@@ -260,6 +260,7 @@ async def _provision_drill_background(
             "failed",
             error=_provision_error_message(exc),
         )
+        await _release_if_nothing_built(drill_id)
     except Exception as exc:  # noqa: BLE001
         log.exception("oxblood.provision_background_failed drill_id=%s", drill_id)
         await _set_drill_provision_status(
@@ -267,6 +268,7 @@ async def _provision_drill_background(
             "failed",
             error=f"{type(exc).__name__}: {exc}",
         )
+        await _release_if_nothing_built(drill_id)
     finally:
         if _PROVISION_JOBS.get(drill_id) is job:
             _PROVISION_JOBS.pop(drill_id, None)
@@ -499,3 +501,25 @@ async def _record_match_run(drill_id: int, copy: int, run_id: int) -> None:
         env[matches.RUNS_KEY] = {**(env.get(matches.RUNS_KEY) or {}), str(copy): run_id}
         drill.environment_config = env
         await db.commit()
+
+
+async def _release_if_nothing_built(drill_id: int) -> None:
+    """A prepare that failed before any VM existed has nothing to clean up: free the environment.
+
+    Without this a refused preflight (for example not enough RAM) leaves the drill owning the
+    shared environment in ``cleanup_required``, and no other drill can be prepared until someone
+    stops it by hand. A drill with a run keeps the lock, because its VMs still need cleanup.
+    """
+    async with get_sessionmaker()() as db:
+        drill = (
+            await db.execute(select(Drill).where(Drill.id == drill_id).with_for_update())
+        ).scalar_one_or_none()
+        if drill is None or matches.run_ids(drill):
+            return
+        env = dict(drill.environment_config or {})
+        if env.get("provision_status") != "failed":
+            return
+        env["cleanup_status"] = "stopped"
+        drill.environment_config = env
+        await db.commit()
+        await release_environment_lock(db, drill_id=drill_id)

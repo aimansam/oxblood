@@ -1377,3 +1377,65 @@ def test_v2_prepare_builds_one_range_copy_per_match_and_stop_removes_all(session
 
     assert _run(_stop()) == "stopped"
     assert sorted(fake_runner.stopped) == [321, 322]
+
+
+def test_v2_refused_preflight_does_not_keep_the_environment_locked(sessionmaker, monkeypatch):
+    from app.runners.runner import RunnerError
+
+    async def _seed():
+        async with sessionmaker() as session:
+            scenario = auth_models.Scenario(
+                name="tight-ram",
+                title="Tight RAM",
+                version=1,
+                difficulty="beginner",
+                duration_min=10,
+                tags=[],
+                authors=[],
+                spec={"spec": {"assets": [], "networks": []}},
+            )
+            session.add(scenario)
+            await session.flush()
+            first = await create_drill(session, title="First", scenario_id=scenario.id)
+            second = await create_drill(session, title="Second", scenario_id=scenario.id)
+            return first.id, second.id
+
+    async def _override_session():
+        async with sessionmaker() as session:
+            yield session
+
+    class Result:
+        run_id = 500
+        status = auth_models.RunStatus.RUNNING
+
+    class FakeRunner:
+        refuse = True
+
+        async def start_run(self, req, session):
+            if self.refuse:
+                raise RunnerError(
+                    "Range preflight failed: Range needs 15.5 GiB RAM; 15.4 GiB available"
+                )
+            return Result()
+
+    fake_runner = FakeRunner()
+    first_id, second_id = _run(_seed())
+
+    from app.main import app
+
+    app.dependency_overrides[get_session] = _override_session
+    _patch(monkeypatch, "_get_runner", lambda: fake_runner)
+    _patch(monkeypatch, "get_sessionmaker", lambda: sessionmaker)
+    headers = {"X-Divide-Token": sign_token("operator", "lead", 60)}
+    try:
+        client = TestClient(app)
+        assert client.post(f"/api/v2/drills/{first_id}/prepare", headers=headers).status_code == 200
+        first = client.get(f"/api/v2/drills/{first_id}").json()["environment_config"]
+        fake_runner.refuse = False
+        again = client.post(f"/api/v2/drills/{second_id}/prepare", headers=headers)
+    finally:
+        app.dependency_overrides.pop(get_session, None)
+
+    assert first["provision_status"] == "failed" and "15.5 GiB" in first["provision_error"]
+    assert first["cleanup_status"] == "stopped"  # nothing was built, nothing to clean up
+    assert again.status_code == 200, again.text  # the environment is free for the next drill
