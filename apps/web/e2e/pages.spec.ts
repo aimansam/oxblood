@@ -6,7 +6,7 @@ test('every operator page renders', async ({ page }) => {
   for (const [link, heading] of [
     ['Exercises', 'Exercises'],
     ['Organizations', 'Organizations'],
-    ['Teams', 'Teams'],
+    ['Players', 'Players'],
     ['Mission Control', 'Mission Control'],
     ['Infrastructure', 'Infrastructure'],
     ['Scoreboard', 'Scoreboard'],

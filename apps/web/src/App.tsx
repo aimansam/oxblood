@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from '@/components/AppShell';
 import { ParticipantShell } from '@/components/ParticipantShell';
 import { RequireAuth, RequireOperator, RequireParticipant } from '@/components/RequireAuth';
@@ -12,7 +12,7 @@ import { ScoreboardPage } from '@/features/scoreboard/ScoreboardPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { JoinPage } from '@/features/login/JoinPage';
 import { LoginPage } from '@/features/login/LoginPage';
-import { TeamsPage } from '@/features/teams/TeamsPage';
+import { PlayersPage } from '@/features/players/PlayersPage';
 import { ThreatMapPage } from '@/features/threat-map/ThreatMapView';
 import { WizardProvider } from '@/features/wizard/WizardProvider';
 import { OverviewPage } from '@/features/overview/OverviewPage';
@@ -47,7 +47,8 @@ export function App() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="reports/:id" element={<ReportDetail />} />
             <Route path="settings" element={<SettingsPage />} />
-            <Route path="teams" element={<TeamsPage />} />
+            <Route path="players" element={<PlayersPage />} />
+            <Route path="teams" element={<Navigate to={`/players${window.location.search}`} replace />} />
             <Route path="competition" element={<CompetitionPage />} />
             <Route path="organizations" element={<OrganizationsPage />} />
             <Route path="organizations/:id" element={<OrganizationDetail />} />

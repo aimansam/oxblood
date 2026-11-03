@@ -8,7 +8,7 @@ const noHorizontalScroll = (page: import('@playwright/test').Page) =>
 
 test('operator pages fit a phone and the menu opens', async ({ page }) => {
   await signInAsAdmin(page);
-  for (const path of ['/app/', '/app/exercises', '/app/organizations', '/app/teams', '/app/mission-control', '/app/settings']) {
+  for (const path of ['/app/', '/app/exercises', '/app/organizations', '/app/players', '/app/mission-control', '/app/settings']) {
     await page.goto(path);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     expect(await noHorizontalScroll(page), path).toBeLessThanOrEqual(1);

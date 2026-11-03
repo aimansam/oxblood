@@ -7,10 +7,23 @@ export type Participant = components['schemas']['ParticipantOut'];
 export type Candidate = components['schemas']['CandidateOut'];
 export type Invitation = components['schemas']['InvitationOut'];
 
+export interface CreatedPlayer {
+  name: string;
+  username: string;
+  password: string;
+  role: 'red' | 'blue';
+  team_id: number | null;
+}
+
 export const participantName = (p: Participant) => p.username || p.sub || `User ${p.user_id}`;
 
 export const teamsApi = {
-  invite: (drillId: number, side: 'red' | 'blue') => http.post<Invitation & { token: string }>(`/api/v2/drills/${drillId}/invitations`, { side }),
+  /** A link for one player, or for a whole team (`maxUses` seats). */
+  invite: (drillId: number, side: 'red' | 'blue', opts: { teamId?: number; maxUses?: number; hours?: number } = {}) =>
+    http.post<Invitation & { token: string }>(`/api/v2/drills/${drillId}/invitations`, { side, team_id: opts.teamId, max_uses: opts.maxUses ?? 1, hours: opts.hours ?? 24 }),
+  /** Accounts from a pasted list of names. Passwords come back once, in this response. Admin only. */
+  bulkCreate: (drillId: number, body: { names: string[]; side: 'red' | 'blue'; team_id?: number }) =>
+    http.post<{ players: CreatedPlayer[] }>(`/api/v2/drills/${drillId}/participants/bulk`, body),
   revoke: (drillId: number, inviteId: number) => http.delete<unknown>(`/api/v2/drills/${drillId}/invitations/${inviteId}`),
   assign: (drillId: number, userId: number, role: 'red' | 'blue') => http.post<unknown>(`/api/v2/drills/${drillId}/participants`, { user_id: userId, role }),
   remove: (drillId: number, userId: number) => http.delete<unknown>(`/api/v2/drills/${drillId}/participants/${userId}`),

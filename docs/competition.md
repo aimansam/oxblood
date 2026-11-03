@@ -5,8 +5,16 @@ team attacks once and defends once; points from all rounds are added up.
 
 ## Before the event
 1. Create the exercise from an organization (Organizations → Create exercise).
-2. **Competition → Teams**: create the teams (4 is typical), then add players. Players can also join
-   by invitation link; use *New invitation link* on a team card so they land in the right team.
+2. **Players**: open the exercise and *Create teams* (4 is typical). The progress bar shows how many seats
+   are filled and what Start still needs. Then add people (*Add players*):
+   - **Invite link**: pick a team, set the seats (a team link serves several people, one link for the
+     whole team) and how long it is valid. Each person opens the link, picks a username and password,
+     and lands in that team. A used-up link disappears from the list.
+   - **Paste names** (admins): one name per line, pick a team; each gets an account with a generated
+     password, enrolled at once. Copy the sheet or download the CSV before leaving the page, because the
+     passwords are not shown again.
+   - **Test players** (admins): one Red and one Blue test account for a dry run.
+   Existing accounts can still be added from the team cards.
 3. **Competition → Rounds**: *Plan 2 rounds*. Round 1 has the first half of the teams as red and the
    second half as blue; round 2 swaps them. Optionally set a **freeze time** for each round.
 4. Prepare and start the exercise as usual (Exercises → Prepare range, then Start).
@@ -23,7 +31,7 @@ team attacks once and defends once; points from all rounds are added up.
 - Ties are broken by whichever team reached its score first.
 
 ## One range per match
-By default every team shares one range. With 4 or 6 teams the Teams tab offers **One range per match**
+By default every team shares one range. With 4 or 6 teams the Players page offers **One range per match**
 (choose it before preparing; it cannot change once a range exists). Teams are paired as the side swap
 pairs them (Alpha with Charlie, Bravo with Delta, ...) and each pair gets its own copy of the range:
 VLANs shifted by 20 per copy, VM names prefixed `M2-`, `M3-`, and its own snapshot baselines. Preparing
@@ -49,7 +57,7 @@ A player who submits a previous round's value is told it is from an earlier roun
 
 ## Captains
 Each team has one captain: the first player added is elected automatically, and a referee can change
-it on the Teams tab ("Make captain"). When the captain leaves the team, the next member takes over;
+it on the Players page ("Make captain"). When the captain leaves the team, the next member takes over;
 an empty team has none. While a team plays **Blue**, only its captain can submit answers; the others
 see who the captain is. **Red** submissions are open to every member (the per-minute limit still
 applies). A team without a valid captain has no restriction.

@@ -75,6 +75,8 @@ def test_invite_registers_prescribed_side_once(invite_app):
     assert client.post("/api/v2/invitations/preview", json={"token": secret}).json() == {
         "title": "Red Blue Exercise",
         "side": "blue",
+        "team": None,
+        "remaining": 1,
         "expires_at": created.json()["expires_at"],
     }
     joined = client.post(
@@ -218,3 +220,67 @@ def test_a_team_link_places_the_player_in_that_team_and_rejects_foreign_teams(in
             return [(p.user_id, p.drill_team_id) for p in rows if p.drill_team_id is not None]
 
     assert [team for _, team in run(team_of_player())] == [1]
+
+
+def test_a_team_link_serves_several_players_then_is_used_up(invite_app):
+    client, maker = invite_app
+    from app.db.models_drill import DrillTeam
+
+    async def seed():
+        async with maker() as db:
+            await db.run_sync(lambda s: DrillTeam.__table__.create(s.get_bind(), checkfirst=True))
+            db.add(Drill(title="Big", max_participants=20))
+            db.add(DrillTeam(drill_id=2, name="Alpha", position=1))
+            await db.commit()
+
+    run(seed())
+    link = client.post(
+        "/api/v2/drills/2/invitations",
+        json={"side": "red", "team_id": 1, "max_uses": 3},
+        headers=auth(),
+    )
+    assert link.status_code == 201
+    assert link.json()["max_uses"] == 3 and link.json()["uses"] == 0
+    secret = link.json()["token"]
+    preview = client.post("/api/v2/invitations/preview", json={"token": secret}).json()
+    assert preview["team"] == "Alpha" and preview["remaining"] == 3
+
+    def join(name):
+        return client.post(
+            "/api/v2/invitations/redeem",
+            json={"token": secret, "username": name, "password": "Sup3rSecret!"},
+        )
+
+    for index, name in enumerate(("amy", "bob", "cat")):
+        assert join(name).status_code == 201
+        listed = client.get("/api/v2/drills/2/invitations", headers=auth()).json()["invitations"][0]
+        assert listed["uses"] == index + 1
+        assert listed["status"] == ("used" if index == 2 else "pending")
+    assert join("dan").status_code == 404  # used up
+    assert client.post("/api/v2/invitations/preview", json={"token": secret}).status_code == 404
+
+    async def members():
+        async with maker() as db:
+            rows = (
+                await db.execute(select(DrillParticipant).where(DrillParticipant.drill_id == 2))
+            ).scalars()
+            return sorted(p.drill_team_id for p in rows)
+
+    assert run(members()) == [1, 1, 1]  # all three landed in the team
+
+
+def test_a_taken_username_does_not_use_up_a_team_link_slot(invite_app):
+    client, _ = invite_app
+    link = client.post(
+        "/api/v2/drills/1/invitations", json={"side": "red", "max_uses": 2}, headers=auth()
+    ).json()["token"]
+
+    def join(name):
+        return client.post(
+            "/api/v2/invitations/redeem",
+            json={"token": link, "username": name, "password": "Sup3rSecret!"},
+        )
+
+    assert join("same").status_code == 201
+    assert join("same").status_code == 409  # taken: the second slot is still free
+    assert join("other").status_code == 201

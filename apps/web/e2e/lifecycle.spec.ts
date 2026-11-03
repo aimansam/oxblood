@@ -120,11 +120,15 @@ test('the exercise card says why Start is refused and can add test players', asy
     // Starting now explains instead of failing with a bare 409 ...
     await page.getByRole('button', { name: 'Start', exact: true }).click();
     await expect(page.getByText(/Cannot start yet/)).toBeVisible();
-    // ... and one click adds the missing players so the dry run can go on.
+    // ... and the card points at the Players screen, where one click adds test players.
+    await page.getByRole('link', { name: 'Add players' }).click();
+    await expect(page).toHaveURL(new RegExp(`/app/players\\?drill=${id}`));
+    await expect(page.getByText('Start needs a Blue player.')).toBeVisible();
+    await page.getByRole('tab', { name: 'Test players' }).click();
     await page.getByRole('button', { name: 'Add test players' }).click();
-    await expect(page.getByRole('dialog').getByText('Test players added')).toBeVisible();
-    await expect(page.getByRole('dialog').getByText(/^test-blue-/)).toBeVisible();
-    await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+    await expect(page.getByRole('status', { name: 'New player accounts' }).getByText(/test-blue-/).first()).toBeVisible();
+    await expect(page.getByText('The roster has both sides, so the exercise can start.')).toBeVisible();
+    await page.goto(`/app/exercises?drill=${id}`);
     await expect(page.getByText('Start will be refused until:')).toHaveCount(0, { timeout: 15_000 });
     await page.getByRole('button', { name: 'Start', exact: true }).click();
     await expect(page.getByText('Live', { exact: true }).first()).toBeVisible({ timeout: 15_000 });

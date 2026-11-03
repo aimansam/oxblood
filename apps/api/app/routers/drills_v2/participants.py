@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import logging
+import re
+import secrets
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import Role, TokenData, require_role
@@ -14,8 +17,10 @@ from app.db.models_drill import (
     DrillEvent,
     DrillParticipant,
     DrillStatus,
+    DrillTeam,
 )
 from app.db.session import get_session
+from app.services import teams as team_service
 from app.services.drill_service import (
     add_participant,
     create_announcement,
@@ -24,6 +29,7 @@ from app.services.drill_service import (
     list_drill_participants,
     remove_participant,
 )
+from app.services.users import create_user
 
 from .schemas import AnnouncementCreate, CandidateListOut, ParticipantAdd, ParticipantListOut
 
@@ -167,6 +173,102 @@ async def post_participant(
         return {"message": "Participant added", "participant_id": participant.id}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+class BulkPlayers(BaseModel):
+    names: list[str] = Field(min_length=1, max_length=40)
+    side: str = Field(default="red", pattern="^(red|blue)$")
+    team_id: int | None = None
+
+
+_PASSWORD_ALPHABET = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def _username(name: str, taken: set[str]) -> str:
+    base = re.sub(r"[^a-z0-9]+", ".", name.lower()).strip(".")[:24] or "player"
+    candidate, n = base, 1
+    while candidate in taken:
+        n += 1
+        candidate = f"{base}{n}"
+    taken.add(candidate)
+    return candidate
+
+
+@router.post("/{drill_id}/participants/bulk", status_code=201)
+async def post_participants_bulk(
+    drill_id: int,
+    data: BulkPlayers,
+    db: AsyncSession = Depends(get_session),
+    token: TokenData = Depends(require_role(Role.ADMIN)),
+):
+    """Create accounts from a pasted list of names and enroll them. Passwords are returned once."""
+    drill = await get_drill(db, drill_id)
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    if drill.status != DrillStatus.SCHEDULED:
+        raise HTTPException(status_code=409, detail="Roster is locked after the drill starts.")
+    names = [n.strip() for n in data.names if n and n.strip()]
+    if not names:
+        raise HTTPException(status_code=422, detail="Give at least one name.")
+    team = None
+    if data.team_id is not None:
+        team = await db.get(DrillTeam, data.team_id)
+        if team is None or team.drill_id != drill_id:
+            raise HTTPException(status_code=404, detail="Team not found in this drill.")
+    enrolled = int(
+        await db.scalar(
+            select(func.count(DrillParticipant.id)).where(DrillParticipant.drill_id == drill_id)
+        )
+        or 0
+    )
+    limit = drill.max_participants or 10
+    if enrolled + len(names) > limit:
+        raise HTTPException(
+            status_code=409,
+            detail=f"{len(names)} players do not fit: {enrolled} of {limit} seats are taken.",
+        )
+    taken: set[str] = set()
+    for base in {re.sub(r"[^a-z0-9]+", ".", n.lower()).strip(".")[:24] or "player" for n in names}:
+        rows = await db.execute(select(User.sub).where(User.sub.like(f"{base}%")))
+        taken.update(sub.lower() for sub in rows.scalars())
+    created = []
+    for name in names:
+        username = _username(name, taken)
+        password = "".join(secrets.choice(_PASSWORD_ALPHABET) for _ in range(12))
+        user = await create_user(db, sub=username, password=password, role=data.side)
+        db.add(
+            DrillParticipant(
+                drill_id=drill_id,
+                user_id=user.id,
+                role=data.side,
+                status="registered",
+                drill_team_id=team.id if team else None,
+            )
+        )
+        db.add(
+            DrillEvent(
+                drill_id=drill_id,
+                kind="roster",
+                title=f"{data.side.title()} participant created and enrolled",
+                detail=username,
+                side=data.side,
+                actor=token.sub,
+            )
+        )
+        created.append(
+            {
+                "name": name,
+                "username": username,
+                "password": password,
+                "role": data.side,
+                "team_id": data.team_id,
+            }
+        )
+    await db.flush()
+    if team is not None and await team_service.team_captain(db, team) is None:
+        await team_service.elect_captain(db, team)
+    await db.commit()
+    return {"players": created}
 
 
 @router.delete("/{drill_id}/participants/{user_id}")

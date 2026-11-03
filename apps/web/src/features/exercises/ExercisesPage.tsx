@@ -54,10 +54,10 @@ function Detail({ drill, onClose }: { drill: Drill; onClose: () => void }) {
             <Link to={`/live/${drill.id}`}>Open live range</Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link to={`/teams?drill=${drill.id}`}>Manage teams</Link>
+            <Link to={`/players?drill=${drill.id}`}>Players</Link>
           </Button>
           <Button variant="outline" className="col-span-2" asChild>
-            <Link to={`/competition?drill=${drill.id}`}>Competition: teams, rounds, referee</Link>
+            <Link to={`/competition?drill=${drill.id}`}>Competition: rounds and referee</Link>
           </Button>
         </div>
       </CardContent>

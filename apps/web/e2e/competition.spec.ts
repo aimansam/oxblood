@@ -13,7 +13,7 @@ test('a referee runs a two-team round and the scoreboard follows', async ({ page
 
   // --- referee: teams, rounds
   await signInAsAdmin(page);
-  await page.goto(`/app/competition?drill=${drill}`);
+  await page.goto(`/app/players?drill=${drill}`);
   await page.getByLabel('Number of teams').selectOption('2');
   await page.getByRole('button', { name: 'Create teams' }).click();
   await expect(page.getByText('Teams created')).toBeVisible();
@@ -25,6 +25,7 @@ test('a referee runs a two-team round and the scoreboard follows', async ({ page
   await page.getByRole('button', { name: 'Add', exact: true }).nth(1).click();
   await expect(page.getByText('2 of 2 enrolled players are in a team.')).toBeVisible();
 
+  await page.getByRole('link', { name: 'Competition', exact: true }).click(); // teams are set; rounds are next
   await page.getByRole('tab', { name: 'Rounds' }).click();
   await page.getByRole('button', { name: 'Plan 2 rounds (swap sides)' }).click();
   await expect(page.getByText('Round 2')).toBeVisible();

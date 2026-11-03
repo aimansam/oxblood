@@ -7,19 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { inviteUrl, useRoster } from '../teams/api';
-import { competitionApi, useMatchMode, useTeams } from './api';
+import { useRoster } from '../teams/api';
+import { competitionApi, useMatchMode, useTeams } from '../competition/api';
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : 'Request failed');
 
-export function TeamsTab({ drillId, scheduled }: { drillId: number; scheduled: boolean }) {
+/** The teams of a competition: members, captains, renaming, and the shared/separate range choice. */
+export function TeamRoster({ drillId, scheduled }: { drillId: number; scheduled: boolean }) {
   const qc = useQueryClient();
   const teams = useTeams(drillId);
   const matchMode = useMatchMode(drillId).data ?? 'shared';
   const roster = useRoster(drillId);
-  const [count, setCount] = useState('4');
   const [pick, setPick] = useState<Record<number, string>>({});
-  const [link, setLink] = useState<{ teamId: number; url: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const refresh = async () => {
@@ -40,30 +39,7 @@ export function TeamsTab({ drillId, scheduled }: { drillId: number; scheduled: b
 
   if (teams.isLoading || roster.isLoading) return <Skeleton className="h-48 w-full" />;
   const list = teams.data ?? [];
-  if (list.length === 0) {
-    return (
-      <Card className="max-w-lg">
-        <CardHeader>
-          <CardTitle>Set up teams</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-muted-foreground">Create the teams for this competition. In a two-round swap, half the teams attack while the other half defend, then they switch.</p>
-          <div className="flex gap-2">
-            <Select aria-label="Number of teams" value={count} onChange={(e) => setCount(e.target.value)} className="w-32">
-              {['2', '4', '6'].map((n) => (
-                <option key={n} value={n}>
-                  {n} teams
-                </option>
-              ))}
-            </Select>
-            <Button disabled={busy} onClick={() => act(() => competitionApi.createTeams(drillId, Number(count)), 'Teams created')}>
-              Create teams
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (list.length === 0) return null;
 
   const inTeam = new Set(list.flatMap((t) => t.members.map((m) => m.user_id)));
   const enrolledFree = (roster.data?.participants ?? []).filter((p) => !inTeam.has(p.user_id));
@@ -82,15 +58,6 @@ export function TeamsTab({ drillId, scheduled }: { drillId: number; scheduled: b
       await competitionApi.assign(drillId, teamId, userId);
       setPick((s) => ({ ...s, [teamId]: '' }));
     }, 'Player added');
-
-  const copy = async (url: string) => {
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success('Link copied');
-    } catch {
-      toast.error('Copy failed — select the link and copy it manually');
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -122,7 +89,7 @@ export function TeamsTab({ drillId, scheduled }: { drillId: number; scheduled: b
         {inTeam.size} of {list.reduce((n, t) => n + t.member_count, 0) + enrolledFree.length} enrolled players are in a team.
       </p>
       <div className="grid gap-4 md:grid-cols-2">
-        {list.map((team, index) => (
+        {list.map((team) => (
           <Card key={team.id}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -183,30 +150,6 @@ export function TeamsTab({ drillId, scheduled }: { drillId: number; scheduled: b
                   Add
                 </Button>
               </div>
-              {scheduled && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={busy}
-                  onClick={() =>
-                    act(async () => {
-                      const side = index < list.length / 2 ? 'red' : 'blue';
-                      const invite = await competitionApi.invite(drillId, side, team.id);
-                      setLink({ teamId: team.id, url: inviteUrl(invite.token) });
-                    })
-                  }
-                >
-                  New invitation link
-                </Button>
-              )}
-              {link?.teamId === team.id && (
-                <div className="flex gap-2">
-                  <Input readOnly aria-label={`Invitation link for ${team.name}`} value={link.url} onFocus={(e) => e.currentTarget.select()} />
-                  <Button variant="outline" onClick={() => copy(link.url)}>
-                    Copy
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
         ))}

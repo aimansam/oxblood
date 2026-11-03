@@ -1,4 +1,4 @@
-"""Operator-issued, single-use participant enrollment links."""
+"""Operator-issued participant enrollment links: one person, or a whole team up to a capacity."""
 
 from __future__ import annotations
 
@@ -25,7 +25,6 @@ from app.db.session import get_session
 from app.services.users import DuplicateSubError, create_user
 
 router = APIRouter(prefix="/api/v2", tags=["Drill invitations"])
-_LIFETIME = timedelta(hours=24)
 _UNAVAILABLE = "This invitation is no longer available. Ask the operator for a new link."
 
 
@@ -42,6 +41,8 @@ class InvitationOut(BaseModel):
     side: str
     team_id: int | None = None
     status: str
+    max_uses: int = 1
+    uses: int = 0
     expires_at: str
     created_at: str
 
@@ -66,6 +67,8 @@ def _public(invite: DrillInvitation) -> dict:
         "side": invite.side,
         "team_id": invite.drill_team_id,
         "status": state,
+        "max_uses": invite.max_uses,
+        "uses": invite.uses,
         "expires_at": invite.expires_at.isoformat(),
         "created_at": invite.created_at.isoformat(),
     }
@@ -79,6 +82,7 @@ def _valid(invite: DrillInvitation | None, drill: Drill | None) -> bool:
         and drill.status == DrillStatus.SCHEDULED
         and invite.redeemed_at is None
         and invite.revoked_at is None
+        and invite.uses < invite.max_uses
         and _utc(invite.expires_at) > datetime.now(UTC)
     )
 
@@ -99,6 +103,9 @@ class IssueRequest(BaseModel):
     side: str = Field(pattern="^(red|blue)$")
     # Optional: the player is placed in this team when they redeem the link.
     team_id: int | None = None
+    # How many players the link can enroll (a team link); the roster limit still applies.
+    max_uses: int = Field(default=1, ge=1, le=30)
+    hours: int = Field(default=24, ge=1, le=168)
 
 
 class SecretRequest(BaseModel):
@@ -177,7 +184,8 @@ async def issue_invitation(
         drill_team_id=body.team_id,
         token_hash=_digest(secret),
         created_by=actor.sub,
-        expires_at=datetime.now(UTC) + _LIFETIME,
+        max_uses=body.max_uses,
+        expires_at=datetime.now(UTC) + timedelta(hours=body.hours),
     )
     db.add(invite)
     await db.commit()
@@ -196,7 +204,7 @@ async def revoke_invitation(
     if invite is None or invite.drill_id != drill_id:
         raise HTTPException(404, "Invitation not found")
     if invite.redeemed_at is not None:
-        raise HTTPException(409, "This invitation has already been used.")
+        raise HTTPException(409, "This invitation has already been used up.")
     invite.revoked_at = datetime.now(UTC)
     await db.commit()
     return {"ok": True}
@@ -208,7 +216,14 @@ async def preview_invitation(body: SecretRequest, db: AsyncSession = Depends(get
     if not _valid(invite, drill):
         raise HTTPException(404, _UNAVAILABLE)
     assert invite is not None and drill is not None  # guaranteed by _valid
-    return {"title": drill.title, "side": invite.side, "expires_at": invite.expires_at.isoformat()}
+    team = await db.get(DrillTeam, invite.drill_team_id) if invite.drill_team_id else None
+    return {
+        "title": drill.title,
+        "side": invite.side,
+        "team": team.name if team else None,
+        "remaining": invite.max_uses - invite.uses,
+        "expires_at": invite.expires_at.isoformat(),
+    }
 
 
 @router.post("/invitations/redeem", status_code=201)
@@ -218,17 +233,18 @@ async def redeem_invitation(body: RedeemRequest, db: AsyncSession = Depends(get_
         raise HTTPException(404, _UNAVAILABLE)
     assert invite is not None and drill is not None  # guaranteed by _valid
     now = datetime.now(UTC)
-    # Claim by conditional UPDATE. A concurrent request cannot claim the same
-    # invitation; account creation and enrollment share this transaction.
+    # Claim one use by conditional UPDATE. A concurrent request cannot take a use that is not there;
+    # account creation and enrollment share this transaction.
     claimed = await db.execute(
         update(DrillInvitation)
         .where(
             DrillInvitation.id == invite.id,
             DrillInvitation.redeemed_at.is_(None),
             DrillInvitation.revoked_at.is_(None),
+            DrillInvitation.uses < DrillInvitation.max_uses,
             DrillInvitation.expires_at > now,
         )
-        .values(redeemed_at=now)
+        .values(uses=DrillInvitation.uses + 1)
         .execution_options(synchronize_session=False)
     )
     if claimed.rowcount != 1:  # type: ignore[attr-defined]
@@ -271,7 +287,11 @@ async def redeem_invitation(body: RedeemRequest, db: AsyncSession = Depends(get_
             actor=user.sub,
         )
     )
-    invite.redeemed_by = user.id
+    await db.refresh(invite)
+    if invite.uses >= invite.max_uses:
+        invite.redeemed_at = now  # used up
+    if invite.max_uses == 1:
+        invite.redeemed_by = user.id
     await db.commit()
     issued_at = int(time.time())
     ttl = 8 * 3600

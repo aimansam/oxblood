@@ -1,16 +1,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api, unwrap } from '@/api/client';
-import { useMe } from '@/api/hooks';
 import { drillsApi } from '@/api/drills';
 import type { Drill } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EditDrillDialog } from './EditDrillDialog';
 import { availableActions } from './actions';
-import { type TestPlayer, addTestPlayers } from './testPlayers';
 
 /** Lifecycle buttons for one exercise. Which ones appear depends on its status and range state. */
 export function ExerciseActions({ drill, onRemoved }: { drill: Drill; onRemoved: () => void }) {
@@ -18,8 +16,6 @@ export function ExerciseActions({ drill, onRemoved }: { drill: Drill; onRemoved:
   const [busy, setBusy] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<null | 'delete' | 'stop'>(null);
   const [editing, setEditing] = useState(false);
-  const [testPlayers, setTestPlayers] = useState<TestPlayer[] | null>(null);
-  const me = useMe();
   const actions = availableActions(drill);
   // Why Start would be refused: the range checks the server enforces, shown before the click.
   const health = useQuery({
@@ -42,18 +38,6 @@ export function ExerciseActions({ drill, onRemoved }: { drill: Drill; onRemoved:
       return;
     }
     await run('start', 'Exercise started', () => drillsApi.start(drill.id));
-  };
-
-  const addPlayers = async () => {
-    setBusy('players');
-    try {
-      setTestPlayers(await addTestPlayers(drill.id));
-      await health.refetch();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not add test players');
-    } finally {
-      setBusy(null);
-    }
   };
 
   const run = async (key: string, label: string, fn: () => Promise<unknown>) => {
@@ -108,9 +92,9 @@ export function ExerciseActions({ drill, onRemoved }: { drill: Drill; onRemoved:
               <li key={c.id ?? c.label}>{c.detail || c.label}</li>
             ))}
           </ul>
-          {needsRoster && me.data?.role === 'admin' && (
-            <Button size="sm" variant="outline" disabled={busy !== null} onClick={addPlayers}>
-              Add test players
+          {needsRoster && (
+            <Button size="sm" variant="outline" asChild>
+              <Link to={`/players?drill=${drill.id}`}>Add players</Link>
             </Button>
           )}
         </div>
@@ -130,29 +114,6 @@ export function ExerciseActions({ drill, onRemoved }: { drill: Drill; onRemoved:
           </Button>
         )}
       </div>
-      <Dialog open={testPlayers !== null} onOpenChange={(open) => !open && setTestPlayers(null)}>
-        <DialogContent aria-describedby={undefined}>
-          <DialogHeader>
-            <DialogTitle>Test players added</DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <p className="mb-3 text-muted-foreground">One Red and one Blue account were created and enrolled. Copy the passwords now; they are not shown again. Disable the accounts under Settings when you are done.</p>
-            <ul className="divide-y divide-border">
-              {(testPlayers ?? []).map((p) => (
-                <li key={p.sub} className="flex justify-between gap-3 py-2">
-                  <span>
-                    <strong>{p.sub}</strong> <span className="text-xs uppercase text-muted-foreground">{p.role}</span>
-                  </span>
-                  <code className="select-all">{p.password}</code>
-                </li>
-              ))}
-            </ul>
-          </DialogBody>
-          <DialogFooter>
-            <Button onClick={() => setTestPlayers(null)}>Done</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <EditDrillDialog drill={drill} open={editing} onOpenChange={setEditing} />
       <ConfirmDialog
         open={confirm === 'stop'}

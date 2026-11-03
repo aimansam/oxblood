@@ -5,7 +5,7 @@ test('a player sees only their mission screen and cannot reach operator pages', 
   await signIn(page, RED);
   await expect(page).toHaveURL(/\/app\/mission$/);
   await expect(page.getByRole('navigation', { name: 'Primary' })).toHaveCount(0);
-  for (const path of ['/app/settings', '/app/infrastructure', '/app/teams']) {
+  for (const path of ['/app/settings', '/app/infrastructure', '/app/players']) {
     await page.goto(path);
     await expect(page).toHaveURL(/\/app\/mission$/);
   }

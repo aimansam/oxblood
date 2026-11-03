@@ -18,7 +18,7 @@ const NAV: NavItem[] = [
   { label: 'Exercises', to: '/exercises' },
   { label: 'Mission Control', to: '/mission-control' },
   { label: 'Organizations', to: '/organizations' },
-  { label: 'Teams', to: '/teams' },
+  { label: 'Players', to: '/players' },
   { label: 'Competition', to: '/competition' },
   { label: 'Infrastructure', to: '/infrastructure' },
   { label: 'Scoreboard', to: '/scoreboard' },

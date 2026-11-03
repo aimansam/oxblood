@@ -318,7 +318,7 @@ class DrillScoreEvent(Base):
 
 
 class DrillInvitation(Base):
-    """One-use, side-bound enrollment link; only its SHA-256 digest is stored."""
+    """Side-bound enrollment link (one use, or a capacity for a team link); only its SHA-256 digest is stored."""
 
     __tablename__ = "drill_invitations"
 
@@ -342,6 +342,9 @@ class DrillInvitation(Base):
     drill_team_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("drill_teams.id", ondelete="SET NULL")
     )
+    # A link can serve several players (a team link): it is used up after ``max_uses`` redemptions.
+    max_uses: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    uses: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     __table_args__ = (Index("ix_drill_invitations_drill_id", "drill_id"),)
 

@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 interface Preview {
   title: string;
   side: string;
+  team?: string | null;
+  remaining?: number;
 }
 
 /** Invitation links carry a 43-character URL-safe token in the fragment, so it never reaches a server log. */
@@ -96,7 +98,7 @@ export function JoinPage() {
           <h1 className="text-xl font-semibold tracking-tight">{preview?.title ?? 'Checking your invitation…'}</h1>
           {preview && (
             <p className="mt-1 text-muted-foreground">
-              <span className="font-semibold uppercase">{preview.side} team</span> · Your place is reserved
+              <span className="font-semibold uppercase">{preview.side} team</span>{preview.team ? <> · {preview.team}</> : null} · Your place is reserved
             </p>
           )}
         </div>

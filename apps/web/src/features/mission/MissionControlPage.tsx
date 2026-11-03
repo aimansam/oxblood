@@ -66,7 +66,7 @@ export function MissionControlPage() {
   const act = async () => {
     try {
       if (next.kind === 'create') wizard.open();
-      else if (next.kind === 'roster') navigate(`/teams?drill=${next.drillId}`);
+      else if (next.kind === 'roster') navigate(`/players?drill=${next.drillId}`);
       else if (next.kind === 'inspect') navigate(`/exercises?drill=${next.drillId}`);
       else if (next.kind === 'open') navigate(`/exercises?drill=${next.drillId}`);
       else if (next.kind === 'prepare') { await drillsApi.prepare(next.drillId as number); toast.success('Range preparation started'); await qc.invalidateQueries({ queryKey: ['drills'] }); }

@@ -1,10 +1,5 @@
 import { http } from '@/api/http';
-
-export interface TestPlayer {
-  sub: string;
-  password: string;
-  role: 'red' | 'blue';
-}
+import type { CreatedPlayer } from '../teams/api';
 
 const randomText = (length: number) => {
   const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -13,13 +8,14 @@ const randomText = (length: number) => {
 };
 
 /** One Red and one Blue account, enrolled in the exercise, so a dry run can start. Admin only. */
-export async function addTestPlayers(drillId: number): Promise<TestPlayer[]> {
-  const made: TestPlayer[] = [];
+export async function addTestPlayers(drillId: number): Promise<CreatedPlayer[]> {
+  const made: CreatedPlayer[] = [];
   for (const role of ['red', 'blue'] as const) {
-    const player: TestPlayer = { sub: `test-${role}-${randomText(5)}`, password: `Tp${randomText(10)}A1!`, role };
-    const created = await http.post<{ id: number }>('/api/v1/auth/users', { sub: player.sub, password: player.password, role });
+    const username = `test-${role}-${randomText(5)}`;
+    const password = `Tp${randomText(10)}A1!`;
+    const created = await http.post<{ id: number }>('/api/v1/auth/users', { sub: username, password, role });
     await http.post(`/api/v2/drills/${drillId}/participants`, { user_id: created.id, role });
-    made.push(player);
+    made.push({ name: username, username, password, role, team_id: null });
   }
   return made;
 }

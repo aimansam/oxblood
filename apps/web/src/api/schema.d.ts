@@ -2171,6 +2171,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/drills/{drill_id}/participants/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Participants Bulk
+         * @description Create accounts from a pasted list of names and enroll them. Passwords are returned once.
+         */
+        post: operations["post_participants_bulk_api_v2_drills__drill_id__participants_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/drills/{drill_id}/participants/{user_id}": {
         parameters: {
             query?: never;
@@ -3284,6 +3304,18 @@ export interface components {
              */
             storage: string;
         };
+        /** BulkPlayers */
+        BulkPlayers: {
+            /** Names */
+            names: string[];
+            /**
+             * Side
+             * @default red
+             */
+            side: string;
+            /** Team Id */
+            team_id?: number | null;
+        };
         /** CandidateListOut */
         CandidateListOut: {
             /** Candidates */
@@ -3780,15 +3812,35 @@ export interface components {
             expires_at: string;
             /** Id */
             id: number;
+            /**
+             * Max Uses
+             * @default 1
+             */
+            max_uses: number;
             /** Side */
             side: string;
             /** Status */
             status: string;
             /** Team Id */
             team_id?: number | null;
+            /**
+             * Uses
+             * @default 0
+             */
+            uses: number;
         };
         /** IssueRequest */
         IssueRequest: {
+            /**
+             * Hours
+             * @default 24
+             */
+            hours: number;
+            /**
+             * Max Uses
+             * @default 1
+             */
+            max_uses: number;
             /** Side */
             side: string;
             /** Team Id */
@@ -8308,6 +8360,43 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_participants_bulk_api_v2_drills__drill_id__participants_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Divide-Token"?: string | null;
+            };
+            path: {
+                drill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkPlayers"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

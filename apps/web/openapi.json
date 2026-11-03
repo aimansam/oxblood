@@ -63,6 +63,41 @@
         "title": "Body_upload_qcow2_api_v1_admin_upload_qcow2_post",
         "type": "object"
       },
+      "BulkPlayers": {
+        "properties": {
+          "names": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 40,
+            "minItems": 1,
+            "title": "Names",
+            "type": "array"
+          },
+          "side": {
+            "default": "red",
+            "pattern": "^(red|blue)$",
+            "title": "Side",
+            "type": "string"
+          },
+          "team_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Id"
+          }
+        },
+        "required": [
+          "names"
+        ],
+        "title": "BulkPlayers",
+        "type": "object"
+      },
       "CandidateListOut": {
         "additionalProperties": true,
         "properties": {
@@ -1579,6 +1614,11 @@
             "title": "Id",
             "type": "integer"
           },
+          "max_uses": {
+            "default": 1,
+            "title": "Max Uses",
+            "type": "integer"
+          },
           "side": {
             "title": "Side",
             "type": "string"
@@ -1597,6 +1637,11 @@
               }
             ],
             "title": "Team Id"
+          },
+          "uses": {
+            "default": 0,
+            "title": "Uses",
+            "type": "integer"
           }
         },
         "required": [
@@ -1611,6 +1656,20 @@
       },
       "IssueRequest": {
         "properties": {
+          "hours": {
+            "default": 24,
+            "maximum": 168.0,
+            "minimum": 1.0,
+            "title": "Hours",
+            "type": "integer"
+          },
+          "max_uses": {
+            "default": 1,
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Max Uses",
+            "type": "integer"
+          },
           "side": {
             "pattern": "^(red|blue)$",
             "title": "Side",
@@ -10131,6 +10190,73 @@
           }
         },
         "summary": "Post Participant",
+        "tags": [
+          "Drills v2"
+        ]
+      }
+    },
+    "/api/v2/drills/{drill_id}/participants/bulk": {
+      "post": {
+        "description": "Create accounts from a pasted list of names and enroll them. Passwords are returned once.",
+        "operationId": "post_participants_bulk_api_v2_drills__drill_id__participants_bulk_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "drill_id",
+            "required": true,
+            "schema": {
+              "title": "Drill Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Divide-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Divide-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkPlayers"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Participants Bulk",
         "tags": [
           "Drills v2"
         ]
