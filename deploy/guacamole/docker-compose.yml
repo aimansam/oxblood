@@ -37,6 +37,10 @@ services:
       POSTGRESQL_USER: guacamole
       POSTGRESQL_PASSWORD: ${GUAC_DB_PASSWORD}
       WEBAPP_CONTEXT: guacamole
+      # Players log in with a signed link from OxBlood (JSON authentication), not with a Guacamole account.
+      # The key is the same 32 hex characters as DIVIDE_GUACAMOLE_JSON_SECRET on the API (openssl rand -hex 16).
+      EXTENSIONS: auth-json
+      JSON_SECRET_KEY: ${GUAC_JSON_SECRET}
     depends_on:
       postgres:
         condition: service_healthy

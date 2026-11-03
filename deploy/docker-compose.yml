@@ -42,6 +42,9 @@ services:
       DIVIDE_ENV: ${DIVIDE_ENV:-dev}
       DIVIDE_LOG_LEVEL: ${DIVIDE_LOG_LEVEL:-INFO}
       DIVIDE_RANGE_HOST_RESERVE_MB: ${DIVIDE_RANGE_HOST_RESERVE_MB:-2048}
+      # Players open their workstation through Guacamole when both are set; empty keeps the Proxmox console.
+      DIVIDE_GUACAMOLE_URL: ${DIVIDE_GUACAMOLE_URL:-}
+      DIVIDE_GUACAMOLE_JSON_SECRET: ${DIVIDE_GUACAMOLE_JSON_SECRET:-}
       DIVIDE_DB_URL: postgresql+asyncpg://divide:${POSTGRES_PASSWORD:-divide}@postgres:5432/divide
       DIVIDE_REDIS_URL: redis://redis:6379/0
       # R1: opt into the Redis-backed event bus. With multiple

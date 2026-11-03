@@ -1477,3 +1477,154 @@ def test_v2_cleanup_of_a_finished_exercise_destroys_its_accounts_but_a_retry_doe
             assert subs == {"temp.retried"}
 
     _run(_case())
+
+
+def test_v2_player_console_goes_through_guacamole_with_their_own_account(sessionmaker, monkeypatch):
+    from app.core.config import settings
+    from pydantic import SecretStr
+
+    secret = "4c0b569e4c96df157eee1b65dd0e4d41"
+    monkeypatch.setattr(settings, "guacamole_url", "https://gateway.example/guacamole")
+    monkeypatch.setattr(settings, "guacamole_json_secret", SecretStr(secret))
+
+    async def _seed():
+        async with sessionmaker() as session:
+            scenario = auth_models.Scenario(
+                name="guac",
+                title="Guac",
+                version=1,
+                difficulty="beginner",
+                duration_min=10,
+                tags=[],
+                authors=[],
+                spec={"spec": {"assets": [], "networks": []}},
+            )
+            session.add(scenario)
+            await session.flush()
+            run = auth_models.Run(
+                scenario_id=scenario.id,
+                status=auth_models.RunStatus.RUNNING,
+                started_at=datetime.now(UTC),
+            )
+            session.add(run)
+            await session.flush()
+            kali = auth_models.Asset(
+                run_id=run.id,
+                role="red_workstation",
+                template="tpl-kali-gui-xrdp",
+                status=auth_models.AssetStatus.RUNNING,
+                pve_vmid=9001,
+                pve_node="pve",
+                pve_ip="10.30.10.10",
+            )
+            files = auth_models.Asset(
+                run_id=run.id,
+                role="red_staging",
+                template="tpl-debian-file-server",
+                status=auth_models.AssetStatus.RUNNING,
+                pve_vmid=9002,
+                pve_node="pve",
+                pve_ip="10.30.40.20",
+            )
+            session.add_all([kali, files])
+            drill = await create_drill(
+                session,
+                title="Guac",
+                scenario_id=scenario.id,
+                environment_config={"provision_run_id": run.id, "provision_status": "started"},
+            )
+            drill.status = m.DrillStatus.ACTIVE
+            user = auth_models.User(sub="ana.smith", password_hash="x", role="red")
+            session.add(user)
+            await session.flush()
+            session.add(
+                m.DrillParticipant(
+                    drill_id=drill.id, user_id=user.id, role="red", status="registered"
+                )
+            )
+            await session.commit()
+            return drill.id, kali.id, files.id, user.id
+
+    async def _override_session():
+        async with sessionmaker() as session:
+            yield session
+
+    class FakeAdapter:
+        def __init__(self):
+            self.tickets, self.seeds = [], []
+
+        async def create_console_ticket(self, vmid, node):
+            self.tickets.append(vmid)
+            return ConsoleTicket(
+                vmid=vmid,
+                node=node,
+                ticket="t",
+                port=5900,
+                cert="c",
+                user="root@pam",
+                launch_url="https://pve/?novnc=1",
+            )
+
+        async def apply_guest_seed(self, vmid, node, seed):
+            self.seeds.append((vmid, seed))
+
+    adapter = FakeAdapter()
+
+    class FakeRunner:
+        _adapter = adapter
+
+    drill_id, kali_id, files_id, user_id = _run(_seed())
+
+    from app.core.auth import sign_token
+    from app.main import app
+    from app.services.guacamole import decrypt_payload, session_password
+
+    app.dependency_overrides[get_session] = _override_session
+    _patch(monkeypatch, "_get_runner", lambda: FakeRunner())
+    player = {"X-Divide-Token": sign_token(sub="ana.smith", role="red", ttl_s=600)}
+    lead = {"X-Divide-Token": sign_token(sub="lead", role="lead", ttl_s=600)}
+    try:
+        client = TestClient(app)
+        opened = client.post(f"/api/v2/drills/{drill_id}/access/{kali_id}/console", headers=player)
+        server = client.post(f"/api/v2/drills/{drill_id}/access/{files_id}/console", headers=player)
+        access = client.get(f"/api/v2/drills/{drill_id}/access", headers=player).json()["assets"]
+        operator = client.post(f"/api/v2/drills/{drill_id}/access/{files_id}/console", headers=lead)
+        events = client.get(f"/api/v2/drills/{drill_id}/timeline").json()["events"]
+        env = client.get(f"/api/v2/drills/{drill_id}", headers=lead).json()["environment_config"]
+    finally:
+        app.dependency_overrides.pop(get_session, None)
+
+    # The player never gets a Proxmox ticket: a signed link to the gateway, with their own login.
+    assert opened.status_code == 200, opened.text
+    body = opened.json()
+    assert body["viewer"] == "guacamole" and "ticket" not in body
+    assert body["launch_url"].startswith("https://gateway.example/guacamole/#/?data=")
+    from urllib.parse import parse_qs, urlparse
+
+    payload = decrypt_payload(
+        secret, parse_qs(urlparse(body["launch_url"].replace("#/", "")).query)["data"][0]
+    )
+    params = payload["connections"]["red workstation"]["parameters"]
+    password = session_password(env["access_seed"], kali_id, user_id)
+    assert payload["username"] == "ana.smith"
+    assert (params["hostname"], params["username"], params["password"]) == (
+        "10.30.10.10",
+        "ana-smith",
+        password,
+    )
+
+    # Their account is created on the machine through the guest agent, with that same password.
+    assert adapter.tickets == [9002]  # only the operator's request used Proxmox
+    (vmid, seed) = adapter.seeds[0]
+    assert vmid == 9001
+    assert any("useradd" in c and "ana-smith" in c for c in seed.runcmd)
+    assert f"echo 'ana-smith:{password}' | chpasswd" in seed.runcmd
+
+    # A server is not something a player opens in the browser, and the list says so.
+    assert server.status_code == 409
+    by_role = {a["role"]: a for a in access}
+    assert by_role["red_workstation"]["console_available"] is True
+    assert by_role["red_staging"]["console_available"] is False
+    # Operators keep the recovery console.
+    assert operator.status_code == 200 and operator.json()["viewer"] == "novnc"
+    assert any(e["kind"] == "access" and e["actor"] == "ana.smith" for e in events)

@@ -102,6 +102,12 @@ class Settings(BaseSettings):
         validation_alias="DIVIDE_TOKEN_SECRET",
     )
 
+    # Apache Guacamole gateway for players (see app/services/guacamole.py). Both must be set to turn it on;
+    # otherwise players keep using the Proxmox console. The secret is the 128-bit key (32 hex characters)
+    # of Guacamole's JSON authentication extension (JSON_SECRET_KEY on the Guacamole side).
+    guacamole_url: str | None = None
+    guacamole_json_secret: SecretStr | None = None
+
     # Setup wizard portal (vanilla HTML+JS). Mounted at /setup/ by main.py.
     # Defaults to the bundled copy; override for development to point at
     # the live source tree.

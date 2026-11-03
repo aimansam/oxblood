@@ -59,6 +59,7 @@ from .access import (
     _participant_is_enrolled,
     _require_participant_workspace_access,
 )
+from .guac_console import guacamole_config, is_rdp_workstation, player_console
 from .health import _range_health, _refresh_drill_provision_state
 from .provisioning import _stop_drill_provision_run
 from .schemas import (
@@ -328,6 +329,12 @@ async def get_drill_access(
     )
 
     rows = []
+    viewer_is_operator = token is not None and str(token.role or "").lower() in {
+        "admin",
+        "lead",
+        "observer",
+    }
+    guac_for_players = guacamole_config() is not None
     for asset in assets:
         role_text = str(asset.role or "")
         role_parts = role_text.rsplit("_", 1)
@@ -361,7 +368,8 @@ async def get_drill_access(
                 "credentials": credentials if _can_view_credentials(side, viewer) else None,
                 "console_available": bool(
                     asset.pve_vmid and asset.pve_node and status_value == "running"
-                ),
+                )
+                and (not guac_for_players or viewer_is_operator or is_rdp_workstation(asset)),
                 "console_message": (
                     "Open the assigned workstation console."
                     if status_value == "running"
@@ -524,6 +532,19 @@ async def create_drill_console(
         )
     if not asset.pve_vmid or not asset.pve_node:
         raise HTTPException(status_code=409, detail="Asset has no PVE VM binding")
+
+    guac = guacamole_config()
+    if guac is not None and not is_operator:
+        # Players go through the gateway and never see Proxmox. Operators keep the recovery console.
+        return await player_console(
+            db,
+            drill=drill,
+            asset=asset,
+            token=token,
+            side=side,
+            adapter=_get_runner()._adapter,  # noqa: SLF001
+            config=guac,
+        )
 
     try:
         ticket = await _get_runner()._adapter.create_console_ticket(  # noqa: SLF001
