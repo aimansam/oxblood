@@ -27,6 +27,8 @@ export function RequireAuth() {
       </div>
     );
   }
+  // A temporary password still in force: nothing else is available until it is replaced.
+  if (me.role === 'password_change') return <Navigate to="/change-password" replace />;
   return <Outlet />;
 }
 

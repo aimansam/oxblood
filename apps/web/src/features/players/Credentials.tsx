@@ -34,7 +34,10 @@ export function Credentials({ players, onDone }: { players: CreatedPlayer[]; onD
     <div role="status" aria-label="New player accounts" className="space-y-3 rounded-md border border-success/40 bg-success/10 p-3">
       <div>
         <div className="font-medium text-success">{players.length} account{players.length === 1 ? '' : 's'} created and enrolled</div>
-        <p className="text-xs text-muted-foreground">Passwords are shown only now. Copy or download them before you leave this page.</p>
+        <p className="text-xs text-muted-foreground">
+          Passwords are shown only now. Copy or download them before you leave this page.
+          {players.some((p) => p.must_change_password) && ' Each player is asked to choose their own password the first time they sign in.'}
+        </p>
       </div>
       <div className="overflow-x-auto rounded border border-border bg-card">
         <table className="w-full text-left text-sm">

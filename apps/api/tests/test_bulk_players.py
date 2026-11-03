@@ -84,6 +84,9 @@ def test_names_become_enrolled_accounts_with_one_time_passwords(world):
             team = await db.get(DrillTeam, 1)
             return ok is not None, [p.drill_team_id for p in rows], team.captain_user_id
 
+    assert all(
+        p["must_change_password"] for p in players
+    )  # generated passwords must be replaced at first sign-in
     logged_in, teams, captain = run(check())
     assert logged_in and teams == [1, 1, 1]
     assert captain is not None  # the first member is elected captain

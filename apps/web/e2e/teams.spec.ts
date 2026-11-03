@@ -86,3 +86,41 @@ test('a missing or malformed token is unavailable', async ({ page }) => {
   await page.goto('/app/join#token=short');
   await expect(page.getByText('Link unavailable')).toBeVisible();
 });
+
+test('a generated password must be replaced at first sign-in', async ({ page, request }) => {
+  const id = await createDrill(request, uniqueName('E2E first login'), await firstScenarioId(request));
+  const headers = { 'X-Divide-Token': await adminToken(request) };
+  const stamp = Date.now().toString(36);
+  const made = await request.post(`/api/v2/drills/${id}/participants/bulk`, { headers, data: { names: [`Pat ${stamp}`], side: 'red' } });
+  expect(made.ok()).toBeTruthy();
+  const { username, password } = (await made.json()).players[0];
+
+  await page.goto('/app/login');
+  await page.getByLabel('Username').fill(username);
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/app\/change-password$/);
+  await expect(page.getByRole('heading', { name: 'Choose your password' })).toBeVisible();
+
+  // There is no way around it: other pages send the player straight back.
+  await page.goto('/app/mission');
+  await expect(page).toHaveURL(/\/app\/change-password$/);
+
+  await page.getByLabel('Current password', { exact: true }).fill(password);
+  await page.getByLabel('New password', { exact: true }).fill('short');
+  await expect(page.getByRole('alert')).toContainText('at least 10 characters');
+  await page.getByLabel('New password', { exact: true }).fill('My-Own-Passw0rd');
+  await page.getByLabel('Repeat the new password').fill('My-Own-Passw0rd');
+  await page.getByLabel('Current password', { exact: true }).fill('not-the-password');
+  await page.getByRole('button', { name: 'Save and continue' }).click();
+  await expect(page.getByRole('alert')).toContainText('current password is not correct');
+  await page.getByLabel('Current password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Save and continue' }).click();
+  await expect(page).toHaveURL(/\/app\/mission$/); // now an ordinary player
+
+  // The handed-out password no longer works; the new one does and needs no further change.
+  expect((await request.post('/api/v1/auth/login', { data: { sub: username, password } })).status()).toBe(401);
+  const again = await (await request.post('/api/v1/auth/login', { data: { sub: username, password: 'My-Own-Passw0rd' } })).json();
+  expect(again.must_change_password).toBe(false);
+  expect(again.role).toBe('red');
+});

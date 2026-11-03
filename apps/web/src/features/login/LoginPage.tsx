@@ -22,7 +22,8 @@ export function LoginPage() {
       const data = unwrap(await api.POST('/api/v1/auth/login', { body: { sub: sub.trim(), password } }));
       setToken(data.token);
       await queryClient.invalidateQueries();
-      navigate('/', { replace: true });
+      // A password someone else generated must be replaced before the account can do anything.
+      navigate(data.must_change_password ? '/change-password' : '/', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message.replace(/^API error: \d+ /, '') : 'Sign-in failed');
     } finally {

@@ -74,7 +74,7 @@ from sqlalchemy import func as sql_func
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import Role, current_token, require_role, sign_token
+from app.core.auth import Role, TokenData, current_token, require_role, sign_token
 from app.core.config import settings
 from app.db import models as db_models
 from app.db.session import get_session
@@ -223,6 +223,8 @@ class LoginResponse(BaseModel):
     iat: int
     exp: int
     ttl_remaining_s: int
+    # True when the password was generated for the user: the token is then limited to changing it.
+    must_change_password: bool = False
 
 
 class UserPublic(BaseModel):
@@ -313,8 +315,20 @@ async def login(
     except Exception:  # noqa: BLE001 — best-effort
         await session.rollback()
 
-    token = sign_token(sub=user.sub, role=user.role, ttl_s=_login_token_ttl_s())
     now = int(time.time())
+    if user.must_change_password:
+        # A role that no endpoint accepts: the only thing this token can do is change the password.
+        ttl = _CHANGE_PASSWORD_TTL_S
+        return LoginResponse(
+            token=sign_token(sub=user.sub, role=CHANGE_PASSWORD_ROLE, ttl_s=ttl),
+            sub=user.sub,
+            role=CHANGE_PASSWORD_ROLE,
+            iat=now,
+            exp=now + ttl,
+            ttl_remaining_s=ttl,
+            must_change_password=True,
+        )
+    token = sign_token(sub=user.sub, role=user.role, ttl_s=_login_token_ttl_s())
     return LoginResponse(
         token=token,
         sub=user.sub,
@@ -322,6 +336,57 @@ async def login(
         iat=now,
         exp=now + _login_token_ttl_s(),
         ttl_remaining_s=_login_token_ttl_s(),
+    )
+
+
+# Token role while a generated password is still in force. It matches no ``Role``, so every
+# role-gated endpoint answers 403 and every enrolment check fails.
+CHANGE_PASSWORD_ROLE = "password_change"
+_CHANGE_PASSWORD_TTL_S = 15 * 60
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=512)
+    new_password: str = Field(min_length=10, max_length=512)
+
+
+@router.post(
+    "/change-password",
+    summary="Change your own password (required at first sign-in for generated passwords)",
+)
+async def change_password(
+    body: ChangePasswordRequest,
+    token: Annotated[TokenData, Depends(current_token)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> LoginResponse:
+    """Verify the current password, set the new one, and return a normal token for the account."""
+    if token is None:
+        raise HTTPException(status_code=401, detail="authentication required")
+    sub = token.sub
+    await _check_login_limit_no_increment(sub)
+    user = await authenticate(session, sub=sub, password=body.current_password)
+    if user is None:
+        await _increment_login_limit(sub)
+        # 400, not 401: the client treats a 401 as an expired session and signs the user out.
+        raise HTTPException(status_code=400, detail="the current password is not correct")
+    if body.new_password == body.current_password:
+        raise HTTPException(
+            status_code=422, detail="Choose a password different from the current one."
+        )
+    if body.new_password.lower() == user.sub.lower():
+        raise HTTPException(status_code=422, detail="The password cannot be the username.")
+    await set_password(session, user=user, new_password=body.new_password)
+    user.must_change_password = False
+    await session.commit()
+    now = int(time.time())
+    ttl = _login_token_ttl_s()
+    return LoginResponse(
+        token=sign_token(sub=user.sub, role=user.role, ttl_s=ttl),
+        sub=user.sub,
+        role=user.role,
+        iat=now,
+        exp=now + ttl,
+        ttl_remaining_s=ttl,
     )
 
 

@@ -17,6 +17,7 @@ import { ThreatMapPage } from '@/features/threat-map/ThreatMapView';
 import { WizardProvider } from '@/features/wizard/WizardProvider';
 import { OverviewPage } from '@/features/overview/OverviewPage';
 import { OrganizationDetail } from '@/features/scenarios/OrganizationDetail';
+import { ChangePasswordPage } from '@/features/login/ChangePasswordPage';
 import { OrganizationsPage } from '@/features/scenarios/OrganizationsPage';
 
 export function App() {
@@ -24,6 +25,7 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/join" element={<JoinPage />} />
+      <Route path="/change-password" element={<ChangePasswordPage />} />
       <Route element={<RequireAuth />}>
         <Route path="live/:id" element={<ThreatMapPage />} />
         <Route element={<RequireParticipant />}>

@@ -203,12 +203,14 @@ async def _enroll_new(
     team: DrillTeam | None,
     taken: set[str],
     actor: str,
+    must_change_password: bool = True,
 ) -> dict:
     """Create one account for this exercise (marked, so it is destroyed after cleanup) and enroll it."""
     username = _username(name, taken)
     password = "".join(secrets.choice(_PASSWORD_ALPHABET) for _ in range(12))
     user = await create_user(db, sub=username, password=password, role=side)
     user.created_for_drill_id = drill_id
+    user.must_change_password = must_change_password
     db.add(
         DrillParticipant(
             drill_id=drill_id,
@@ -234,6 +236,7 @@ async def _enroll_new(
         "password": password,
         "role": side,
         "team_id": team.id if team else None,
+        "must_change_password": must_change_password,
     }
 
 
@@ -263,8 +266,8 @@ async def post_test_players(
         rows = await db.execute(select(User.sub).where(User.sub.like(f"{base}%")))
         taken.update(sub.lower() for sub in rows.scalars())
     created = [
-        await _enroll_new(db, drill_id, f"test red {tag}", "red", None, taken, token.sub),
-        await _enroll_new(db, drill_id, f"test blue {tag}", "blue", None, taken, token.sub),
+        await _enroll_new(db, drill_id, f"test red {tag}", "red", None, taken, token.sub, False),
+        await _enroll_new(db, drill_id, f"test blue {tag}", "blue", None, taken, token.sub, False),
     ]
     await db.commit()
     return {"players": created}

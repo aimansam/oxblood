@@ -20,7 +20,9 @@ team attacks once and defends once; points from all rounds are added up.
      picks a username and password, and lands in that team. A used-up link disappears from the list.
    - **Paste names** (admins): one name per line, pick a team; each gets an account with a generated
      password, enrolled at once. Copy the sheet or download the CSV before leaving the page, because the
-     passwords are not shown again.
+     passwords are not shown again. Hand each player their username and password. **The first time they
+     sign in they must choose their own password** (at least 10 characters, not their username); until
+     they do, nothing else in the app is available to them.
    - **Test players** (admins): one Red and one Blue test account for a dry run.
    Existing accounts can still be added from the team cards.
 3. **Competition → Rounds**: *Plan 2 rounds*. Round 1 has the first half of the teams as red and the
@@ -62,6 +64,14 @@ worked, so a flag whose planting failed keeps its old value (the card then offer
 Flags with no machine, or drills with no prepared range, are left alone. Run **Reset range** before the
 round: a reset rolls the machines back to their baseline, which holds the scenario's original files.
 A player who submits a previous round's value is told it is from an earlier round.
+
+## First sign-in with a handed-out password
+A password generated for a player (paste names) is temporary. Signing in with it gives a token that can
+only change the password (15 minutes, no access to any exercise data); the web app shows *Choose your
+password* and nothing else until it is done. Then the player gets a normal session, and the handed-out
+password stops working. Test players keep the password you were shown, since they are throwaway, and
+invitation links let the player choose a password from the start. A wrong current password answers 400
+(not 401, which the app reads as an expired session).
 
 ## Accounts are destroyed after cleanup
 Accounts created *for an exercise* (invite link, pasted names, test players) are marked with it. When the

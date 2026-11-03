@@ -174,6 +174,9 @@ def test_test_players_are_two_marked_accounts_that_the_cleanup_removes(world):
     res = client.post("/api/v2/drills/1/participants/test", headers=admin())
     assert res.status_code == 201, res.text
     players = res.json()["players"]
+    assert not any(
+        p["must_change_password"] for p in players
+    )  # throwaway accounts keep their handed-out password
     assert [p["role"] for p in players] == ["red", "blue"] and all(
         p["username"].startswith("test.") for p in players
     )

@@ -13,6 +13,8 @@ export interface CreatedPlayer {
   password: string;
   role: 'red' | 'blue';
   team_id: number | null;
+  /** The generated password must be replaced at first sign-in. */
+  must_change_password?: boolean;
 }
 
 export const participantName = (p: Participant) => p.username || p.sub || `User ${p.user_id}`;

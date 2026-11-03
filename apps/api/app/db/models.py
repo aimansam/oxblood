@@ -32,6 +32,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy import false as sa_false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, TimestampMixin
@@ -476,6 +477,10 @@ class User(Base, TimestampMixin):
     # it is destroyed when that exercise's range is cleaned up. No foreign key on purpose, so the
     # exercise can go first without cascading into the account.
     created_for_drill_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    # The password was generated and handed out by an operator: the first sign-in must replace it.
+    must_change_password: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_false()
+    )
     disabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
