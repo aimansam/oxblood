@@ -472,6 +472,10 @@ class User(Base, TimestampMixin):
     # ``POST /auth/login``; their existing tokens still verify
     # until ``exp`` (consistent with the rest of the auth model —
     # no revocation list yet).
+    # Set when the account was created for one exercise (invite link, pasted names, test players):
+    # it is destroyed when that exercise's range is cleaned up. No foreign key on purpose, so the
+    # exercise can go first without cascading into the account.
+    created_for_drill_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     disabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )

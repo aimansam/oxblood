@@ -1439,3 +1439,41 @@ def test_v2_refused_preflight_does_not_keep_the_environment_locked(sessionmaker,
     assert first["provision_status"] == "failed" and "15.5 GiB" in first["provision_error"]
     assert first["cleanup_status"] == "stopped"  # nothing was built, nothing to clean up
     assert again.status_code == 200, again.text  # the environment is free for the next drill
+
+
+def test_v2_cleanup_of_a_finished_exercise_destroys_its_accounts_but_a_retry_does_not(
+    sessionmaker, monkeypatch
+):
+    async def _case():
+        async with sessionmaker() as session:
+            finished = await create_drill(session, title="Finished")
+            retried = await create_drill(session, title="Retried")
+            finished.status = m.DrillStatus.CANCELLED
+            for drill, sub in ((finished, "temp.finished"), (retried, "temp.retried")):
+                user = auth_models.User(
+                    sub=sub, password_hash="x", role="red", created_for_drill_id=drill.id
+                )
+                session.add(user)
+                await session.flush()
+                session.add(
+                    m.DrillParticipant(
+                        drill_id=drill.id, user_id=user.id, role="red", status="registered"
+                    )
+                )
+            await session.commit()
+
+            class FakeRunner:
+                async def stop_run(self, *args, **kwargs):
+                    return None
+
+            from app.routers import drills_v2
+
+            _patch(monkeypatch, "_get_runner", lambda: FakeRunner())
+            _patch(monkeypatch, "get_sessionmaker", lambda: sessionmaker)
+            assert await drills_v2._stop_drill_provision_run(session, finished) == "stopped"
+            # A failed prepare that is retried cleans up the old run, but the exercise goes on.
+            assert await drills_v2._stop_drill_provision_run(session, retried) == "stopped"
+            subs = set((await session.execute(select(auth_models.User.sub))).scalars())
+            assert subs == {"temp.retried"}
+
+    _run(_case())

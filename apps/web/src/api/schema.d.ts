@@ -1900,6 +1900,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/drills/{drill_id}/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Keep Accounts
+         * @description Keep (or destroy, the default) the accounts created for this exercise after its range is cleaned up.
+         */
+        put: operations["put_keep_accounts_api_v2_drills__drill_id__accounts_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/drills/{drill_id}/accounts/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Purge Accounts
+         * @description Destroy this exercise's temporary accounts now. Only once the exercise is over and cleaned up.
+         */
+        post: operations["post_purge_accounts_api_v2_drills__drill_id__accounts_purge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/drills/{drill_id}/announcements": {
         parameters: {
             query?: never;
@@ -2003,6 +2043,29 @@ export interface paths {
          * @description Delete a Drill flag.
          */
         delete: operations["remove_flag_api_v2_drills__drill_id__flags__flag_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/drills/{drill_id}/format": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Format
+         * @description Choose how the exercise is played, in one step and before the range is prepared.
+         *
+         *     ``free``: Red against Blue on one shared range. ``team``: named teams, a round schedule and the
+         *     range layout (one shared range, or one copy per match). Idempotent until the range exists.
+         */
+        put: operations["put_format_api_v2_drills__drill_id__format_put"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2185,6 +2248,26 @@ export interface paths {
          * @description Create accounts from a pasted list of names and enroll them. Passwords are returned once.
          */
         post: operations["post_participants_bulk_api_v2_drills__drill_id__participants_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/drills/{drill_id}/participants/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Test Players
+         * @description One Red and one Blue throwaway account for a dry run. They are destroyed after cleanup.
+         */
+        post: operations["post_test_players_api_v2_drills__drill_id__participants_test_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3780,6 +3863,36 @@ export interface components {
              */
             ok: boolean;
         };
+        /** FormatBody */
+        FormatBody: {
+            /**
+             * Keep Accounts
+             * @default false
+             */
+            keep_accounts: boolean;
+            /**
+             * Layout
+             * @default shared
+             * @enum {string}
+             */
+            layout: "shared" | "separate";
+            /**
+             * Mode
+             * @default free
+             * @enum {string}
+             */
+            mode: "free" | "team";
+            /**
+             * Rounds
+             * @default 2
+             */
+            rounds: number;
+            /**
+             * Teams
+             * @default 4
+             */
+            teams: number;
+        };
         /** FreezeUpdate */
         FreezeUpdate: {
             /** Freeze At */
@@ -3867,6 +3980,11 @@ export interface components {
             reset_token: string;
             /** Sub */
             sub: string;
+        };
+        /** KeepAccounts */
+        KeepAccounts: {
+            /** Keep */
+            keep: boolean;
         };
         /** LeaderboardEntryOut */
         LeaderboardEntryOut: {
@@ -4478,6 +4596,10 @@ export interface components {
              * @default []
              */
             checks: components["schemas"]["PreflightCheckOut"][];
+            /** Copies Note */
+            copies_note?: string | null;
+            /** Copies Supported */
+            copies_supported?: boolean | null;
             /** Node */
             node?: string | null;
             /** Ready */
@@ -7768,6 +7890,76 @@ export interface operations {
             };
         };
     };
+    put_keep_accounts_api_v2_drills__drill_id__accounts_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Divide-Token"?: string | null;
+            };
+            path: {
+                drill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KeepAccounts"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_purge_accounts_api_v2_drills__drill_id__accounts_purge_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Divide-Token"?: string | null;
+            };
+            path: {
+                drill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_announcements_api_v2_drills__drill_id__announcements_get: {
         parameters: {
             query?: never;
@@ -7974,6 +8166,43 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_format_api_v2_drills__drill_id__format_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Divide-Token"?: string | null;
+            };
+            path: {
+                drill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FormatBody"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -8394,6 +8623,39 @@ export interface operations {
                 "application/json": components["schemas"]["BulkPlayers"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_test_players_api_v2_drills__drill_id__participants_test_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Divide-Token"?: string | null;
+            };
+            path: {
+                drill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             201: {

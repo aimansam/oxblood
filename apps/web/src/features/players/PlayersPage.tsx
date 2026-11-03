@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/field';
 import { Skeleton } from '@/components/ui/skeleton';
 import { competitionApi, useTeams } from '../competition/api';
 import { useRoster } from '../teams/api';
+import { AccountsNotice } from './AccountsNotice';
 import { AddPlayers, type TeamTarget } from './AddPlayers';
 import { Progress } from './Progress';
 import { SideRoster } from './SideRoster';
@@ -73,6 +74,8 @@ export function PlayersPage() {
         blue={sideOf('blue')}
         teams={teamList.map((t) => ({ id: t.id, name: t.name, color: t.color, members: t.member_count }))}
       />
+
+      <AccountsNotice drillId={drillId} status={selected.status} env={(selected.environment_config ?? {}) as Record<string, unknown>} isAdmin={String(me.data?.role).toLowerCase() === 'admin'} />
 
       {scheduled ? (
         <AddPlayers

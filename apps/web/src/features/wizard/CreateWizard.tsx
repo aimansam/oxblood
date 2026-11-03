@@ -14,11 +14,14 @@ import { Field, Select, Textarea } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { defaultDrillTitle, initials, organization, scenarioName, summary, summaryStats } from '../scenarios/helpers';
+import { DEFAULT_FORMAT, type Format, copiesOf, memoryEstimate, useScenarioPreflight } from './format';
 import { MAX_PARTICIPANTS, validateDetails } from './readiness';
+import { ProvisionPlayers } from './ProvisionPlayers';
 import { provisionPhase } from './provision';
 import { useReadiness } from './useReadiness';
 
-const STEPS = ['Catalog', 'Details', 'Setup', 'Provision'] as const;
+const STEPS = ['Catalog', 'Details', 'Format', 'Setup', 'Provision'] as const;
+const LAST_FORM_STEP = 4; // Setup; the Provision step (5) is a progress screen
 
 interface Props {
   open: boolean;
@@ -34,7 +37,9 @@ export function CreateWizard({ open, initialScenarioId, onOpenChange }: Props) {
 
   const [step, setStep] = useState(initialScenarioId ? 2 : 1);
   const [scenarioId, setScenarioId] = useState<number | null>(initialScenarioId);
-  const [rest, setRest] = useState({ description: '', type: 'individual', duration: '60', maxParticipants: '10' });
+  const [rest, setRest] = useState({ description: '', duration: '60', maxParticipants: '10' });
+  const [format, setFormat] = useState<Format>(DEFAULT_FORMAT);
+  const [formatApplied, setFormatApplied] = useState(false);
   // null until the user types a title; then the scenario's default title is shown instead.
   const [titleOverride, setTitleOverride] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -43,14 +48,15 @@ export function CreateWizard({ open, initialScenarioId, onOpenChange }: Props) {
   const [confirming, setConfirming] = useState<null | 'schedule' | 'prepare'>(null);
 
   const scenario: Scenario | undefined = scenarios.find((s) => s.id === scenarioId);
-  const fields = { ...rest, title: titleOverride ?? (scenario ? defaultDrillTitle(scenario) : '') };
+  const fields = { ...rest, type: format.mode === 'team' ? 'team' : 'individual', title: titleOverride ?? (scenario ? defaultDrillTitle(scenario) : '') };
+  const preflight = useScenarioPreflight(scenarioId, open && step >= 3);
   const errors = validateDetails(fields);
-  const readiness = useReadiness(scenario, open && step === 3);
+  const readiness = useReadiness(scenario, open && step === 4);
 
   // Provisioning progress: poll until the backend reports a terminal state.
   const status = useQuery<DrillStatus>({
     queryKey: ['drill-status', createdId],
-    enabled: open && step === 4 && createdId !== null && startedAt !== null,
+    enabled: open && step === 5 && createdId !== null && startedAt !== null,
     queryFn: () => drillsApi.status(createdId as number),
     refetchInterval: (q) => (provisionPhase(q.state.data).terminal ? false : 3000),
   });
@@ -59,12 +65,13 @@ export function CreateWizard({ open, initialScenarioId, onOpenChange }: Props) {
     if (phase.terminal) void queryClient.invalidateQueries({ queryKey: ['drills'] });
   }, [phase.terminal, queryClient]);
 
-  const setField = (key: keyof typeof fields, value: string) => (key === 'title' ? setTitleOverride(value) : setRest((f) => ({ ...f, [key]: value })));
+  const setField = (key: 'title' | 'description' | 'duration' | 'maxParticipants', value: string) => (key === 'title' ? setTitleOverride(value) : setRest((f) => ({ ...f, [key]: value })));
 
   const next = () => {
     if (step === 1 && !scenarioId) return toast.error('Choose a scenario first');
     if (step === 2 && Object.keys(errors).length) return toast.error(Object.values(errors)[0]);
-    setStep((s) => Math.min(3, s + 1));
+    if (step === 3 && format.layout === 'separate' && preflight.data?.copies_supported === false) return toast.error('This scenario cannot run one range per match. Choose a shared range.');
+    setStep((s) => Math.min(LAST_FORM_STEP, s + 1));
   };
 
   const createDrill = async (): Promise<number | null> => {
@@ -92,19 +99,34 @@ export function CreateWizard({ open, initialScenarioId, onOpenChange }: Props) {
     return created.drill_id;
   };
 
+  // Teams, rounds, the range layout and what happens to the accounts, in one idempotent call that has
+  // to land before the range is prepared: the layout cannot change once a range exists.
+  const applyFormat = async (id: number) => {
+    if (formatApplied) return;
+    await http.put(`/api/v2/drills/${id}/format`, {
+      mode: format.mode,
+      teams: format.teams,
+      rounds: format.rounds,
+      layout: format.layout,
+      keep_accounts: !format.destroyAccounts,
+    });
+    setFormatApplied(true);
+  };
+
   const run = async (mode: 'schedule' | 'prepare') => {
     setConfirming(null);
     setBusy(true);
     try {
       const id = await createDrill();
       if (!id) return;
+      await applyFormat(id);
       if (mode === 'schedule') {
         toast.success('Exercise created and scheduled');
         onOpenChange(false);
         navigate(`/exercises?drill=${id}`);
         return;
       }
-      setStep(4);
+      setStep(5);
       setStartedAt(Date.now());
       const result = await drillsApi.prepare(id);
       if (result.provision_status === 'failed') toast.error('Provisioning failed to start');
@@ -163,7 +185,7 @@ export function CreateWizard({ open, initialScenarioId, onOpenChange }: Props) {
                 return (
                   <li key={label} className="flex-1">
                     <button
-                      disabled={busy || step === 4 || n > Math.max(step, 1) || (n >= 3 && !scenarioId)}
+                      disabled={busy || step === 5 || n > Math.max(step, 1) || (n >= 3 && !scenarioId)}
                       onClick={() => setStep(n)}
                       aria-current={state === 'current' ? 'step' : undefined}
                       className={cn(
@@ -190,25 +212,39 @@ export function CreateWizard({ open, initialScenarioId, onOpenChange }: Props) {
                 onChange={setField}
               />
             )}
-            {step === 3 && <SetupStep scenario={scenario} readiness={readiness} busy={busy} onBridges={bridges} />}
-            {step === 4 && <ProvisionStep phase={phase} assets={status.data?.provision?.assets ?? []} />}
+            {step === 3 && (
+              <FormatStep
+                format={format}
+                onChange={(patch) => setFormat((f) => ({ ...f, ...patch }))}
+                maxParticipants={Number(rest.maxParticipants) || 0}
+                preflight={preflight.data}
+                loading={preflight.isLoading}
+              />
+            )}
+            {step === 4 && <SetupStep scenario={scenario} readiness={readiness} busy={busy} onBridges={bridges} />}
+            {step === 5 && (
+              <>
+                <ProvisionStep phase={phase} assets={status.data?.provision?.assets ?? []} />
+                {createdId && <ProvisionPlayers drillId={createdId} maxParticipants={Number(rest.maxParticipants) || 10} destroyAccounts={format.destroyAccounts} />}
+              </>
+            )}
           </DialogBody>
 
           <DialogFooter className="justify-between">
             <div>
-              {step > 1 && step < 4 && (
+              {step > 1 && step < 5 && (
                 <Button variant="outline" disabled={busy} onClick={() => setStep((s) => s - 1)}>
                   <ChevronLeft className="h-4 w-4" /> Back
                 </Button>
               )}
             </div>
             <div className="flex items-center gap-2">
-              {step < 3 && (
+              {step < 4 && (
                 <Button onClick={next} disabled={busy || (step === 1 && !scenarioId)}>
                   Next <ChevronRight className="h-4 w-4" />
                 </Button>
               )}
-              {step === 3 && (
+              {step === 4 && (
                 <>
                   <Button variant="outline" disabled={busy || readiness.isFetching || !scenarioId} onClick={() => request('schedule')}>
                     Create scheduled
@@ -218,12 +254,12 @@ export function CreateWizard({ open, initialScenarioId, onOpenChange }: Props) {
                   </Button>
                 </>
               )}
-              {step === 4 && phase.failed && (
+              {step === 5 && phase.failed && (
                 <Button variant="outline" disabled={busy} onClick={retry}>
                   Retry
                 </Button>
               )}
-              {step === 4 && (
+              {step === 5 && (
                 <>
                   <Button
                     variant="outline"
@@ -304,7 +340,7 @@ function DetailsStep({
   scenario: Scenario | undefined;
   fields: { title: string; description: string; type: string; duration: string; maxParticipants: string };
   errors: Record<string, string>;
-  onChange: (key: 'title' | 'description' | 'type' | 'duration' | 'maxParticipants', value: string) => void;
+  onChange: (key: 'title' | 'description' | 'duration' | 'maxParticipants', value: string) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -321,12 +357,6 @@ function DetailsStep({
         <Field label="Title" error={errors.title}>
           <Input value={fields.title} onChange={(e) => onChange('title', e.target.value)} />
         </Field>
-        <Field label="Type">
-          <Select value={fields.type} onChange={(e) => onChange('type', e.target.value)}>
-            <option value="individual">Individual</option>
-            <option value="team">Team</option>
-          </Select>
-        </Field>
         <Field label="Duration (minutes)" error={errors.duration}>
           <Input type="number" min={1} value={fields.duration} onChange={(e) => onChange('duration', e.target.value)} />
         </Field>
@@ -337,6 +367,106 @@ function DetailsStep({
           <Textarea value={fields.description} onChange={(e) => onChange('description', e.target.value)} />
         </Field>
       </div>
+    </div>
+  );
+}
+
+function FormatStep({
+  format,
+  onChange,
+  maxParticipants,
+  preflight,
+  loading,
+}: {
+  format: Format;
+  onChange: (patch: Partial<Format>) => void;
+  maxParticipants: number;
+  preflight: { checks?: { id?: string | null; [k: string]: unknown }[]; copies_supported?: boolean | null; copies_note?: string | null } | undefined;
+  loading: boolean;
+}) {
+  const copies = copiesOf(format);
+  const memory = memoryEstimate(preflight?.checks, copies);
+  const canCopy = preflight?.copies_supported !== false;
+  const choice = (mode: Format['mode'], title: string, body: string) => (
+    <button
+      type="button"
+      aria-pressed={format.mode === mode}
+      onClick={() => onChange({ mode, layout: mode === 'free' ? 'shared' : format.layout })}
+      className={cn('flex-1 rounded-lg border p-4 text-left transition-colors', format.mode === mode ? 'border-primary bg-muted' : 'border-border hover:bg-muted')}
+    >
+      <div className="font-semibold">{title}</div>
+      <p className="mt-1 text-xs text-muted-foreground">{body}</p>
+    </button>
+  );
+  return (
+    <div className="space-y-5">
+      <div role="group" aria-label="Play mode" className="flex flex-col gap-3 sm:flex-row">
+        {choice('free', 'Free play', 'Red and Blue players on one shared range. The simplest setup.')}
+        {choice('team', 'Team competition', 'Named teams, a round schedule with the sides swapped, and a scoreboard.')}
+      </div>
+
+      {format.mode === 'team' && (
+        <div className="space-y-4 rounded-lg border border-border p-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Teams" hint={maxParticipants ? `About ${Math.ceil(maxParticipants / format.teams)} players each` : undefined}>
+              <Select value={format.teams} onChange={(e) => { const teams = Number(e.target.value); onChange({ teams, layout: teams < 4 ? 'shared' : format.layout }); }}>
+                {[2, 4, 6].map((n) => (
+                  <option key={n} value={n}>
+                    {n} teams
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Rounds">
+              <Select value={format.rounds} onChange={(e) => onChange({ rounds: Number(e.target.value) })}>
+                <option value={1}>1 round</option>
+                <option value={2}>2 rounds, sides swapped</option>
+              </Select>
+            </Field>
+          </div>
+          <Field label="Range layout">
+            <Select value={format.layout} onChange={(e) => onChange({ layout: e.target.value as Format['layout'] })} aria-label="Range layout">
+              <option value="shared">One shared range</option>
+              <option value="separate" disabled={format.teams < 4 || !canCopy}>
+                One range per match{format.teams < 4 ? ' (needs 4 or 6 teams)' : !canCopy ? ' (not possible for this scenario)' : ''}
+              </option>
+            </Select>
+          </Field>
+          {!canCopy && preflight?.copies_note && (
+            <p role="alert" className="text-xs text-warning">
+              {preflight.copies_note}
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            {format.layout === 'separate'
+              ? 'Each pair of teams plays on its own copy of the range, so one team cannot see or reuse another match\'s flags.'
+              : 'All teams attack and defend the same machines.'}
+          </p>
+        </div>
+      )}
+
+      <div aria-live="polite" className="text-sm">
+        {loading ? (
+          <span className="text-muted-foreground">Checking what the range needs…</span>
+        ) : memory ? (
+          <span className={memory.fits === false ? 'text-danger' : 'text-muted-foreground'}>
+            Memory: {memory.copies > 1 ? `${memory.copies} ranges × ${memory.perCopyGiB.toFixed(1)} GiB = ` : ''}
+            <b>{memory.totalGiB.toFixed(1)} GiB</b>
+            {memory.availableGiB != null ? ` of ${memory.availableGiB.toFixed(1)} GiB available` : ''}
+            {memory.fits === false ? '. This will not fit; choose a shared range or fewer teams.' : ''}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">The node's free memory could not be read; Prepare checks it again.</span>
+        )}
+      </div>
+
+      <label className="flex items-start gap-2 text-sm">
+        <input type="checkbox" className="mt-1" checked={format.destroyAccounts} onChange={(e) => onChange({ destroyAccounts: e.target.checked })} />
+        <span>
+          <b className="font-medium">Destroy the accounts made for this exercise</b> when its range is cleaned up
+          <span className="block text-xs text-muted-foreground">Applies to invite links, pasted names and test players. A final roster with each player's points is kept; accounts you pick from the existing list are never removed.</span>
+        </span>
+      </label>
     </div>
   );
 }

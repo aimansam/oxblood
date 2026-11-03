@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import Role, TokenData, current_token, require_role
 from app.db.models import User
-from app.db.models_drill import DrillParticipant, DrillRound, DrillTeam
+from app.db.models_drill import DrillParticipant, DrillRound, DrillStatus, DrillTeam
 from app.db.session import get_session
 from app.modules.drills.lifecycle import provision_run_id
 from app.services import matches
@@ -205,6 +207,74 @@ async def put_match_mode(
     drill.environment_config = env
     await db.commit()
     return {"mode": body.mode, "matches": matches.match_count(teams) if teams else 1}
+
+
+class FormatBody(BaseModel):
+    mode: Literal["free", "team"] = "free"
+    teams: int = Field(default=4, ge=2, le=6)
+    rounds: int = Field(default=2, ge=1, le=6)
+    layout: Literal["shared", "separate"] = "shared"
+    # Keep the accounts created for this exercise after its range is cleaned up (default: destroy them).
+    keep_accounts: bool = False
+
+
+@router.put("/{drill_id}/format")
+async def put_format(
+    drill_id: int,
+    body: FormatBody,
+    db: AsyncSession = Depends(get_session),
+    token: TokenData = Depends(require_role(*_OPERATORS)),
+):
+    """Choose how the exercise is played, in one step and before the range is prepared.
+
+    ``free``: Red against Blue on one shared range. ``team``: named teams, a round schedule and the
+    range layout (one shared range, or one copy per match). Idempotent until the range exists.
+    """
+    drill = await _drill_or_404(db, drill_id)
+    if drill.status != DrillStatus.SCHEDULED:
+        raise HTTPException(
+            status_code=409, detail="The format is fixed once the exercise has started."
+        )
+    if matches.run_ids(drill):
+        raise HTTPException(
+            status_code=409,
+            detail="A range is already prepared. Stop the exercise to change its format.",
+        )
+    if body.mode == "team":
+        if body.teams % 2:
+            raise HTTPException(
+                status_code=422,
+                detail="A swap competition needs an even number of teams (2, 4 or 6).",
+            )
+        if body.layout == "separate" and body.teams < 4:
+            raise HTTPException(status_code=422, detail="One range per match needs 4 or 6 teams.")
+    elif body.layout == "separate":
+        raise HTTPException(status_code=422, detail="Free play uses one shared range.")
+    teams: list[DrillTeam] = []
+    try:
+        if body.mode == "team":
+            teams = await svc.ensure_teams(db, drill_id, body.teams)
+            await svc.plan_rounds(db, drill_id, body.rounds)
+    except svc.TeamError as exc:
+        raise _fail(exc) from exc
+    drill = await _drill_or_404(db, drill_id)
+    env = dict(drill.environment_config or {})
+    env[matches.MODE_KEY] = body.layout
+    if body.keep_accounts:
+        env["keep_accounts"] = True
+    else:
+        env.pop("keep_accounts", None)
+    drill.environment_config = env
+    drill.drill_type = "team" if body.mode == "team" else "individual"
+    await db.commit()
+    return {
+        "mode": body.mode,
+        "teams": len(teams),
+        "rounds": body.rounds if body.mode == "team" else 0,
+        "layout": body.layout,
+        "matches": matches.match_count(teams) if teams and body.layout == "separate" else 1,
+        "keep_accounts": body.keep_accounts,
+    }
 
 
 @router.put("/{drill_id}/teams/{team_id}/captain")

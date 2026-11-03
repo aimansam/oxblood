@@ -221,6 +221,9 @@ class ScenarioPreflightOut(BaseModel):
     node: str | None = None
     checks: list[PreflightCheckOut] = []
     checked_at: str | None = None
+    # Can a second copy of this range run beside the first (needed for one range per match)?
+    copies_supported: bool | None = None
+    copies_note: str | None = None
 
 
 class EnvironmentLockOut(BaseModel):

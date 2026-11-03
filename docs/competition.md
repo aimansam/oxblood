@@ -4,12 +4,20 @@ A drill can hold up to **20 players in 2, 4 or 6 teams**. Teams swap sides betwe
 team attacks once and defends once; points from all rounds are added up.
 
 ## Before the event
-1. Create the exercise from an organization (Organizations → Create exercise).
-2. **Players**: open the exercise and *Create teams* (4 is typical). The progress bar shows how many seats
-   are filled and what Start still needs. Then add people (*Add players*):
-   - **Invite link**: pick a team, set the seats (a team link serves several people, one link for the
-     whole team) and how long it is valid. Each person opens the link, picks a username and password,
-     and lands in that team. A used-up link disappears from the list.
+1. **Create the exercise** from an organization (Organizations → Create exercise). The wizard's
+   **Format** step decides how it is played, before anything is built:
+   - **Free play**: Red and Blue on one shared range.
+   - **Team competition**: 2, 4 or 6 teams, 1 or 2 rounds (sides swapped), and the range layout: one
+     shared range, or one copy per match. The step shows the memory the choice needs against what the
+     node has free (the same check Prepare uses) and refuses *one range per match* for a scenario whose
+     router cannot make copies. The layout cannot change once a range exists.
+   Teams and rounds are created in the same step, so there is nothing to set up by hand afterwards.
+2. **Add players while the range builds.** The Provision step shows the build progress and, beside it,
+   the same *Add players* tools as the **Players** page: *Create one link for every team* (one link per
+   team, seats from the roster size), *Paste names* and *Test players*. You can also do this later on the
+   Players page, which shows how many seats are filled and what Start still needs.
+   - **Invite link**: pick a team, set the seats and how long it is valid. Each person opens the link,
+     picks a username and password, and lands in that team. A used-up link disappears from the list.
    - **Paste names** (admins): one name per line, pick a team; each gets an account with a generated
      password, enrolled at once. Copy the sheet or download the CSV before leaving the page, because the
      passwords are not shown again.
@@ -54,6 +62,21 @@ worked, so a flag whose planting failed keeps its old value (the card then offer
 Flags with no machine, or drills with no prepared range, are left alone. Run **Reset range** before the
 round: a reset rolls the machines back to their baseline, which holds the scenario's original files.
 A player who submits a previous round's value is told it is from an earlier round.
+
+## Accounts are destroyed after cleanup
+Accounts created *for an exercise* (invite link, pasted names, test players) are marked with it. When the
+exercise is stopped or cancelled and its range is cleaned up, they are **destroyed**, unless you untick
+*Destroy the accounts made for this exercise* (in the wizard's Format step, or on the Players page).
+
+- Accounts picked from the existing list are never removed, nor any account enrolled in another live
+  exercise.
+- Deleting an account also deletes that player's own submissions and scores. The team ledger keeps its
+  points (only the link to the player is cleared), and a **final roster** (username, side, team, points)
+  is saved on the exercise first and shown on the Players page.
+- A failed prepare that is retried does not remove anything: the exercise goes on.
+- An admin can destroy the accounts of a finished exercise by hand (*Destroy the accounts now*).
+- Sessions already issued stay valid until they expire (8 hours) but lose access to the exercise, since
+  the enrolment is gone.
 
 ## Captains
 Each team has one captain: the first player added is elected automatically, and a referee can change

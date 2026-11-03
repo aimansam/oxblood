@@ -21,6 +21,7 @@ from app.db.models_drill import (
 )
 from app.db.session import get_session
 from app.services import teams as team_service
+from app.services.account_cleanup import KEEP_KEY, exercise_accounts, purge_exercise_accounts
 from app.services.drill_service import (
     add_participant,
     create_announcement,
@@ -194,6 +195,133 @@ def _username(name: str, taken: set[str]) -> str:
     return candidate
 
 
+async def _enroll_new(
+    db: AsyncSession,
+    drill_id: int,
+    name: str,
+    side: str,
+    team: DrillTeam | None,
+    taken: set[str],
+    actor: str,
+) -> dict:
+    """Create one account for this exercise (marked, so it is destroyed after cleanup) and enroll it."""
+    username = _username(name, taken)
+    password = "".join(secrets.choice(_PASSWORD_ALPHABET) for _ in range(12))
+    user = await create_user(db, sub=username, password=password, role=side)
+    user.created_for_drill_id = drill_id
+    db.add(
+        DrillParticipant(
+            drill_id=drill_id,
+            user_id=user.id,
+            role=side,
+            status="registered",
+            drill_team_id=team.id if team else None,
+        )
+    )
+    db.add(
+        DrillEvent(
+            drill_id=drill_id,
+            kind="roster",
+            title=f"{side.title()} participant created and enrolled",
+            detail=username,
+            side=side,
+            actor=actor,
+        )
+    )
+    return {
+        "name": name,
+        "username": username,
+        "password": password,
+        "role": side,
+        "team_id": team.id if team else None,
+    }
+
+
+@router.post("/{drill_id}/participants/test", status_code=201)
+async def post_test_players(
+    drill_id: int,
+    db: AsyncSession = Depends(get_session),
+    token: TokenData = Depends(require_role(Role.ADMIN)),
+):
+    """One Red and one Blue throwaway account for a dry run. They are destroyed after cleanup."""
+    drill = await get_drill(db, drill_id)
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    if drill.status != DrillStatus.SCHEDULED:
+        raise HTTPException(status_code=409, detail="Roster is locked after the drill starts.")
+    enrolled = int(
+        await db.scalar(
+            select(func.count(DrillParticipant.id)).where(DrillParticipant.drill_id == drill_id)
+        )
+        or 0
+    )
+    if enrolled + 2 > (drill.max_participants or 10):
+        raise HTTPException(status_code=409, detail="Two more players do not fit in this roster.")
+    tag = secrets.token_hex(2)
+    taken: set[str] = set()
+    for base in (f"test-red-{tag}", f"test-blue-{tag}"):
+        rows = await db.execute(select(User.sub).where(User.sub.like(f"{base}%")))
+        taken.update(sub.lower() for sub in rows.scalars())
+    created = [
+        await _enroll_new(db, drill_id, f"test red {tag}", "red", None, taken, token.sub),
+        await _enroll_new(db, drill_id, f"test blue {tag}", "blue", None, taken, token.sub),
+    ]
+    await db.commit()
+    return {"players": created}
+
+
+class KeepAccounts(BaseModel):
+    keep: bool
+
+
+@router.put("/{drill_id}/accounts")
+async def put_keep_accounts(
+    drill_id: int,
+    data: KeepAccounts,
+    db: AsyncSession = Depends(get_session),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+):
+    """Keep (or destroy, the default) the accounts created for this exercise after its range is cleaned up."""
+    drill = await get_drill(db, drill_id)
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    env = dict(drill.environment_config or {})
+    if data.keep:
+        env[KEEP_KEY] = True
+    else:
+        env.pop(KEEP_KEY, None)
+    drill.environment_config = env
+    await db.commit()
+    return {
+        "keep_accounts": bool(data.keep),
+        "temporary_accounts": len(await exercise_accounts(db, drill_id)),
+    }
+
+
+@router.post("/{drill_id}/accounts/purge")
+async def post_purge_accounts(
+    drill_id: int,
+    db: AsyncSession = Depends(get_session),
+    token: TokenData = Depends(require_role(Role.ADMIN)),
+):
+    """Destroy this exercise's temporary accounts now. Only once the exercise is over and cleaned up."""
+    drill = await get_drill(db, drill_id)
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    env = drill.environment_config or {}
+    if (
+        drill.status not in {DrillStatus.COMPLETED, DrillStatus.CANCELLED}
+        or env.get("cleanup_status") == "stopping"
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="The exercise must be finished before its accounts are destroyed.",
+        )
+    if env.get("provision_run_id") and env.get("cleanup_status") != "stopped":
+        raise HTTPException(status_code=409, detail="Finish VM cleanup first.")
+    return {"destroyed": await purge_exercise_accounts(db, drill)}
+
+
 @router.post("/{drill_id}/participants/bulk", status_code=201)
 async def post_participants_bulk(
     drill_id: int,
@@ -231,39 +359,9 @@ async def post_participants_bulk(
     for base in {re.sub(r"[^a-z0-9]+", ".", n.lower()).strip(".")[:24] or "player" for n in names}:
         rows = await db.execute(select(User.sub).where(User.sub.like(f"{base}%")))
         taken.update(sub.lower() for sub in rows.scalars())
-    created = []
-    for name in names:
-        username = _username(name, taken)
-        password = "".join(secrets.choice(_PASSWORD_ALPHABET) for _ in range(12))
-        user = await create_user(db, sub=username, password=password, role=data.side)
-        db.add(
-            DrillParticipant(
-                drill_id=drill_id,
-                user_id=user.id,
-                role=data.side,
-                status="registered",
-                drill_team_id=team.id if team else None,
-            )
-        )
-        db.add(
-            DrillEvent(
-                drill_id=drill_id,
-                kind="roster",
-                title=f"{data.side.title()} participant created and enrolled",
-                detail=username,
-                side=data.side,
-                actor=token.sub,
-            )
-        )
-        created.append(
-            {
-                "name": name,
-                "username": username,
-                "password": password,
-                "role": data.side,
-                "team_id": data.team_id,
-            }
-        )
+    created = [
+        await _enroll_new(db, drill_id, name, data.side, team, taken, token.sub) for name in names
+    ]
     await db.flush()
     if team is not None and await team_service.team_captain(db, team) is None:
         await team_service.elect_captain(db, team)

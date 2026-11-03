@@ -85,6 +85,7 @@ test('the wizard prepares a range and "Open live range" takes the operator into 
   await dialog.getByRole('button', { name: 'Next' }).click();
   await dialog.getByLabel('Title').fill(title);
   await dialog.getByRole('button', { name: 'Next' }).click();
+  await dialog.getByRole('button', { name: 'Next' }).click(); // Format
   await dialog.getByRole('button', { name: 'Prepare range' }).click();
   await page.getByRole('button', { name: /Prepare|Create/ }).last().click(); // "not start-ready, prepare anyway?"
   try {
@@ -126,7 +127,7 @@ test('the exercise card says why Start is refused and can add test players', asy
     await expect(page.getByText('Start needs a Blue player.')).toBeVisible();
     await page.getByRole('tab', { name: 'Test players' }).click();
     await page.getByRole('button', { name: 'Add test players' }).click();
-    await expect(page.getByRole('status', { name: 'New player accounts' }).getByText(/test-blue-/).first()).toBeVisible();
+    await expect(page.getByRole('status', { name: 'New player accounts' }).getByText(/test\.blue\./).first()).toBeVisible();
     await expect(page.getByText('The roster has both sides, so the exercise can start.')).toBeVisible();
     await page.goto(`/app/exercises?drill=${id}`);
     await expect(page.getByText('Start will be refused until:')).toHaveCount(0, { timeout: 15_000 });
@@ -135,4 +136,62 @@ test('the exercise card says why Start is refused and can add test players', asy
   } finally {
     await request.post(`/api/v2/drills/${id}/stop`, { headers });
   }
+});
+
+
+test('a team competition is set up in the wizard, players join while the range builds, and the accounts are destroyed after cleanup', async ({ page, request }) => {
+  test.setTimeout(120_000);
+  const title = uniqueName('Wizard teams');
+  const headers = { 'X-Divide-Token': await adminToken(request) };
+  await signInAsAdmin(page);
+  await page.goto('/app/exercises');
+  await page.getByRole('button', { name: 'New exercise' }).first().click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('option').first().click();
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await dialog.getByLabel('Title').fill(title);
+  await dialog.getByLabel('Max participants').fill('8');
+  await dialog.getByRole('button', { name: 'Next' }).click();
+
+  // Format: a team competition with 4 teams. This scenario's router cannot make copies, so one range per
+  // match is offered but not selectable, with the reason.
+  await dialog.getByRole('button', { name: /Team competition/ }).click();
+  await expect(dialog.getByText('About 2 players each')).toBeVisible(); // 4 teams is the default; 8 seats
+  await expect(dialog.locator('option:disabled')).toContainText('not possible for this scenario');
+  await expect(dialog.getByText(/OPNsense/)).toBeVisible();
+  await expect(dialog.getByText(/Destroy the accounts made for this exercise/)).toBeVisible();
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await dialog.getByRole('button', { name: 'Prepare range' }).click();
+  await page.getByRole('button', { name: /Prepare|Create/ }).last().click();
+
+  // While the range builds: a link for every team, and accounts from pasted names.
+  const players = dialog.getByRole('region', { name: 'Add players while the range builds' });
+  await expect(players).toBeVisible();
+  await expect(dialog.getByText('Provision run #')).toBeVisible({ timeout: 45_000 });
+  await players.getByRole('button', { name: 'Create one link for every team' }).click();
+  await expect(players.getByLabel(/^Link for Alpha/)).toHaveValue(/\/join#token=/);
+  await expect(players.getByRole('list', { name: 'Team links' }).getByRole('listitem')).toHaveCount(4);
+  await players.getByRole('tab', { name: 'Paste names' }).click();
+  const stamp = Date.now().toString(36);
+  await players.getByLabel('Player names').fill(`Zed ${stamp}\nYan ${stamp}`);
+  await players.getByRole('button', { name: 'Create 2 accounts' }).click();
+  await expect(players.getByRole('status', { name: 'New player accounts' }).getByText(`zed.${stamp}`)).toBeVisible();
+  await expect(players.getByText('2 / 8 enrolled')).toBeVisible();
+
+  // The format landed before the range was prepared.
+  const list = await (await request.get('/api/v2/drills', { headers })).json();
+  const drill = list.drills.find((d: { title: string }) => d.title === title);
+  expect(drill.drill_type).toBe('team');
+  expect((await (await request.get(`/api/v2/drills/${drill.id}/teams`, { headers })).json()).teams).toHaveLength(4);
+  expect((await (await request.get(`/api/v2/drills/${drill.id}/rounds`, { headers })).json()).rounds).toHaveLength(2);
+
+  // Cleaning up the range destroys the accounts made for it, and keeps a final roster.
+  const usersBefore = JSON.stringify(await (await request.get('/api/v1/auth/users', { headers })).json());
+  expect(usersBefore).toContain(`zed.${stamp}`);
+  expect((await request.post(`/api/v2/drills/${drill.id}/stop`, { headers })).ok()).toBeTruthy();
+  const usersAfter = JSON.stringify(await (await request.get('/api/v1/auth/users', { headers })).json());
+  expect(usersAfter).not.toContain(`zed.${stamp}`);
+  expect(usersAfter).not.toContain(`yan.${stamp}`);
+  const after = await (await request.get(`/api/v2/drills/${drill.id}`, { headers })).json();
+  expect(after.environment_config.final_roster.map((r: { username: string }) => r.username).sort()).toEqual([`yan.${stamp}`, `zed.${stamp}`]);
 });

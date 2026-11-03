@@ -35,6 +35,7 @@ from app.modules.drills.lock import (
     assert_environment_owner,
     environment_lock_status,
 )
+from app.services.account_cleanup import purge_exercise_accounts
 from app.services.drill_service import (
     cancel_drill,
     create_drill,
@@ -586,4 +587,5 @@ async def delete_drill(
     drill = await cancel_drill(db, drill_id)
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
+    await purge_exercise_accounts(db, drill)  # nothing is left to run: its accounts go with it
     return {"message": "Drill cancelled"}

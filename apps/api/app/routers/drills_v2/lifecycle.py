@@ -30,6 +30,7 @@ from app.modules.drills.lock import (
     set_environment_lock_status,
 )
 from app.runners.runner import RunnerError
+from app.runners.runner_base import instance_spec
 from app.services.drill_service import (
     create_drill,
     get_drill,
@@ -310,11 +311,19 @@ async def scenario_preflight(
         checks = await adapter.preflight(scenario.spec.get("spec") or scenario.spec, node)
     except (ProxmoxAPIError, RunnerError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    spec = scenario.spec.get("spec") or scenario.spec
+    copies_note = None
+    try:
+        instance_spec(spec, 2)  # can a second copy of this range exist beside the first?
+    except RunnerError as exc:
+        copies_note = str(exc)
     return {
         "ready": bool(checks) and all(check["ready"] for check in checks),
         "node": node,
         "checks": checks,
         "checked_at": datetime.now(UTC).isoformat(),
+        "copies_supported": copies_note is None,
+        "copies_note": copies_note,
     }
 
 

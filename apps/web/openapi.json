@@ -1530,6 +1530,49 @@
         "title": "ForgotPasswordResponse",
         "type": "object"
       },
+      "FormatBody": {
+        "properties": {
+          "keep_accounts": {
+            "default": false,
+            "title": "Keep Accounts",
+            "type": "boolean"
+          },
+          "layout": {
+            "default": "shared",
+            "enum": [
+              "shared",
+              "separate"
+            ],
+            "title": "Layout",
+            "type": "string"
+          },
+          "mode": {
+            "default": "free",
+            "enum": [
+              "free",
+              "team"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "rounds": {
+            "default": 2,
+            "maximum": 6.0,
+            "minimum": 1.0,
+            "title": "Rounds",
+            "type": "integer"
+          },
+          "teams": {
+            "default": 4,
+            "maximum": 6.0,
+            "minimum": 2.0,
+            "title": "Teams",
+            "type": "integer"
+          }
+        },
+        "title": "FormatBody",
+        "type": "object"
+      },
       "FreezeUpdate": {
         "properties": {
           "freeze_at": {
@@ -1720,6 +1763,19 @@
           "expires_at"
         ],
         "title": "IssueResetLinkResponse",
+        "type": "object"
+      },
+      "KeepAccounts": {
+        "properties": {
+          "keep": {
+            "title": "Keep",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "keep"
+        ],
+        "title": "KeepAccounts",
         "type": "object"
       },
       "LeaderboardEntryOut": {
@@ -3463,6 +3519,28 @@
             },
             "title": "Checks",
             "type": "array"
+          },
+          "copies_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copies Note"
+          },
+          "copies_supported": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copies Supported"
           },
           "node": {
             "anyOf": [
@@ -9220,6 +9298,130 @@
         ]
       }
     },
+    "/api/v2/drills/{drill_id}/accounts": {
+      "put": {
+        "description": "Keep (or destroy, the default) the accounts created for this exercise after its range is cleaned up.",
+        "operationId": "put_keep_accounts_api_v2_drills__drill_id__accounts_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "drill_id",
+            "required": true,
+            "schema": {
+              "title": "Drill Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Divide-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Divide-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeepAccounts"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Keep Accounts",
+        "tags": [
+          "Drills v2"
+        ]
+      }
+    },
+    "/api/v2/drills/{drill_id}/accounts/purge": {
+      "post": {
+        "description": "Destroy this exercise's temporary accounts now. Only once the exercise is over and cleaned up.",
+        "operationId": "post_purge_accounts_api_v2_drills__drill_id__accounts_purge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "drill_id",
+            "required": true,
+            "schema": {
+              "title": "Drill Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Divide-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Divide-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Purge Accounts",
+        "tags": [
+          "Drills v2"
+        ]
+      }
+    },
     "/api/v2/drills/{drill_id}/announcements": {
       "get": {
         "description": "Get all announcements for a drill.",
@@ -9536,6 +9738,73 @@
           }
         },
         "summary": "Remove Flag",
+        "tags": [
+          "Drills v2"
+        ]
+      }
+    },
+    "/api/v2/drills/{drill_id}/format": {
+      "put": {
+        "description": "Choose how the exercise is played, in one step and before the range is prepared.\n\n``free``: Red against Blue on one shared range. ``team``: named teams, a round schedule and the\nrange layout (one shared range, or one copy per match). Idempotent until the range exists.",
+        "operationId": "put_format_api_v2_drills__drill_id__format_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "drill_id",
+            "required": true,
+            "schema": {
+              "title": "Drill Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Divide-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Divide-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FormatBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Format",
         "tags": [
           "Drills v2"
         ]
@@ -10257,6 +10526,63 @@
           }
         },
         "summary": "Post Participants Bulk",
+        "tags": [
+          "Drills v2"
+        ]
+      }
+    },
+    "/api/v2/drills/{drill_id}/participants/test": {
+      "post": {
+        "description": "One Red and one Blue throwaway account for a dry run. They are destroyed after cleanup.",
+        "operationId": "post_test_players_api_v2_drills__drill_id__participants_test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "drill_id",
+            "required": true,
+            "schema": {
+              "title": "Drill Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Divide-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Divide-Token"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Test Players",
         "tags": [
           "Drills v2"
         ]

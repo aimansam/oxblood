@@ -12,6 +12,7 @@ test('create an exercise from an organization through the wizard', async ({ page
   await expect(dialog.getByText('New exercise')).toBeVisible();
   await dialog.getByLabel('Title').fill(title);
   await dialog.getByRole('button', { name: 'Next' }).click();
+  await dialog.getByRole('button', { name: 'Next' }).click(); // Format: free play is the default
 
   // No Proxmox in the test stack: one clear banner, details collapsed.
   await expect(dialog.getByText('Proxmox is not connected.')).toBeVisible();

@@ -29,6 +29,7 @@ from app.modules.drills.lock import (
 )
 from app.runners.runner import RunnerError, RunRequest
 from app.services import matches
+from app.services.account_cleanup import purge_exercise_accounts
 from app.services.drill_service import (
     get_drill,
 )
@@ -343,6 +344,7 @@ async def _stop_drill_provision_run(db: AsyncSession, drill) -> str | None:
         drill.environment_config = env
         await db.commit()
         await release_environment_lock(db, drill_id=drill.id)
+        await _purge_if_finished(db, drill)
         return "stopped"
 
     all_run_ids = [run_id, *(r for n, r in sorted(matches.run_ids(drill).items()) if r != run_id)]
@@ -438,7 +440,22 @@ async def _stop_drill_provision_run(db: AsyncSession, drill) -> str | None:
     await db.commit()
     await db.refresh(drill)
     await release_environment_lock(db, drill_id=drill.id)
+    await _purge_if_finished(db, drill)
     return "stopped"
+
+
+async def _purge_if_finished(db: AsyncSession, drill) -> None:
+    """The exercise is over and its VMs are gone: destroy the accounts created for it.
+
+    Cleanup also runs when a failed prepare is retried; then the exercise goes on, so nothing is purged.
+    """
+    if drill.status not in {DrillStatus.COMPLETED, DrillStatus.CANCELLED}:
+        return
+    try:
+        await purge_exercise_accounts(db, drill)
+    except Exception:  # noqa: BLE001 - cleanup of logins must never fail the VM cleanup
+        log.exception("oxblood.account_purge_failed drill_id=%s", drill.id)
+        await db.rollback()
 
 
 async def _set_range_reset(drill_id: int, status: str, error: str | None = None) -> None:

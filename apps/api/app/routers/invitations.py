@@ -268,6 +268,7 @@ async def redeem_invitation(body: RedeemRequest, db: AsyncSession = Depends(get_
         user = await create_user(db, sub=body.username, password=body.password, role=invite.side)
     except DuplicateSubError as exc:
         raise HTTPException(409, "That username is taken. Choose another.") from exc
+    user.created_for_drill_id = drill.id  # destroyed when this exercise's range is cleaned up
     db.add(
         DrillParticipant(
             drill_id=drill.id,

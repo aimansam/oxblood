@@ -390,3 +390,50 @@ def test_players_see_their_matchs_range_and_operators_can_pick_one(api):
 
     _set_env(maker, match_mode="shared")
     assert run(pick("ana", "red")) == 5  # one shared range: everybody sees the primary run
+
+
+def test_format_sets_teams_rounds_layout_and_keep_accounts_in_one_call(api):
+    client, maker = api
+    url = "/api/v2/drills/1/format"
+    assert client.put(url, json={"mode": "team", "teams": 4}, headers=ana()).status_code == 403
+    assert (
+        client.put(url, json={"mode": "team", "teams": 3}, headers=ref()).status_code == 422
+    )  # a swap needs pairs
+    assert (
+        client.put(
+            url, json={"mode": "team", "teams": 2, "layout": "separate"}, headers=ref()
+        ).status_code
+        == 422
+    )
+    assert (
+        client.put(url, json={"mode": "free", "layout": "separate"}, headers=ref()).status_code
+        == 422
+    )
+
+    done = client.put(
+        url, json={"mode": "team", "teams": 4, "rounds": 2, "layout": "separate"}, headers=ref()
+    )
+    assert done.status_code == 200, done.text
+    assert done.json() == {
+        "mode": "team",
+        "teams": 4,
+        "rounds": 2,
+        "layout": "separate",
+        "matches": 2,
+        "keep_accounts": False,
+    }
+    assert len(client.get("/api/v2/drills/1/teams", headers=ref()).json()["teams"]) == 4
+    assert len(client.get("/api/v2/drills/1/rounds", headers=ref()).json()["rounds"]) == 2
+    assert client.get("/api/v2/drills/1/teams", headers=ref()).json()["match_mode"] == "separate"
+    # Idempotent: asking again does not duplicate anything.
+    again = client.put(
+        url, json={"mode": "team", "teams": 4, "rounds": 2, "layout": "separate"}, headers=ref()
+    )
+    assert (
+        again.status_code == 200
+        and len(client.get("/api/v2/drills/1/teams", headers=ref()).json()["teams"]) == 4
+    )
+
+    # Once a range exists the format is locked.
+    _set_env(maker, provision_run_id=5)
+    assert client.put(url, json={"mode": "free"}, headers=ref()).status_code == 409
