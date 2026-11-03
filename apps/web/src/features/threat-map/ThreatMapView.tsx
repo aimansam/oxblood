@@ -12,6 +12,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { availableActions } from '../exercises/actions';
 import { CompetitionBadge } from '../competition/CompetitionBadge';
 import { FlagPanel } from './FlagPanel';
+import { MissionPanel } from './MissionPanel';
+import { RefereeStrip } from './RefereeStrip';
+import { setGetRewriter } from '@/api/http';
 import { openAssetConsole } from './console';
 import { ThreatMapEngine } from './legacy/engine.js';
 import './legacy/map.css';
@@ -35,6 +38,7 @@ function LiveRange({ drill, user }: { drill: Drill; user: { sub: string; role: s
   const qc = useQueryClient();
   const engineRef = useRef<ThreatMapEngine | null>(null);
   const [readiness, setReadiness] = useState(false);
+  const [match, setMatch] = useState(1); // operators: which match's range copy the map shows
   const [busy, setBusy] = useState(false);
   const operator = ['admin', 'lead'].includes(String(user.role).toLowerCase());
   const actions = availableActions(drill);
@@ -66,6 +70,15 @@ function LiveRange({ drill, user }: { drill: Drill; user: { sub: string; role: s
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drill.id, user.sub]);
+
+  // The vendored engine fetches its own data through http.get; point it at the chosen match's range.
+  useEffect(() => {
+    if (match > 1) {
+      setGetRewriter((path) => (path.includes(`/drills/${drill.id}/threat-map`) && !path.includes('match=') ? `${path}?match=${match}` : path));
+    } else setGetRewriter(null);
+    void engineRef.current?.refreshThreatMap();
+    return () => setGetRewriter(null);
+  }, [match, drill.id]);
 
   // Keep the engine's idea of the drill current (status drives its HUD text).
   useEffect(() => {
@@ -120,8 +133,15 @@ function LiveRange({ drill, user }: { drill: Drill; user: { sub: string; role: s
           <div className="threat-map-loading"><span className="threat-loading-pulse" /><strong>Loading range graph</strong><small>Waiting for machines and VLAN telemetry.</small></div>
         </main>
       </div>
-      {!operator && <CompetitionBadge drillId={drill.id} className="fixed bottom-20 right-4 z-[1100] max-w-[calc(100%-2rem)] flex-wrap" />}
-      {!operator && status === 'active' && <FlagPanel drillId={drill.id} />}
+      {operator && <RefereeStrip drillId={drill.id} match={match} onMatch={setMatch} onReadiness={() => setReadiness(true)} />}
+      {!operator && (
+        // One column on a phone; on wider screens each panel pins itself to a corner (md:contents).
+        <div className="fixed inset-x-4 bottom-4 z-[1100] flex flex-col gap-2 md:contents">
+          <MissionPanel drillId={drill.id} me={user.sub} />
+          <CompetitionBadge drillId={drill.id} className="map-overlay w-full flex-wrap md:fixed md:bottom-20 md:right-4 md:z-[1100] md:w-auto" />
+          {status === 'active' && <FlagPanel drillId={drill.id} />}
+        </div>
+      )}
       <ReadinessDialog drillId={drill.id} open={readiness} onOpenChange={setReadiness} />
     </div>
   );

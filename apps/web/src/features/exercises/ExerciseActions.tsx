@@ -1,6 +1,7 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { api, unwrap } from '@/api/client';
 import { drillsApi } from '@/api/drills';
 import type { Drill } from '@/api/types';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,14 @@ export function ExerciseActions({ drill, onRemoved }: { drill: Drill; onRemoved:
   const [confirm, setConfirm] = useState<null | 'delete' | 'stop'>(null);
   const [editing, setEditing] = useState(false);
   const actions = availableActions(drill);
+  // Why Start would be refused: the range checks the server enforces, shown before the click.
+  const health = useQuery({
+    queryKey: ['range-health', drill.id, 'card'],
+    enabled: actions.start,
+    refetchInterval: 10_000,
+    queryFn: async () => unwrap(await api.GET('/api/v2/drills/{drill_id}/range-health', { params: { path: { drill_id: drill.id } } })),
+  });
+  const blockers = (health.data?.checks ?? []).filter((c) => c.required && c.state !== 'ready');
 
   const run = async (key: string, label: string, fn: () => Promise<unknown>) => {
     setBusy(key);
@@ -75,6 +84,16 @@ export function ExerciseActions({ drill, onRemoved }: { drill: Drill; onRemoved:
           </Button>
         )}
       </div>
+      {actions.start && blockers.length > 0 && (
+        <div role="status" className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs text-warning">
+          <div className="font-semibold">Start will be refused until:</div>
+          <ul className="list-disc pl-4">
+            {blockers.map((c) => (
+              <li key={c.id}>{c.detail || c.label}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <EditDrillDialog drill={drill} open={editing} onOpenChange={setEditing} />
       <ConfirmDialog

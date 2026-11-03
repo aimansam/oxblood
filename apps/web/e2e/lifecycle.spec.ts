@@ -43,6 +43,9 @@ test('play a whole exercise: prepare, start, a player scores from the map, pause
     await expect(player).toHaveURL(/\/app\/mission$/);
     await player.getByRole('link', { name: 'Enter the map' }).click();
     await expect(player).toHaveURL(new RegExp(`/app/live/${id}`));
+    const mission = player.getByRole('region', { name: 'Mission' });
+    await expect(mission).toBeVisible();
+    await expect(mission.getByText('Objectives')).toBeVisible();
     const flagBox = player.getByLabel('Flag', { exact: true });
     await expect(flagBox).toBeVisible();
     await flagBox.fill('FLAG{enterprise_dmz_foothold}');
@@ -91,5 +94,26 @@ test('the wizard prepares a range and "Open live range" takes the operator into 
     for (const d of list.drills.filter((x: { title: string }) => x.title === title)) {
       await request.post(`/api/v2/drills/${d.id}/stop`, { headers });
     }
+  }
+});
+
+
+test('the exercise card says why Start would be refused', async ({ page, request }) => {
+  const headers = { 'X-Divide-Token': await adminToken(request) };
+  const scenarios = (await (await request.get('/api/v1/scenarios')).json()).items as { id: number; name: string }[];
+  const scenario = scenarios.find((s) => s.name === 'enterprise-file-breach') ?? scenarios[0];
+  const title = uniqueName('Blockers');
+  const made = await request.post('/api/v2/drills', { headers, data: { title, drill_type: 'individual', duration_limit_minutes: 60, max_participants: 10, scenario_id: scenario.id } });
+  const id = (await made.json()).drill_id as number;
+  await enroll(request, id, (await createPlayer(request, 'red')).id, 'red'); // no Blue player on purpose
+  try {
+    await signInAsAdmin(page);
+    await page.goto(`/app/exercises?drill=${id}`);
+    await page.getByRole('button', { name: 'Prepare range' }).click();
+    await expect(page.getByText('Range: started')).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText('Start will be refused until:')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Blue/)).toBeVisible();
+  } finally {
+    await request.post(`/api/v2/drills/${id}/stop`, { headers });
   }
 });

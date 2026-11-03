@@ -11989,6 +11989,24 @@
             }
           },
           {
+            "description": "Operators: which match's range copy to show",
+            "in": "query",
+            "name": "match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Operators: which match's range copy to show",
+              "title": "Match"
+            }
+          },
+          {
             "in": "header",
             "name": "X-Divide-Token",
             "required": false,

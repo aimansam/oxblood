@@ -9354,7 +9354,10 @@ export interface operations {
     };
     get_drill_threat_map_api_v2_drills__drill_id__threat_map_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Operators: which match's range copy to show */
+                match?: number | null;
+            };
             header?: {
                 "X-Divide-Token"?: string | null;
             };

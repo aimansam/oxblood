@@ -381,6 +381,7 @@ async def get_drill_access(
 @router.get("/{drill_id}/threat-map")
 async def get_drill_threat_map(
     drill_id: int,
+    match: int | None = Query(None, description="Operators: which match's range copy to show"),
     db: AsyncSession = Depends(get_session),
     token: TokenData | None = Depends(current_token),
 ):
@@ -390,7 +391,7 @@ async def get_drill_threat_map(
         raise HTTPException(status_code=404, detail="Drill not found")
     await _require_participant_workspace_access(db, drill, token)
 
-    access = await get_drill_access(drill_id, None, db, token)
+    access = await get_drill_access(drill_id, match, db, token)
     scenario = None
     if drill.scenario_id:
         scenario = (
