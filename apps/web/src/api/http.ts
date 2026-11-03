@@ -6,15 +6,7 @@ import { getToken, setToken } from './token';
  * (see apps/web/README.md). Callers state the shape they expect; prefer the typed
  * `api` client once an endpoint has a `response_model`.
  */
-let rewriteGet: ((path: string) => string) | null = null;
-
-/** Lets a screen adjust GET paths made on its behalf (the vendored map engine calls `http.get`). */
-export function setGetRewriter(fn: ((path: string) => string) | null) {
-  rewriteGet = fn;
-}
-
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  if (method === 'GET' && rewriteGet) path = rewriteGet(path);
   const headers: Record<string, string> = { Accept: 'application/json' };
   const token = getToken();
   if (token) headers['X-Divide-Token'] = token;

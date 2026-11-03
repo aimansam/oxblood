@@ -73,10 +73,3 @@ test('the live range map: inspect, layers, zoom, pan, fit, story feed, keyboard'
 
   expect(problems).toEqual([]);
 });
-
-test('the classic map is still available behind ?map=classic', async ({ page, request }) => {
-  const id = await createDrill(request, uniqueName('E2E classic'), await firstScenarioId(request));
-  await signInAsAdmin(page);
-  await page.goto(`/app/live/${id}?map=classic`);
-  await expect(page.locator('.threat-map-shell')).toBeVisible();
-});
