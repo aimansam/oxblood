@@ -28,7 +28,6 @@ from app.routers import (
     events,
     exercises,
     health,
-    invitations,
     me,
     proxmox,
     reports,
@@ -619,7 +618,6 @@ def create_app() -> FastAPI:
     # v2 API endpoints (Drill schema). Learn endpoints (labs_v2,
     # learning_paths_v2, user_profiles_v2) live in the Learn product.
     app.include_router(drills_v2.router)
-    app.include_router(invitations.router)
     app.include_router(submissions_v2.router)
     app.include_router(reports_v2.router)
 

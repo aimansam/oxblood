@@ -78,14 +78,7 @@ export function PlayersPage() {
       <AccountsNotice drillId={drillId} status={selected.status} env={(selected.environment_config ?? {}) as Record<string, unknown>} isAdmin={String(me.data?.role).toLowerCase() === 'admin'} />
 
       {scheduled ? (
-        <AddPlayers
-          key={drillId}
-          drillId={drillId}
-          isAdmin={String(me.data?.role).toLowerCase() === 'admin'}
-          teams={targets}
-          maxParticipants={selected.max_participants ?? 10}
-          invitations={roster.data?.invitations ?? []}
-        />
+        <AddPlayers key={drillId} drillId={drillId} teams={targets} maxParticipants={selected.max_participants ?? 10} enrolled={people.length} />
       ) : (
         <p className="mb-4 text-muted-foreground">Registration is closed for this {selected.status} exercise. Select a scheduled exercise above.</p>
       )}

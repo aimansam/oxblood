@@ -244,7 +244,7 @@ async def _enroll_new(
 async def post_test_players(
     drill_id: int,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
 ):
     """One Red and one Blue throwaway account for a dry run. They are destroyed after cleanup."""
     drill = await get_drill(db, drill_id)
@@ -330,7 +330,7 @@ async def post_participants_bulk(
     drill_id: int,
     data: BulkPlayers,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
 ):
     """Create accounts from a pasted list of names and enroll them. Passwords are returned once."""
     drill = await get_drill(db, drill_id)

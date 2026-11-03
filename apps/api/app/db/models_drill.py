@@ -317,38 +317,6 @@ class DrillScoreEvent(Base):
     )
 
 
-class DrillInvitation(Base):
-    """Side-bound enrollment link (one use, or a capacity for a team link); only its SHA-256 digest is stored."""
-
-    __tablename__ = "drill_invitations"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    drill_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("drills.id", ondelete="CASCADE"), nullable=False
-    )
-    side: Mapped[str] = mapped_column(String(8), nullable=False)
-    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
-    created_by: Mapped[str] = mapped_column(String(64), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    redeemed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    redeemed_by: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="SET NULL")
-    )
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # Optional: redeeming this link also places the player in this team.
-    drill_team_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("drill_teams.id", ondelete="SET NULL")
-    )
-    # A link can serve several players (a team link): it is used up after ``max_uses`` redemptions.
-    max_uses: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
-    uses: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-
-    __table_args__ = (Index("ix_drill_invitations_drill_id", "drill_id"),)
-
-
 class DrillEvent(Base):
     """Unified per-drill exercise timeline.
 

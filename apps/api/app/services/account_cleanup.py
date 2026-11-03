@@ -1,6 +1,6 @@
 """Destroy the accounts that were created for one exercise, once its range is cleaned up.
 
-An invitation link, a pasted list of names or a test-player button creates an account *for* an
+A pasted list of names or a test-player button creates an account *for* an
 exercise and marks it (``users.created_for_drill_id``). When the exercise ends and its VMs are gone,
 those accounts have no further use, so they are deleted. Accounts that existed before (picked from the
 list) are never touched, and neither is any account enrolled in another live exercise.

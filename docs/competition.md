@@ -13,17 +13,17 @@ team attacks once and defends once; points from all rounds are added up.
      router cannot make copies. The layout cannot change once a range exists.
    Teams and rounds are created in the same step, so there is nothing to set up by hand afterwards.
 2. **Add players while the range builds.** The Provision step shows the build progress and, beside it,
-   the same *Add players* tools as the **Players** page: *Create one link for every team* (one link per
-   team, seats from the roster size), *Paste names* and *Test players*. You can also do this later on the
-   Players page, which shows how many seats are filled and what Start still needs.
-   - **Invite link**: pick a team, set the seats and how long it is valid. Each person opens the link,
-     picks a username and password, and lands in that team. A used-up link disappears from the list.
-   - **Paste names** (admins): one name per line, pick a team; each gets an account with a generated
-     password, enrolled at once. Copy the sheet or download the CSV before leaving the page, because the
-     passwords are not shown again. Hand each player their username and password. **The first time they
-     sign in they must choose their own password** (at least 10 characters, not their username); until
-     they do, nothing else in the app is available to them.
-   - **Test players** (admins): one Red and one Blue test account for a dry run.
+   the same *Add players* tools as the **Players** page, which also shows how many seats are filled and
+   what Start still needs. There are no invitation links: players are created for you.
+   - **Paste names** (admins and leads): one name per line. Put a team after a comma to place people,
+     like `Ana Smith, Bravo` (a tab works too, so a spreadsheet column pastes cleanly); lines without a team
+     go to the team picked above the box. Each person gets an account with a generated password and is
+     enrolled at once. A mistyped team is named before anything is created, and a list longer than the
+     free seats is refused. Copy the credentials sheet or download the CSV before leaving the page,
+     because the passwords are not shown again. Hand each player their username and password. **The
+     first time they sign in they must choose their own password** (at least 10 characters, not their
+     username); until they do, nothing else in the app is available to them.
+   - **Test players** (admins and leads): one Red and one Blue test account for a dry run.
    Existing accounts can still be added from the team cards.
 3. **Competition → Rounds**: *Plan 2 rounds*. Round 1 has the first half of the teams as red and the
    second half as blue; round 2 swaps them. Optionally set a **freeze time** for each round.
@@ -70,11 +70,11 @@ A password generated for a player (paste names) is temporary. Signing in with it
 only change the password (15 minutes, no access to any exercise data); the web app shows *Choose your
 password* and nothing else until it is done. Then the player gets a normal session, and the handed-out
 password stops working. Test players keep the password you were shown, since they are throwaway, and
-invitation links let the player choose a password from the start. A wrong current password answers 400
+A wrong current password answers 400
 (not 401, which the app reads as an expired session).
 
 ## Accounts are destroyed after cleanup
-Accounts created *for an exercise* (invite link, pasted names, test players) are marked with it. When the
+Accounts created *for an exercise* (pasted names, test players) are marked with it. When the
 exercise is stopped or cancelled and its range is cleaned up, they are **destroyed**, unless you untick
 *Destroy the accounts made for this exercise* (in the wizard's Format step, or on the Players page).
 

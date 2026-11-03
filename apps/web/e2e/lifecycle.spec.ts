@@ -164,16 +164,12 @@ test('a team competition is set up in the wizard, players join while the range b
   await dialog.getByRole('button', { name: 'Prepare range' }).click();
   await page.getByRole('button', { name: /Prepare|Create/ }).last().click();
 
-  // While the range builds: a link for every team, and accounts from pasted names.
+  // While the range builds: accounts from pasted names, each to their team.
   const players = dialog.getByRole('region', { name: 'Add players while the range builds' });
   await expect(players).toBeVisible();
   await expect(dialog.getByText('Provision run #')).toBeVisible({ timeout: 45_000 });
-  await players.getByRole('button', { name: 'Create one link for every team' }).click();
-  await expect(players.getByLabel(/^Link for Alpha/)).toHaveValue(/\/join#token=/);
-  await expect(players.getByRole('list', { name: 'Team links' }).getByRole('listitem')).toHaveCount(4);
-  await players.getByRole('tab', { name: 'Paste names' }).click();
   const stamp = Date.now().toString(36);
-  await players.getByLabel('Player names').fill(`Zed ${stamp}\nYan ${stamp}`);
+  await players.getByLabel('Player names').fill(`Zed ${stamp}, Alpha\nYan ${stamp}, Bravo`);
   await players.getByRole('button', { name: 'Create 2 accounts' }).click();
   await expect(players.getByRole('status', { name: 'New player accounts' }).getByText(`zed.${stamp}`)).toBeVisible();
   await expect(players.getByText('2 / 8 enrolled')).toBeVisible();

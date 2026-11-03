@@ -10,7 +10,6 @@ import { MissionControlPage } from '@/features/mission/MissionControlPage';
 import { ReportDetail, ReportsPage } from '@/features/reports/ReportsPage';
 import { ScoreboardPage } from '@/features/scoreboard/ScoreboardPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
-import { JoinPage } from '@/features/login/JoinPage';
 import { LoginPage } from '@/features/login/LoginPage';
 import { PlayersPage } from '@/features/players/PlayersPage';
 import { ThreatMapPage } from '@/features/threat-map/ThreatMapView';
@@ -24,7 +23,6 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/join" element={<JoinPage />} />
       <Route path="/change-password" element={<ChangePasswordPage />} />
       <Route element={<RequireAuth />}>
         <Route path="live/:id" element={<ThreatMapPage />} />

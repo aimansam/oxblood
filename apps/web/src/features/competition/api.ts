@@ -25,8 +25,6 @@ export const competitionApi = {
   freeze: (drillId: number, n: number, at: string | null) => http.put<Round>(`${base(drillId)}/rounds/${n}/freeze`, { freeze_at: at }),
   scoreEvent: (drillId: number, body: { team_id: number; points: number; reason: string; kind: string }) =>
     http.post<{ id: number }>(`${base(drillId)}/score-events`, body),
-  invite: (drillId: number, side: 'red' | 'blue', teamId: number) =>
-    http.post<{ token: string }>(`/api/v2/drills/${drillId}/invitations`, { side, team_id: teamId }),
 };
 
 export const useTeams = (drillId: number | null) =>

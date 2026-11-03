@@ -95,9 +95,13 @@ def test_names_become_enrolled_accounts_with_one_time_passwords(world):
 def test_it_refuses_what_does_not_fit_and_who_may_not(world):
     client, _ = world
     url = "/api/v2/drills/1/participants/bulk"
+    player = {"X-Divide-Token": sign_token("a.player", "red", 3600)}
     assert (
-        client.post(url, json={"names": ["a"]}, headers=lead()).status_code == 403
-    )  # accounts are admin-only
+        client.post(url, json={"names": ["a"]}, headers=player).status_code == 403
+    )  # players cannot make accounts
+    assert (
+        client.post(url, json={"names": ["lead.made"]}, headers=lead()).status_code == 201
+    )  # a lead can
     too_many = client.post(url, json={"names": [f"p{i}" for i in range(6)]}, headers=admin())
     assert too_many.status_code == 409 and "seats" in too_many.json()["detail"]
     assert (

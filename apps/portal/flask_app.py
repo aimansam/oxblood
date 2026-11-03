@@ -2,7 +2,7 @@
 Flask portal - serves the React UI and proxies API requests to FastAPI.
 
 1. Serves the React app (built from apps/web) at /app/
-2. Redirects the old entry points (/, /login, /join, /drill/) to it
+2. Redirects the old entry points (/, /login, /drill/) to it
 3. Proxies /api/* requests to the FastAPI backend
 4. Provides a single entry point (port 80) for everything
 """
@@ -48,12 +48,6 @@ def login():
     return redirect("/app/login", code=302)
 
 
-@app.route("/join")
-def join():
-    """Invitation links are shared as /join#token=...; browsers keep the fragment across this redirect."""
-    return redirect("/app/join", code=302)
-
-
 @app.route("/drill/")
 @app.route("/drill/<path:path>")
 def classic_portal(path=""):
@@ -78,10 +72,6 @@ def web_app(path=""):
         return Response("The web app is not built", 503, mimetype="text/plain")
     response = send_from_directory(WEB_DIR, "index.html")
     response.headers["Cache-Control"] = "no-cache"
-    if path == "join":
-        # The invitation secret is in the URL fragment; never leak it through Referer.
-        response.headers["Cache-Control"] = "no-store"
-        response.headers["Referrer-Policy"] = "no-referrer"
     return response
 
 

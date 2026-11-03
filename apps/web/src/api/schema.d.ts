@@ -2091,41 +2091,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v2/drills/{drill_id}/invitations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Invitations */
-        get: operations["list_invitations_api_v2_drills__drill_id__invitations_get"];
-        put?: never;
-        /** Issue Invitation */
-        post: operations["issue_invitation_api_v2_drills__drill_id__invitations_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v2/drills/{drill_id}/invitations/{invite_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Revoke Invitation */
-        delete: operations["revoke_invitation_api_v2_drills__drill_id__invitations__invite_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v2/drills/{drill_id}/matches": {
         parameters: {
             query?: never;
@@ -2832,40 +2797,6 @@ export interface paths {
          * @description Lead appends an exercise note to the drill timeline.
          */
         post: operations["post_timeline_note_api_v2_drills__drill_id__timeline_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v2/invitations/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Preview Invitation */
-        post: operations["preview_invitation_api_v2_invitations_preview_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v2/invitations/redeem": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Redeem Invitation */
-        post: operations["redeem_invitation_api_v2_invitations_redeem_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3939,53 +3870,6 @@ export interface components {
             /** Version */
             version: string;
         };
-        /** InvitationListOut */
-        InvitationListOut: {
-            /** Invitations */
-            invitations: components["schemas"]["InvitationOut"][];
-        };
-        /** InvitationOut */
-        InvitationOut: {
-            /** Created At */
-            created_at: string;
-            /** Expires At */
-            expires_at: string;
-            /** Id */
-            id: number;
-            /**
-             * Max Uses
-             * @default 1
-             */
-            max_uses: number;
-            /** Side */
-            side: string;
-            /** Status */
-            status: string;
-            /** Team Id */
-            team_id?: number | null;
-            /**
-             * Uses
-             * @default 0
-             */
-            uses: number;
-        };
-        /** IssueRequest */
-        IssueRequest: {
-            /**
-             * Hours
-             * @default 24
-             */
-            hours: number;
-            /**
-             * Max Uses
-             * @default 1
-             */
-            max_uses: number;
-            /** Side */
-            side: string;
-            /** Team Id */
-            team_id?: number | null;
-        };
         /**
          * IssueResetLinkResponse
          * @description Body for ``POST /auth/users/{sub}/issue-reset`` (admin only).
@@ -4444,15 +4328,6 @@ export interface components {
             /** Status */
             status: string;
         };
-        /** RedeemRequest */
-        RedeemRequest: {
-            /** Password */
-            password: string;
-            /** Token */
-            token: string;
-            /** Username */
-            username: string;
-        };
         /** ReportCreate */
         ReportCreate: {
             /** Content */
@@ -4727,11 +4602,6 @@ export interface components {
             total: number;
         } & {
             [key: string]: unknown;
-        };
-        /** SecretRequest */
-        SecretRequest: {
-            /** Token */
-            token: string;
         };
         /** SetTemplateRequest */
         SetTemplateRequest: {
@@ -8291,110 +8161,6 @@ export interface operations {
             };
         };
     };
-    list_invitations_api_v2_drills__drill_id__invitations_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Divide-Token"?: string | null;
-            };
-            path: {
-                drill_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InvitationListOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    issue_invitation_api_v2_drills__drill_id__invitations_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Divide-Token"?: string | null;
-            };
-            path: {
-                drill_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["IssueRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    revoke_invitation_api_v2_drills__drill_id__invitations__invite_id__delete: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Divide-Token"?: string | null;
-            };
-            path: {
-                drill_id: number;
-                invite_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     put_match_mode_api_v2_drills__drill_id__matches_put: {
         parameters: {
             query?: never;
@@ -9856,72 +9622,6 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    preview_invitation_api_v2_invitations_preview_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SecretRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    redeem_invitation_api_v2_invitations_redeem_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RedeemRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
                 headers: {
                     [name: string]: unknown;
                 };
