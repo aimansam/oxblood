@@ -56,8 +56,8 @@ test('the live range map renders and can be inspected', async ({ page, request }
   await signInAsAdmin(page);
   await page.goto(`/app/exercises?drill=${id}`);
   await page.getByRole('link', { name: 'Open live range' }).click();
-  await expect(page.locator('.threat-map-shell')).toBeVisible();
-  await expect(page.locator('.topology-svg-device, .topology-svg-node').first()).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Range topology' })).toBeVisible();
+  await expect(page.locator('.rm-node').first()).toBeVisible();
   for (const control of ['Story feed', 'VLANs', 'Fit range']) {
     await page.getByRole('button', { name: control }).first().click();
   }

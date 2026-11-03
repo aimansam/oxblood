@@ -1,18 +1,18 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { drillsApi } from '@/api/drills';
 import { useDrills, useMe } from '@/api/hooks';
-import { api, unwrap } from '@/api/client';
 import type { Drill } from '@/api/types';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { availableActions } from '../exercises/actions';
 import { CompetitionBadge } from '../competition/CompetitionBadge';
 import { FlagPanel } from './FlagPanel';
 import { MissionPanel } from './MissionPanel';
+import { LiveRangeReact } from './LiveRangeReact';
+import { ReadinessDialog } from './ReadinessDialog';
 import { RefereeStrip } from './RefereeStrip';
 import { setGetRewriter } from '@/api/http';
 import { openAssetConsole } from './console';
@@ -30,7 +30,9 @@ export function ThreatMapPage() {
   const drill = drills.data?.find((d) => String(d.id) === id);
   if (drills.isLoading || me.isLoading) return <div className="p-8"><Skeleton className="h-64 w-full" /></div>;
   if (!drill || !me.data) return <div className="p-8 text-muted-foreground">Exercise not found.</div>;
-  return <LiveRange drill={drill} user={me.data} />;
+  // The React map is the default. `?map=classic` brings back the vendored engine as a fallback.
+  const classic = new URLSearchParams(window.location.search).get('map') === 'classic';
+  return classic ? <LiveRange drill={drill} user={me.data} /> : <LiveRangeReact drill={drill} user={me.data} />;
 }
 
 function LiveRange({ drill, user }: { drill: Drill; user: { sub: string; role: string } }) {
@@ -137,39 +139,12 @@ function LiveRange({ drill, user }: { drill: Drill; user: { sub: string; role: s
       {!operator && (
         // One column on a phone; on wider screens each panel pins itself to a corner (md:contents).
         <div className="fixed inset-x-4 bottom-4 z-[1100] flex flex-col gap-2 md:contents">
-          <MissionPanel drillId={drill.id} me={user.sub} />
+          <MissionPanel drillId={drill.id} me={user.sub} role={user.role} />
           <CompetitionBadge drillId={drill.id} className="map-overlay w-full flex-wrap md:fixed md:bottom-20 md:right-4 md:z-[1100] md:w-auto" />
           {status === 'active' && <FlagPanel drillId={drill.id} />}
         </div>
       )}
       <ReadinessDialog drillId={drill.id} open={readiness} onOpenChange={setReadiness} />
     </div>
-  );
-}
-
-function ReadinessDialog({ drillId, open, onOpenChange }: { drillId: number; open: boolean; onOpenChange: (o: boolean) => void }) {
-  const q = useQuery({ queryKey: ['range-health', drillId], enabled: open, queryFn: async () => unwrap(await api.GET('/api/v2/drills/{drill_id}/range-health', { params: { path: { drill_id: drillId } } })), staleTime: 0 });
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-describedby={undefined}>
-        <DialogHeader><DialogTitle>Range readiness</DialogTitle></DialogHeader>
-        <DialogBody>
-          {q.isLoading || q.isFetching ? <p className="text-muted-foreground">Checking range…</p> : q.isError ? <p className="text-danger">{(q.error as Error).message || 'Readiness checks unavailable.'}</p> : (
-            <>
-              <p className="mb-3 text-muted-foreground">{q.data?.summary}</p>
-              <ul className="divide-y divide-border">
-                {(q.data?.checks ?? []).map((c, i) => (
-                  <li key={i} className="py-2">
-                    <div className="flex justify-between gap-3"><strong>{c.label}</strong><span className={c.state === 'ready' ? 'text-success' : 'text-warning'}>{c.state.replace(/_/g, ' ')}{c.required ? '' : ' (informational)'}</span></div>
-                    {c.detail && <p className="text-xs text-muted-foreground">{c.detail}</p>}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </DialogBody>
-        <DialogFooter><Button variant="outline" onClick={() => q.refetch()}>Recheck</Button></DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }

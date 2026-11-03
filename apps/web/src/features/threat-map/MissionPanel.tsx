@@ -14,7 +14,7 @@ interface Objective {
 }
 
 /** What a player needs while playing: round clock, side and match, freeze notice, objectives. */
-export function MissionPanel({ drillId, me }: { drillId: number; me: string }) {
+export function MissionPanel({ drillId, me, role }: { drillId: number; me: string; role?: string }) {
   const mine = useMyTeam(drillId);
   const board = useScoreboard(drillId);
   const matchMode = useMatchMode(drillId).data;
@@ -24,10 +24,12 @@ export function MissionPanel({ drillId, me }: { drillId: number; me: string }) {
     staleTime: 60_000,
   });
   const now = useNow();
-  // Collapsed by default on a phone, where the map needs the room.
-  const [open, setOpen] = useState(() => (typeof window === 'undefined' ? true : window.innerWidth >= 768));
+  // Collapsed until asked for: expanded it would sit over the player's own machine on the map.
+  const [open, setOpen] = useState(false);
   const team = mine.data?.team;
-  const side = mine.data?.side ?? null;
+  // With no round running the account's own side decides which objectives to show.
+  const accountSide = ['red', 'blue'].includes(String(role).toLowerCase()) ? String(role).toLowerCase() : null;
+  const side = mine.data?.side ?? accountSide;
   const round = mine.data?.round;
   const list = (objectives.data ?? []).filter((o) => !side || !o.side || o.side === side);
   const captain = team?.members.find((m) => m.user_id === team.captain_user_id)?.sub;
