@@ -2,12 +2,15 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { api, unwrap } from '@/api/client';
+import { useMe } from '@/api/hooks';
 import { drillsApi } from '@/api/drills';
 import type { Drill } from '@/api/types';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EditDrillDialog } from './EditDrillDialog';
 import { availableActions } from './actions';
+import { type TestPlayer, addTestPlayers } from './testPlayers';
 
 /** Lifecycle buttons for one exercise. Which ones appear depends on its status and range state. */
 export function ExerciseActions({ drill, onRemoved }: { drill: Drill; onRemoved: () => void }) {
@@ -15,6 +18,8 @@ export function ExerciseActions({ drill, onRemoved }: { drill: Drill; onRemoved:
   const [busy, setBusy] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<null | 'delete' | 'stop'>(null);
   const [editing, setEditing] = useState(false);
+  const [testPlayers, setTestPlayers] = useState<TestPlayer[] | null>(null);
+  const me = useMe();
   const actions = availableActions(drill);
   // Why Start would be refused: the range checks the server enforces, shown before the click.
   const health = useQuery({
@@ -23,7 +28,33 @@ export function ExerciseActions({ drill, onRemoved }: { drill: Drill; onRemoved:
     refetchInterval: 10_000,
     queryFn: async () => unwrap(await api.GET('/api/v2/drills/{drill_id}/range-health', { params: { path: { drill_id: drill.id } } })),
   });
-  const blockers = (health.data?.checks ?? []).filter((c) => c.required && c.state !== 'ready');
+  const blockersOf = (checks: { id?: string | null; required?: boolean; state: string; detail?: string | null; label: string }[] | undefined) =>
+    (checks ?? []).filter((c) => c.required && c.state !== 'ready');
+  const blockers = blockersOf(health.data?.checks);
+  const needsRoster = blockers.some((c) => c.id === 'mission-roster');
+
+  // Start re-reads the checks first, so a roster fixed a moment ago is not held back by a stale list.
+  const start = async () => {
+    const fresh = await health.refetch();
+    const unmet = blockersOf(fresh.data?.checks);
+    if (unmet.length > 0) {
+      toast.error(`Cannot start yet: ${unmet.map((c) => c.detail || c.label).join(' ')}`);
+      return;
+    }
+    await run('start', 'Exercise started', () => drillsApi.start(drill.id));
+  };
+
+  const addPlayers = async () => {
+    setBusy('players');
+    try {
+      setTestPlayers(await addTestPlayers(drill.id));
+      await health.refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not add test players');
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const run = async (key: string, label: string, fn: () => Promise<unknown>) => {
     setBusy(key);
@@ -49,7 +80,7 @@ export function ExerciseActions({ drill, onRemoved }: { drill: Drill; onRemoved:
           </Button>
         )}
         {actions.start && (
-          <Button size="sm" disabled={busy !== null} onClick={() => run('start', 'Exercise started', () => drillsApi.start(drill.id))}>
+          <Button size="sm" disabled={busy !== null} onClick={start}>
             Start
           </Button>
         )}
@@ -69,6 +100,21 @@ export function ExerciseActions({ drill, onRemoved }: { drill: Drill; onRemoved:
           </Button>
         )}
       </div>
+      {actions.start && blockers.length > 0 && (
+        <div role="status" className="space-y-2 rounded-md border border-warning/40 bg-warning/10 p-2 text-xs text-warning">
+          <div className="font-semibold">Start will be refused until:</div>
+          <ul className="list-disc pl-4">
+            {blockers.map((c) => (
+              <li key={c.id ?? c.label}>{c.detail || c.label}</li>
+            ))}
+          </ul>
+          {needsRoster && me.data?.role === 'admin' && (
+            <Button size="sm" variant="outline" disabled={busy !== null} onClick={addPlayers}>
+              Add test players
+            </Button>
+          )}
+        </div>
+      )}
       <div className="flex flex-wrap gap-2">
         {actions.edit && (
           <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
@@ -84,17 +130,29 @@ export function ExerciseActions({ drill, onRemoved }: { drill: Drill; onRemoved:
           </Button>
         )}
       </div>
-      {actions.start && blockers.length > 0 && (
-        <div role="status" className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs text-warning">
-          <div className="font-semibold">Start will be refused until:</div>
-          <ul className="list-disc pl-4">
-            {blockers.map((c) => (
-              <li key={c.id}>{c.detail || c.label}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
+      <Dialog open={testPlayers !== null} onOpenChange={(open) => !open && setTestPlayers(null)}>
+        <DialogContent aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Test players added</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <p className="mb-3 text-muted-foreground">One Red and one Blue account were created and enrolled. Copy the passwords now; they are not shown again. Disable the accounts under Settings when you are done.</p>
+            <ul className="divide-y divide-border">
+              {(testPlayers ?? []).map((p) => (
+                <li key={p.sub} className="flex justify-between gap-3 py-2">
+                  <span>
+                    <strong>{p.sub}</strong> <span className="text-xs uppercase text-muted-foreground">{p.role}</span>
+                  </span>
+                  <code className="select-all">{p.password}</code>
+                </li>
+              ))}
+            </ul>
+          </DialogBody>
+          <DialogFooter>
+            <Button onClick={() => setTestPlayers(null)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <EditDrillDialog drill={drill} open={editing} onOpenChange={setEditing} />
       <ConfirmDialog
         open={confirm === 'stop'}

@@ -102,7 +102,7 @@ test('the wizard prepares a range and "Open live range" takes the operator into 
 });
 
 
-test('the exercise card says why Start would be refused', async ({ page, request }) => {
+test('the exercise card says why Start is refused and can add test players', async ({ page, request }) => {
   const headers = { 'X-Divide-Token': await adminToken(request) };
   const scenarios = (await (await request.get('/api/v1/scenarios')).json()).items as { id: number; name: string }[];
   const scenario = scenarios.find((s) => s.name === 'enterprise-file-breach') ?? scenarios[0];
@@ -117,6 +117,17 @@ test('the exercise card says why Start would be refused', async ({ page, request
     await expect(page.getByText('Range: started')).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText('Start will be refused until:')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/Blue/)).toBeVisible();
+    // Starting now explains instead of failing with a bare 409 ...
+    await page.getByRole('button', { name: 'Start', exact: true }).click();
+    await expect(page.getByText(/Cannot start yet/)).toBeVisible();
+    // ... and one click adds the missing players so the dry run can go on.
+    await page.getByRole('button', { name: 'Add test players' }).click();
+    await expect(page.getByRole('dialog').getByText('Test players added')).toBeVisible();
+    await expect(page.getByRole('dialog').getByText(/^test-blue-/)).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+    await expect(page.getByText('Start will be refused until:')).toHaveCount(0, { timeout: 15_000 });
+    await page.getByRole('button', { name: 'Start', exact: true }).click();
+    await expect(page.getByText('Live', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
   } finally {
     await request.post(`/api/v2/drills/${id}/stop`, { headers });
   }
