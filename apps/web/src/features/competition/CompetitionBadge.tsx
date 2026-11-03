@@ -16,7 +16,7 @@ export function CompetitionBadge({ drillId, className }: { drillId: number; clas
   const side = mine.data?.side;
   return (
     <>
-      <div className={cn('flex items-center gap-3 rounded-lg border border-border bg-card/95 px-3 py-2 shadow-lg backdrop-blur', className)}>
+      <div className={cn('flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-card px-3 py-2 text-sm', className)}>
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: team.color ?? 'currentColor' }} aria-hidden />
         <span className="font-medium">{team.name}</span>
         {side ? (

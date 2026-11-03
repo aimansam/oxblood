@@ -48,7 +48,6 @@ test('play a whole exercise: prepare, start, a player scores from the map, pause
     await expect(player.locator('.rm-node')).toHaveCount(1);
     const mission = player.getByRole('region', { name: 'Mission' });
     await expect(mission).toBeVisible();
-    await mission.getByRole('button').first().click(); // collapsed until asked for
     await expect(mission.getByText('Objectives')).toBeVisible();
     await expect(mission.getByText(/blue console/i)).toHaveCount(0); // a red player sees only red objectives
     const flagBox = player.getByLabel('Flag', { exact: true });

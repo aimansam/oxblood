@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assetSide, deviceMeta, emptyZones, layoutTopology, liveAsset, nodeState, runtimeSpec, vmLabel } from './model';
+import { NODE_H, NODE_W, assetSide, deviceMeta, emptyZones, layoutTopology, liveAsset, nodeState, runtimeSpec, vmLabel } from './model';
 import type { MapAsset, MapNetwork } from './types';
 
 const simpleAssets: MapAsset[] = [
@@ -48,7 +48,7 @@ describe('layout', () => {
     expect(layout.enterprise).toBe(false);
     expect(layout.zones.map((z) => z.key)).toEqual(['red', 'transit', 'blue']);
     const router = layout.nodes.find((n) => n.key === 'router_fw');
-    expect(router?.x).toBe(540);
+    expect(router?.x).toBe(Math.round(380 + 315 / 2)); // centred in its zone
     expect(layout.bridge).toEqual(['router_fw']);
     // each network gets a wire from the router (the hub) to its machines
     expect(layout.edges.map((e) => e.network).sort()).toEqual(['blue_vlan', 'red_vlan']);
@@ -67,6 +67,25 @@ describe('layout', () => {
     expect(layout.zones.map((z) => z.key)).toEqual(['red', 'dmz', 'transit', 'identity', 'protected']);
     expect(layout.width).toBe(1360);
     expect(layout.zones.find((z) => z.key === 'identity')?.subtitle).toContain('VLAN 234');
+  });
+  it('never lets two machine cards overlap, however many share a zone', () => {
+    const many: MapAsset[] = Array.from({ length: 6 }, (_, i) => ({ role: `web_${i}`, template: 'x', networks: ['blue_vlan'] }));
+    const layout = layoutTopology([simpleAssets[0], simpleAssets[1], ...many], simpleNets);
+    for (const a of layout.nodes) {
+      for (const b of layout.nodes) {
+        if (a === b) continue;
+        const overlapX = Math.abs(a.x - b.x) < NODE_W;
+        const overlapY = Math.abs(a.y - b.y) < NODE_H;
+        expect(overlapX && overlapY).toBe(false);
+      }
+      // and every card sits fully inside its zone and the canvas
+      const zone = layout.zones.find((z) => a.x >= z.x && a.x <= z.x + z.w);
+      expect(zone).toBeTruthy();
+      expect(a.x - NODE_W / 2).toBeGreaterThanOrEqual(zone!.x);
+      expect(a.x + NODE_W / 2).toBeLessThanOrEqual(zone!.x + zone!.w);
+      expect(a.y - NODE_H / 2).toBeGreaterThan(100); // below the zone header
+      expect(a.y + NODE_H / 2).toBeLessThan(layout.height - 24);
+    }
   });
   it('reports zones with no machine in them (a player sees only their own side)', () => {
     const onlyRed = layoutTopology([simpleAssets[0]], simpleNets);

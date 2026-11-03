@@ -16,7 +16,7 @@ test('the live range map: inspect, layers, zoom, pan, fit, story feed, keyboard'
 
   // Inspect a machine (and close it again).
   await page.getByRole('button', { name: 'Inspect red workstation' }).click();
-  const details = page.getByRole('complementary', { name: 'Details' });
+  const details = page.getByRole('region', { name: 'Details' });
   await expect(details.getByText('Node inspection')).toBeVisible();
   await expect(details.getByRole('heading', { name: 'red workstation' })).toBeVisible();
   await details.getByRole('button', { name: 'Close details' }).click();

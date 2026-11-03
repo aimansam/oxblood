@@ -17,7 +17,7 @@ import { RefereeStrip } from './RefereeStrip';
 import { ThreatMap } from './map/ThreatMap';
 import { useThreatMap } from './useThreatMap';
 
-const icon = 'grid h-9 w-9 place-items-center rounded border border-border bg-card/80 text-foreground hover:bg-muted disabled:opacity-50';
+const icon = 'grid h-9 w-9 place-items-center rounded-md border border-border bg-card text-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 /** Live range page: header with the exercise controls, the interactive map, and the player / referee overlays. */
 export function LiveRangeReact({ drill, user }: { drill: Drill; user: { sub: string; role: string } }) {
@@ -55,8 +55,8 @@ export function LiveRangeReact({ drill, user }: { drill: Drill; user: { sub: str
   };
 
   return (
-    <div className="map-overlay fixed inset-0 z-[1000] flex flex-col bg-[#060a10] text-foreground">
-      <header className="flex items-center gap-3 border-b border-border bg-[#0d1118]/95 px-3 py-2">
+    <div className="fixed inset-0 z-[1000] flex flex-col bg-background text-foreground">
+      <header className="flex items-center gap-3 border-b border-border bg-card px-3 py-2">
         <button type="button" className={icon} aria-label="Back to exercises" title="Back to exercises" onClick={() => navigate(`/exercises?drill=${drill.id}`)}>
           <ArrowLeft className="h-4 w-4" />
         </button>
@@ -118,18 +118,28 @@ export function LiveRangeReact({ drill, user }: { drill: Drill; user: { sub: str
         </div>
       </header>
 
-      <main className="relative min-h-0 flex-1" aria-label="Interactive threat map">
-        <ThreatMap drillId={drill.id} operator={operator} payload={map.data} loading={map.isLoading} error={map.error as Error | null} onRetry={() => void map.refetch()} />
+      <main className="min-h-0 flex-1" aria-label="Interactive threat map">
+        <ThreatMap
+          drillId={drill.id}
+          operator={operator}
+          payload={map.data}
+          loading={map.isLoading}
+          error={map.error as Error | null}
+          onRetry={() => void map.refetch()}
+          dock={
+            operator ? (
+              <RefereeStrip drillId={drill.id} match={match} onMatch={setMatch} onReadiness={() => setReadiness(true)} />
+            ) : (
+              <>
+                {status === 'active' && <FlagPanel drillId={drill.id} />}
+                <CompetitionBadge drillId={drill.id} className="w-full" />
+                <MissionPanel drillId={drill.id} me={user.sub} role={user.role} />
+              </>
+            )
+          }
+        />
       </main>
 
-      {operator && <RefereeStrip drillId={drill.id} match={match} onMatch={setMatch} onReadiness={() => setReadiness(true)} />}
-      {!operator && (
-        <div className="fixed inset-x-4 bottom-4 z-[1100] flex flex-col gap-2 md:contents">
-          <MissionPanel drillId={drill.id} me={user.sub} role={user.role} />
-          <CompetitionBadge drillId={drill.id} className="map-overlay w-full flex-wrap md:fixed md:bottom-20 md:right-4 md:z-[1100] md:w-auto" />
-          {status === 'active' && <FlagPanel drillId={drill.id} />}
-        </div>
-      )}
       <ReadinessDialog drillId={drill.id} open={readiness} onOpenChange={setReadiness} />
     </div>
   );

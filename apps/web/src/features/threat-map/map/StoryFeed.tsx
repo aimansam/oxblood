@@ -59,7 +59,7 @@ export function StoryFeed({ drillId, roles, onFocusRole, onNoMatch }: { drillId:
   }, [playing, speed]);
 
   return (
-    <section aria-label="Mission record" className="map-overlay absolute inset-x-3 bottom-16 z-20 max-h-[min(250px,38vh)] overflow-hidden rounded-lg border border-border bg-card/90 shadow-xl backdrop-blur">
+    <section aria-label="Mission record" className="max-h-[36vh] shrink-0 overflow-hidden border-t border-border bg-card">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
         <div>
           <span className="block text-xs uppercase tracking-widest text-muted-foreground">Mission record</span>
@@ -87,7 +87,7 @@ export function StoryFeed({ drillId, roles, onFocusRole, onNoMatch }: { drillId:
           </Button>
         </div>
       </header>
-      <div role="log" aria-live="polite" className="max-h-[170px] overflow-auto">
+      <div role="log" aria-live="polite" className="max-h-[26vh] overflow-auto">
         {query.isLoading ? (
           <p className="p-3 text-muted-foreground">Syncing the operation record…</p>
         ) : query.isError ? (

@@ -98,11 +98,11 @@ export function Inspector({
   }
 
   return (
-    <aside aria-label="Details" className="map-overlay absolute bottom-16 right-3 top-24 z-20 w-[min(340px,calc(100%-1.5rem))] overflow-auto rounded-lg border border-border bg-card/90 p-4 text-sm shadow-xl backdrop-blur">
+    <section aria-label="Details" className="relative rounded-lg border border-border bg-card p-4 text-sm">
       <button type="button" className="absolute right-2 top-2 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Close details" onClick={onClose}>
         <X className="h-4 w-4" />
       </button>
       {body}
-    </aside>
+    </section>
   );
 }

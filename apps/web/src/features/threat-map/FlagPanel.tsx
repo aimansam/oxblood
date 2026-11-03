@@ -47,7 +47,7 @@ export function FlagPanel({ drillId }: { drillId: number }) {
     <form
       onSubmit={submit}
       aria-label="Submit a flag"
-      className="map-overlay flex w-full items-center gap-2 md:fixed md:bottom-4 md:right-4 md:z-[1100] md:w-80 rounded-lg border border-border bg-card/95 p-2 shadow-lg backdrop-blur"
+      className="flex w-full items-center gap-2 rounded-lg border border-border bg-card p-2"
     >
       <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Submit a flag" aria-label="Flag" autoComplete="off" spellCheck={false} />
       <Button type="submit" size="sm" disabled={busy || !value.trim()}>

@@ -9,7 +9,7 @@ import type { Camera } from './camera';
 import { emptyZones, layoutTopology, runtimeSpec } from './model';
 import type { ThreatMapPayload } from './types';
 
-/** The interactive range map: SVG topology, layers, inspector, legend and story feed. */
+/** The interactive range map with its docked panels: details and context at the side, the story feed below. */
 export function ThreatMap({
   drillId,
   operator,
@@ -17,6 +17,7 @@ export function ThreatMap({
   loading,
   error,
   onRetry,
+  dock,
 }: {
   drillId: number;
   operator: boolean;
@@ -24,6 +25,8 @@ export function ThreatMap({
   loading: boolean;
   error: Error | null;
   onRetry: () => void;
+  /** Context panels for the side dock (player mission and flag form, referee status). */
+  dock?: React.ReactNode;
 }) {
   const camera = useRef<Camera>(null);
   const [filter, setFilter] = useState<Filter>('all');
@@ -43,41 +46,39 @@ export function ThreatMap({
   useEffect(() => {
     if (layout && !introduced.current) {
       introduced.current = true;
-      camera.current?.intro();
+      if (typeof window !== 'undefined' && window.innerWidth < 640) {
+        // The whole range is unreadable at phone width: open on a machine and let the player pan.
+        const target = (operator && layout.nodes.find((n) => n.meta.cls === 'router')) || layout.nodes[0];
+        if (target) camera.current?.focus({ x: target.x - 90, y: target.y - 70, w: 180, h: 140 }, 3);
+      } else camera.current?.intro();
     }
-  }, [layout]);
+  }, [layout, operator]);
 
   if (!layout) {
-    if (error && !payload) {
-      return (
-        <div role="alert" className="grid h-full place-items-center p-6 text-center">
-          <div className="space-y-3">
-            <strong className="block text-lg">Range graph unavailable</strong>
-            <p className="text-muted-foreground">{error.message || 'The live topology could not be loaded.'}</p>
-            <Button variant="outline" size="sm" onClick={onRetry}>
-              Retry map
-            </Button>
-          </div>
-        </div>
-      );
-    }
-    if (loading || !payload) {
-      return (
-        <div className="grid h-full place-items-center p-6" aria-busy="true">
-          <div className="w-72 space-y-2 text-center">
-            <Skeleton className="h-2 w-full" />
-            <strong className="block">Loading range graph</strong>
-            <small className="text-muted-foreground">Waiting for machines and VLAN telemetry.</small>
-          </div>
-        </div>
-      );
-    }
+    const message = error && !payload ? (
+      <div role="alert" className="space-y-3">
+        <strong className="block text-lg">Range graph unavailable</strong>
+        <p className="text-muted-foreground">{error.message || 'The live topology could not be loaded.'}</p>
+        <Button variant="outline" size="sm" onClick={onRetry}>
+          Retry map
+        </Button>
+      </div>
+    ) : loading || !payload ? (
+      <div className="w-72 space-y-2" aria-busy="true">
+        <Skeleton className="h-2 w-full" />
+        <strong className="block">Loading range graph</strong>
+        <small className="text-muted-foreground">Waiting for machines and VLAN telemetry.</small>
+      </div>
+    ) : (
+      <div>
+        <strong className="block text-lg">No topology is attached to this drill</strong>
+        <p className="text-muted-foreground">Provisioning can continue, but the scenario graph is not available yet.</p>
+      </div>
+    );
     return (
-      <div className="grid h-full place-items-center p-6 text-center">
-        <div>
-          <strong className="block text-lg">No topology is attached to this drill</strong>
-          <p className="text-muted-foreground">Provisioning can continue, but the scenario graph is not available yet.</p>
-        </div>
+      <div className="flex h-full min-h-0 flex-col md:flex-row">
+        <div className="grid min-h-0 flex-1 place-items-center p-6 text-center">{message}</div>
+        {dock && <Dock>{dock}</Dock>}
       </div>
     );
   }
@@ -87,7 +88,7 @@ export function ThreatMap({
     const node = layout.nodes.find((n) => n.asset.role === role);
     if (!node) return;
     setSelected({ kind: 'node', role });
-    camera.current?.focus({ x: node.x - 70, y: node.y - 70, w: 140, h: 150 });
+    camera.current?.focus({ x: node.x - 90, y: node.y - 70, w: 180, h: 140 });
   };
   const selectEdge = (network: string) => {
     const edge = layout.edges.find((e) => e.network === network);
@@ -97,43 +98,60 @@ export function ThreatMap({
   const clear = () => setSelected(null);
 
   return (
-    <div className="relative h-full w-full">
-      <RangeMap ref={camera} layout={layout} live={live} filter={filter} selected={selected} playing={playing} fogged={fogged} onNode={selectNode} onEdge={selectEdge} />
-      <MapToolbar
-        operator={operator}
-        filter={filter}
-        onFilter={setFilter}
-        legend={legend}
-        onLegend={() => setLegend((v) => !v)}
-        story={story}
-        onStory={() => setStory((v) => !v)}
-        playing={playing}
-        onPlaying={() => setPlaying((v) => !v)}
-        onFit={() => camera.current?.fit()}
-        onReveal={() => camera.current?.intro()}
-        onZoom={(factor) => camera.current?.zoomBy(factor)}
-      />
-      {legend && (
-        <div role="region" aria-label="VLAN legend" className="map-overlay absolute bottom-16 left-3 z-10 flex max-w-[min(720px,calc(100%-1.5rem))] flex-wrap gap-2 rounded-lg border border-border bg-card/70 p-2 text-xs backdrop-blur">
-          {spec.networks.map((n) => (
-            <span key={n.name} className="rounded border border-border px-2 py-1">
-              <strong>{n.name}</strong> <small className="text-muted-foreground">{[n.vlan_id ? `VLAN ${n.vlan_id}` : '', n.cidr].filter(Boolean).join(' | ')}</small>
-            </span>
-          ))}
+    <div className="flex h-full min-h-0 flex-col md:flex-row">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="relative min-h-0 flex-1">
+          <RangeMap ref={camera} layout={layout} live={live} filter={filter} selected={selected} playing={playing} fogged={fogged} onNode={selectNode} onEdge={selectEdge} />
+          <MapToolbar
+            operator={operator}
+            filter={filter}
+            onFilter={setFilter}
+            legend={legend}
+            onLegend={() => setLegend((v) => !v)}
+            story={story}
+            onStory={() => setStory((v) => !v)}
+            playing={playing}
+            onPlaying={() => setPlaying((v) => !v)}
+            onFit={() => camera.current?.fit()}
+            onReveal={() => camera.current?.intro()}
+            onZoom={(factor) => camera.current?.zoomBy(factor)}
+          />
+          {legend && (
+            <div role="region" aria-label="VLAN legend" className="absolute inset-x-3 top-14 z-10 flex flex-wrap gap-2 rounded-lg border border-border bg-card/95 p-2 text-xs shadow-sm backdrop-blur md:left-auto md:max-w-md">
+              {spec.networks.map((n) => (
+                <span key={n.name} className="rounded border border-border px-2 py-1">
+                  <strong>{n.name}</strong> <small className="text-muted-foreground">{[n.vlan_id ? `VLAN ${n.vlan_id}` : '', n.cidr].filter(Boolean).join(' · ')}</small>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-      )}
-      <Inspector selection={selected} layout={layout} networks={spec.networks} live={live} drillId={drillId} onSelectNode={selectNode} onClose={clear} />
-      {operator && story && (
-        <StoryFeed
-          drillId={drillId}
-          roles={layout.nodes.map((n) => n.asset.role)}
-          onFocusRole={selectNode}
-          onNoMatch={() => {
-            clear();
-            camera.current?.fit();
-          }}
-        />
-      )}
+        {operator && story && (
+          <StoryFeed
+            drillId={drillId}
+            roles={layout.nodes.map((n) => n.asset.role)}
+            onFocusRole={selectNode}
+            onNoMatch={() => {
+              clear();
+              camera.current?.fit();
+            }}
+          />
+        )}
+      </div>
+      <Dock>
+        {dock}
+        <Inspector selection={selected} layout={layout} networks={spec.networks} live={live} drillId={drillId} onSelectNode={selectNode} onClose={clear} />
+        {!selected && operator && <p className="px-1 text-xs text-muted-foreground">Select a machine or a link to inspect it.</p>}
+      </Dock>
     </div>
+  );
+}
+
+/** Side panel on wide screens, a panel under the map on narrow ones. The map shrinks to make room. */
+function Dock({ children }: { children: React.ReactNode }) {
+  return (
+    <aside aria-label="Side panel" className="flex max-h-[42vh] w-full shrink-0 flex-col gap-3 overflow-auto border-t border-border bg-card/40 p-3 md:max-h-none md:w-80 md:border-l md:border-t-0">
+      {children}
+    </aside>
   );
 }

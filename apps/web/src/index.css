@@ -53,22 +53,3 @@
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 }
-
-/* The live range map is always dark. Overlays drawn on it re-declare the dark tokens so they stay
-   readable in the light theme too (they sit outside the themed page). */
-.map-overlay {
-  --background: 240 10% 5%;
-  --foreground: 240 10% 96%;
-  --card: 240 8% 8%;
-  --card-foreground: 240 10% 96%;
-  --muted: 240 6% 13%;
-  --muted-foreground: 240 6% 64%;
-  --border: 240 6% 17%;
-  --primary: 352 68% 46%;
-  --primary-foreground: 0 0% 100%;
-  --success: 152 52% 48%;
-  --warning: 38 92% 56%;
-  --danger: 0 72% 58%;
-  --info: 215 82% 64%;
-  color: hsl(var(--foreground));
-}

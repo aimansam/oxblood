@@ -24,8 +24,8 @@ export function MissionPanel({ drillId, me, role }: { drillId: number; me: strin
     staleTime: 60_000,
   });
   const now = useNow();
-  // Collapsed until asked for: expanded it would sit over the player's own machine on the map.
-  const [open, setOpen] = useState(false);
+  // Open on a wide screen; on a phone the objectives wait behind the header so the map keeps its room.
+  const [open, setOpen] = useState(() => typeof window === 'undefined' || window.innerWidth >= 768);
   const team = mine.data?.team;
   // With no round running the account's own side decides which objectives to show.
   const accountSide = ['red', 'blue'].includes(String(role).toLowerCase()) ? String(role).toLowerCase() : null;
@@ -37,7 +37,7 @@ export function MissionPanel({ drillId, me, role }: { drillId: number; me: strin
   return (
     <section
       aria-label="Mission"
-      className="map-overlay w-full rounded-lg border border-border bg-card/95 text-sm shadow-lg backdrop-blur md:fixed md:bottom-16 md:left-4 md:z-[1100] md:w-72"
+      className="w-full rounded-lg border border-border bg-card text-sm"
     >
       <button type="button" className="flex w-full items-center justify-between gap-2 px-3 py-2" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
         <span className="flex items-center gap-2 font-semibold">

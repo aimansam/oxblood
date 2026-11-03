@@ -23,11 +23,11 @@ export function RefereeStrip({
   if (teams.length === 0 && rounds.length === 0) return null;
   const active = rounds.find((r) => r.status === 'active');
   const copies = mode === 'separate' ? Math.max(...teams.map((t) => t.match_number), 1) : 1;
-  const chip = 'rounded border border-border bg-card/95 px-2 py-1 text-xs backdrop-blur';
+  const chip = 'rounded-md border border-border px-2 py-1 text-xs';
   const bad = (s?: string) => s === 'failed' || s === 'partial';
 
   return (
-    <div role="region" aria-label="Referee status" className="map-overlay fixed bottom-16 left-3.5 z-[1100] flex max-w-[calc(100%-1.75rem)] flex-wrap items-center gap-2 md:bottom-auto md:top-[56px] md:max-w-[calc(100%-7rem)]">
+    <div role="region" aria-label="Referee status" className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-3">
       <span className={chip}>
         {active ? (
           <>

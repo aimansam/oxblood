@@ -1,52 +1,42 @@
-import { forwardRef, useId, useImperativeHandle, useMemo, useRef } from 'react';
+import { AppWindow, Box as BoxIcon, Network, ScrollText, Server, Terminal } from 'lucide-react';
+import { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import { type Camera, useCamera } from './camera';
-import { liveAsset, nodeState } from './model';
+import { NODE_H, NODE_W, liveAsset, nodeState } from './model';
 import './rangeMap.css';
-import type { Box, DeviceMeta, Layout, LiveAsset } from './types';
+import type { Box, Layout, LiveAsset, NodeState } from './types';
 
 export type Filter = 'all' | 'red' | 'blue' | 'shared';
 export type Selection = { kind: 'node'; role: string } | { kind: 'edge'; network: string } | null;
 
-/** Machine icon in local coordinates, centred on (0, 0). */
-function DeviceIcon({ cls }: { cls: DeviceMeta['cls'] }) {
-  if (cls === 'router')
+const ICONS = { kali: Terminal, debian: Terminal, ubuntu: Terminal, linux: Terminal, windows: AppWindow, router: Network, server: Server, log: ScrollText, vm: BoxIcon } as const;
+
+const STATE_TEXT: Record<NodeState, string> = { running: 'Running', starting: 'Starting…', failed: 'Needs attention', stopped: 'Stopped', planned: 'Not started' };
+
+/** Status mark at (cx, cy). Shape differs per state, so it never relies on colour alone. */
+function StatusMark({ state, cx, cy }: { state: NodeState; cx: number; cy: number }) {
+  if (state === 'failed')
     return (
-      <>
-        <circle className="rm-icon-shape" r="30" />
-        <path className="rm-icon-line" d="M-18 0h36M0 -18v36M-13 -13l-10 -10M13 -13l10 -10M-13 13l-10 10M13 13l10 10" />
-      </>
+      <g>
+        <path className="rm-st-failed" d={`M${cx} ${cy - 7} L${cx + 7} ${cy + 6} H${cx - 7} Z`} />
+        <text className="rm-st-bang" x={cx} y={cy + 4.5}>
+          !
+        </text>
+      </g>
     );
-  if (cls === 'server' || cls === 'log')
-    return (
-      <>
-        <rect className="rm-icon-shape" x="-24" y="-36" width="48" height="72" rx="6" />
-        <path className="rm-icon-line" d="M-14 -18h28M-14 0h28M-14 18h28" />
-        <circle className="rm-led" cx="16" cy="-18" r="3" />
-        <circle className="rm-led" cx="16" cy="18" r="3" />
-      </>
-    );
-  const screen = <rect className="rm-icon-shape" x="-32" y="-30" width="64" height="42" rx="6" />;
-  if (cls === 'windows')
-    return (
-      <>
-        {screen}
-        <path className="rm-icon-line" d="M-16 -18h13v13h-13zM3 -18h13v13H3zM-16 1h13v13h-13zM3 1h13v13H3zM0 12v18M-18 30h36" />
-      </>
-    );
-  if (cls === 'kali' || cls === 'debian' || cls === 'ubuntu' || cls === 'linux')
-    return (
-      <>
-        {screen}
-        <path className="rm-icon-line" d="M-18 -9l8 7-8 7M-5 5h15M0 12v18M-18 30h36" />
-      </>
-    );
-  return (
-    <>
-      {screen}
-      <path className="rm-icon-line" d="M-18 -9h36M0 12v18M-18 30h36" />
-    </>
-  );
+  if (state === 'stopped') return <rect className="rm-st-stopped" x={cx - 5} y={cy - 5} width="10" height="10" rx="2" />;
+  return <circle className={`rm-st-${state}`} cx={cx} cy={cy} r={state === 'running' ? 5 : 4.5} />;
 }
+
+const ACRONYMS = /^(vlan|dmz|dc\d*|wan|lan|dns|sdn|vm)$/i;
+/** "red_vlan" -> "Red VLAN": capitalise words, keep network acronyms upper case. */
+const titleCase = (text: string) =>
+  text
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map((w) => (ACRONYMS.test(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ');
+
+const shorten = (text: string, max = 16) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
 
 export interface RangeMapProps {
   layout: Layout;
@@ -63,7 +53,6 @@ export interface RangeMapProps {
 
 export const RangeMap = forwardRef<Camera, RangeMapProps>(function RangeMap({ layout, live, filter, selected, playing, fogged, onNode, onEdge }, ref) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const id = useId().replace(/:/g, '');
   const full = useMemo<Box>(() => [0, 0, layout.width, layout.height], [layout.width, layout.height]);
   const camera = useCamera(svgRef, full);
   useImperativeHandle(ref, () => camera);
@@ -80,30 +69,17 @@ export const RangeMap = forwardRef<Camera, RangeMapProps>(function RangeMap({ la
   return (
     <div className="rm" data-filter={filter}>
       <svg ref={svgRef} className="rm-svg" viewBox={full.join(' ')} preserveAspectRatio="xMidYMid meet" role="group" aria-label="Range topology">
-        <defs>
-          <pattern id={`${id}-grid`} width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M40 0H0V40" className="rm-grid-line" />
-          </pattern>
-          <radialGradient id={`${id}-glow`} cx="52%" cy="48%" r="74%">
-            <stop offset="0%" stopColor="#1e3a5f" stopOpacity=".28" />
-            <stop offset="56%" stopColor="#0b1320" stopOpacity=".12" />
-            <stop offset="100%" stopColor="#05080d" stopOpacity=".72" />
-          </radialGradient>
-        </defs>
-        <rect className="rm-bg" width={layout.width} height={layout.height} rx="8" />
-        <rect fill={`url(#${id}-glow)`} width={layout.width} height={layout.height} rx="8" />
-        <rect fill={`url(#${id}-grid)`} width={layout.width} height={layout.height} />
-
         {layout.zones.map((zone) => {
           const dim = fogged.has(zone.key);
           return (
             <g key={zone.key} className={dim ? 'rm-fog' : undefined} data-testid={`zone-${zone.key}`}>
-              <rect className="rm-zone" data-zone={zone.key} x={zone.x} y={24} width={zone.w} height={layout.height - 48} rx="8" />
-              <text className="rm-zone-title" data-zone={zone.key} textAnchor={zone.anchor} x={zone.textX} y={58}>
-                {zone.title}
+              <rect className="rm-zone" x={zone.x} y={24} width={zone.w} height={layout.height - 48} rx="12" />
+              <circle className="rm-zone-dot" data-zone={zone.key} cx={zone.x + 22} cy={53} r="4.5" />
+              <text className="rm-zone-title" x={zone.x + 34} y={58}>
+                {titleCase(zone.title)}
               </text>
               {zone.subtitle && (
-                <text className="rm-zone-sub" textAnchor={zone.anchor} x={zone.textX} y={78}>
+                <text className="rm-zone-sub" x={zone.x + 18} y={80}>
                   {zone.subtitle}
                 </text>
               )}
@@ -128,7 +104,7 @@ export const RangeMap = forwardRef<Camera, RangeMapProps>(function RangeMap({ la
                   <title>{edge.network}</title>
                 </path>
                 {playing && (
-                  <circle className="rm-packet" data-side={edge.side} r="3.5" aria-hidden="true">
+                  <circle className="rm-packet" r="3.5" aria-hidden="true">
                     <animateMotion dur={`${duration}s`} begin={`-${offset}s`} repeatCount="indefinite" path={edge.path} />
                   </circle>
                 )}
@@ -143,6 +119,8 @@ export const RangeMap = forwardRef<Camera, RangeMapProps>(function RangeMap({ la
           const state = nodeState(liveNode);
           const activate = () => onNode(node.asset.role);
           const isSelected = selected?.kind === 'node' && selected.role === node.asset.role;
+          const Icon = ICONS[node.meta.cls];
+          const detail = state === 'failed' ? STATE_TEXT.failed : liveNode?.ip || STATE_TEXT[state];
           return (
             <g
               key={node.key}
@@ -151,30 +129,24 @@ export const RangeMap = forwardRef<Camera, RangeMapProps>(function RangeMap({ la
               data-side={node.side}
               data-state={state}
               data-role={node.asset.role}
-              transform={`translate(${node.x} ${node.y})`}
+              transform={`translate(${node.x - NODE_W / 2} ${node.y - NODE_H / 2})`}
               role="button"
               tabIndex={0}
               aria-label={`Inspect ${node.label}`}
               onClick={pick(activate)}
               onKeyDown={keys(activate)}
             >
-              <title>{`${node.label} - ${node.meta.kind} (${state})`}</title>
-              <circle className="rm-halo" cy="-12" r="43" />
-              <circle className="rm-pulse" cy="-12" r="35" />
-              <circle className="rm-status" cx="-58" cy="-44" r="5" />
-              <g transform="translate(0 -12)">
-                <DeviceIcon cls={node.meta.cls} />
-              </g>
-              <rect className="rm-badge" x="15" y="14" width="46" height="18" rx="9" />
-              <text className="rm-badge-text" x="38" y="27">
-                {node.meta.os}
+              <title>{`${node.label} · ${node.meta.kind} · ${STATE_TEXT[state]}${liveNode?.ip ? ` · ${liveNode.ip}` : ''}`}</title>
+              <rect className="rm-card" width={NODE_W} height={NODE_H} rx="12" />
+              <rect className="rm-tile" x="12" y="18" width="36" height="36" rx="9" />
+              <Icon className="rm-icon" x={18} y={24} width={24} height={24} strokeWidth={1.8} />
+              <text className="rm-name" x="60" y="32">
+                {shorten(node.label)}
               </text>
-              <text className="rm-name" y="62">
-                {node.label}
+              <text className="rm-sub" x="60" y="52">
+                {detail}
               </text>
-              <text className="rm-kind" y="80">
-                {node.meta.kind}
-              </text>
+              <StatusMark state={state} cx={NODE_W - 18} cy={20} />
             </g>
           );
         })}

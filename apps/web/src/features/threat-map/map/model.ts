@@ -61,6 +61,11 @@ function laneSide(name: string): EdgeSide {
   return 'neutral';
 }
 
+/** Size of a machine card on the map. Rows are spaced from it so cards can never overlap. */
+export const NODE_W = 204;
+export const NODE_H = 72;
+export const ROW_GAP = NODE_H + 44;
+
 type Row = { asset: MapAsset; key: string; x: number; y: number };
 
 /** Port of the classic topology layout: columns of zones, machines stacked in them, a hub per network. */
@@ -84,28 +89,27 @@ export function layoutTopology(assets: MapAsset[], networks: MapNetwork[]): Layo
 
   const columns = enterprise
     ? [
-        { key: 'red', x: 150, zoneX: 20, zoneW: 235, align: 'start' as const },
-        { key: 'dmz', x: 410, zoneX: 285, zoneW: 235, align: 'start' as const },
-        { key: 'transit', x: 680, zoneX: 550, zoneW: 260, align: 'middle' as const },
-        { key: 'identity', x: 940, zoneX: 830, zoneW: 235, align: 'start' as const },
-        { key: 'protected', x: 1200, zoneX: 1095, zoneW: 245, align: 'end' as const },
+        { key: 'red', zoneX: 20, zoneW: 235 },
+        { key: 'dmz', zoneX: 285, zoneW: 235 },
+        { key: 'transit', zoneX: 550, zoneW: 260 },
+        { key: 'identity', zoneX: 830, zoneW: 235 },
+        { key: 'protected', zoneX: 1095, zoneW: 245 },
       ]
     : [
-        { key: 'red', x: 190, zoneX: 20, zoneW: 310, align: 'start' as const },
-        { key: 'transit', x: 540, zoneX: 380, zoneW: 315, align: 'middle' as const },
-        { key: 'blue', x: 850, zoneX: 750, zoneW: 330, align: 'end' as const },
+        { key: 'red', zoneX: 20, zoneW: 310 },
+        { key: 'transit', zoneX: 380, zoneW: 315 },
+        { key: 'blue', zoneX: 750, zoneW: 330 },
       ];
   const width = enterprise ? 1360 : 1100;
   const maxRows = Math.max(...columns.map((c) => groups[c.key].length), 1);
-  const rowGap = enterprise ? 132 : 126;
-  const height = Math.max(500, 205 + maxRows * rowGap + (enterprise ? 44 : 0));
+  const height = Math.max(480, 190 + maxRows * ROW_GAP);
   const middle = Math.round(height / 2);
   for (const column of columns) {
     const list = groups[column.key];
-    const start = list.length > 1 ? middle - ((list.length - 1) * rowGap) / 2 : middle;
+    const start = list.length > 1 ? middle - ((list.length - 1) * ROW_GAP) / 2 : middle;
     list.forEach((row, idx) => {
-      row.x = column.x;
-      row.y = Math.round(start + idx * rowGap);
+      row.x = Math.round(column.zoneX + column.zoneW / 2);
+      row.y = Math.round(start + idx * ROW_GAP);
     });
   }
 
@@ -165,15 +169,7 @@ export function layoutTopology(assets: MapAsset[], networks: MapNetwork[]): Layo
         protected: { title: 'protected services', subtitle: vlans(/backup|security/i) },
       }
     : { red: text(findNet(/red/i), 'red segment'), transit: text(findNet(/dmz|wan|shared|transit/i), 'transit'), blue: text(findNet(/blue/i), 'blue segment') };
-  const zones: Zone[] = columns.map((c) => ({
-    key: c.key,
-    x: c.zoneX,
-    w: c.zoneW,
-    textX: c.align === 'start' ? c.zoneX + 22 : c.align === 'end' ? c.zoneX + c.zoneW - 22 : c.zoneX + c.zoneW / 2,
-    anchor: c.align,
-    title: zoneText[c.key].title,
-    subtitle: zoneText[c.key].subtitle,
-  }));
+  const zones: Zone[] = columns.map((c) => ({ key: c.key, x: c.zoneX, w: c.zoneW, title: zoneText[c.key].title, subtitle: zoneText[c.key].subtitle }));
   const nodes: PlacedNode[] = rows.map((r) => ({ key: r.key, asset: r.asset, x: r.x, y: r.y, meta: deviceMeta(r.asset), side: assetSide(r.asset), label: vmLabel(r.asset) }));
   return {
     width,

@@ -59,8 +59,6 @@ export interface Zone {
   key: string;
   x: number;
   w: number;
-  textX: number;
-  anchor: 'start' | 'middle' | 'end';
   title: string;
   subtitle: string;
 }
