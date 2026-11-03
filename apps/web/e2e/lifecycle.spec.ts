@@ -66,3 +66,30 @@ test('play a whole exercise: prepare, start, a player scores from the map, pause
   }
   expect(problems).toEqual([]);
 });
+
+test('the wizard prepares a range and "Open live range" takes the operator into it', async ({ page, request }) => {
+  const title = uniqueName('Wizard live');
+  const headers = { 'X-Divide-Token': await adminToken(request) };
+  await signInAsAdmin(page);
+  await page.goto('/app/exercises');
+  await page.getByRole('button', { name: 'New exercise' }).first().click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('option').first().click();
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await dialog.getByLabel('Title').fill(title);
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await dialog.getByRole('button', { name: 'Prepare range' }).click();
+  await page.getByRole('button', { name: /Prepare|Create/ }).last().click(); // "not start-ready, prepare anyway?"
+  try {
+    const open = dialog.getByRole('button', { name: 'Open live range' });
+    await expect(open).toBeEnabled({ timeout: 45_000 });
+    await open.click();
+    await expect(page).toHaveURL(/\/app\/live\/\d+$/);
+    await expect(page.getByLabel('Back to exercises')).toBeVisible();
+  } finally {
+    const list = await (await request.get('/api/v2/drills', { headers })).json();
+    for (const d of list.drills.filter((x: { title: string }) => x.title === title)) {
+      await request.post(`/api/v2/drills/${d.id}/stop`, { headers });
+    }
+  }
+});

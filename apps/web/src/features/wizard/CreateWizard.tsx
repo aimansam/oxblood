@@ -224,15 +224,27 @@ export function CreateWizard({ open, initialScenarioId, onOpenChange }: Props) {
                 </Button>
               )}
               {step === 4 && (
-                <Button
-                  disabled={!createdId || !(phase.ready || phase.validationFailed)}
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate(`/exercises?drill=${createdId}`);
-                  }}
-                >
-                  Open exercise
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    disabled={!createdId || !(phase.ready || phase.validationFailed)}
+                    onClick={() => {
+                      onOpenChange(false);
+                      navigate(`/exercises?drill=${createdId}`);
+                    }}
+                  >
+                    Exercise details
+                  </Button>
+                  <Button
+                    disabled={!createdId || !(phase.ready || phase.validationFailed)}
+                    onClick={() => {
+                      onOpenChange(false);
+                      navigate(`/live/${createdId}`);
+                    }}
+                  >
+                    Open live range
+                  </Button>
+                </>
               )}
             </div>
           </DialogFooter>
