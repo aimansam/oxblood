@@ -57,8 +57,12 @@ async def submit_flag(
         drill_result = await db.execute(select(Drill).where(Drill.id == drill_id))
         drill = drill_result.scalar_one_or_none()
         if drill and drill.actual_start_at:
-            now = datetime.now(UTC)
-            elapsed_seconds = int((now - drill.actual_start_at).total_seconds())
+            started = drill.actual_start_at
+            if (
+                started.tzinfo is None
+            ):  # SQLite returns naive datetimes; Postgres returns aware ones
+                started = started.replace(tzinfo=UTC)
+            elapsed_seconds = int((datetime.now(UTC) - started).total_seconds())
 
     # Validate flag
     is_correct = flag_value.strip() == flag_value_expected.strip()

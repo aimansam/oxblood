@@ -297,3 +297,24 @@ def test_separate_matches_score_only_the_teams_own_value_and_report_sharing(worl
     assert submit(client, DEE, "FLAG{bravo}").json()["is_correct"] is True
     # Open flags (no machine, no per-team value) still work from the scenario value.
     assert submit(client, ANA, OPEN_FLAG).json()["is_correct"] is True
+
+
+def test_classic_submission_works_when_the_database_returns_naive_datetimes(world):
+    import asyncio
+    from datetime import datetime, timedelta
+
+    from app.db.models_drill import Drill
+
+    client, maker = world
+
+    async def start_drill():
+        async with maker() as db:
+            drill = await db.get(Drill, 1)
+            drill.actual_start_at = datetime.utcnow() - timedelta(
+                minutes=3
+            )  # naive, as SQLite returns
+            await db.commit()
+
+    asyncio.run(start_drill())
+    result = submit(client, ANA, RED_FLAG)
+    assert result.status_code == 200 and result.json()["is_correct"] is True

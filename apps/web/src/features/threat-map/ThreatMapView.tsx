@@ -120,7 +120,7 @@ function LiveRange({ drill, user }: { drill: Drill; user: { sub: string; role: s
           <div className="threat-map-loading"><span className="threat-loading-pulse" /><strong>Loading range graph</strong><small>Waiting for machines and VLAN telemetry.</small></div>
         </main>
       </div>
-      {!operator && <CompetitionBadge drillId={drill.id} className="absolute bottom-20 right-4 z-30 max-w-[calc(100%-2rem)] flex-wrap" />}
+      {!operator && <CompetitionBadge drillId={drill.id} className="fixed bottom-20 right-4 z-[1100] max-w-[calc(100%-2rem)] flex-wrap" />}
       {!operator && status === 'active' && <FlagPanel drillId={drill.id} />}
       <ReadinessDialog drillId={drill.id} open={readiness} onOpenChange={setReadiness} />
     </div>

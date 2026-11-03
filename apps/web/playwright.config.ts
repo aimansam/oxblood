@@ -8,7 +8,7 @@ const python = process.env.E2E_PYTHON ?? 'python3';
 const redis = process.env.DIVIDE_REDIS_URL ?? 'redis://127.0.0.1:6399/0';
 const db = process.env.E2E_DB ?? '/tmp/oxblood-e2e.sqlite';
 
-// A throwaway stack: the real API (SQLite + the mock Proxmox adapter) behind the real Flask portal,
+// A throwaway stack: the real API (SQLite + a mock Proxmox with the scenario templates, e2e/serve_api.py) behind the real Flask portal,
 // serving the production build. Needs a Redis at DIVIDE_REDIS_URL and `npm run build` done first
 // (`npm run test:e2e` does both).
 export default defineConfig({
@@ -29,7 +29,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `rm -f ${db} && ${python} -m alembic upgrade head && ${python} -m uvicorn app.main:app --port 8100`,
+      command: `rm -f ${db} && ${python} -m alembic upgrade head && ${python} ${path.join(here, 'e2e/serve_api.py')}`,
       cwd: path.join(repo, 'apps/api'),
       url: 'http://localhost:8100/healthz',
       reuseExistingServer: !process.env.CI,
