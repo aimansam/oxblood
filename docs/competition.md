@@ -30,8 +30,9 @@ VLANs shifted by 20 per copy, VM names prefixed `M2-`, `M3-`, and its own snapsh
 builds the copies one after another, stopping the drill stops all of them, and **Reset range** resets all
 of them. A player's machine list and console follow their team's copy; referees can open any copy.
 
-Memory scales with the number of matches, so check the scenario's RAM times the match count against the
-node before preparing. A scenario whose router is an OPNsense image cannot make copies (its VLANs are
+Memory scales with the number of matches. Preparing first checks the scenario's RAM times the match
+count against what the node has free and refuses with the numbers before anything is built (it does
+not block when the node cannot report its memory). A scenario whose router is an OPNsense image cannot make copies (its VLANs are
 fixed inside the image) and preparation fails with that message.
 
 Flags then become **per team**: each team's value is planted only on its own copy. Submitting another

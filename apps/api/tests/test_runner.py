@@ -298,6 +298,38 @@ async def test_reset_fails_when_a_guest_has_no_address_or_the_wrong_one(
         await runner.reset_run_to_baselines(result.run_id, session, settle_timeout_s=0, poll_s=0)
 
 
+@pytest.mark.asyncio
+async def test_check_copies_fit_refuses_before_anything_is_built(session: AsyncSession) -> None:
+    gib = 1024**3
+
+    class Node(MockProxmoxAdapter):
+        available: int | None = 10 * gib
+
+        async def preflight(self, spec, node):
+            return [
+                {
+                    "id": "memory",
+                    "ready": True,
+                    "required_bytes": 4 * gib,
+                    "available_bytes": self.available,
+                }
+            ]
+
+    scenario = _scenario_with("copies-fit", [_asset("web")])
+    session.add(scenario)
+    await session.commit()
+    adapter = Node()
+    runner = Runner(adapter=adapter)
+
+    await runner.check_copies_fit(scenario.id, 1, session)  # one copy: nothing to check
+    await runner.check_copies_fit(scenario.id, 2, session)  # 8 GiB needed, 10 available
+    with pytest.raises(RunnerError, match="3 match copies need 12.0 GiB.*10.0 GiB"):
+        await runner.check_copies_fit(scenario.id, 3, session)
+    adapter.available = None  # the node could not report its memory: do not block
+    await runner.check_copies_fit(scenario.id, 3, session)
+    assert adapter.created == [] if hasattr(adapter, "created") else True
+
+
 # --- fixtures ---------------------------------------------------------------
 
 

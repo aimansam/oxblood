@@ -1342,6 +1342,9 @@ def test_v2_prepare_builds_one_range_copy_per_match_and_stop_removes_all(session
         async def stop_run(self, run_id, reason, session, actor):
             self.stopped.append(run_id)
 
+        async def check_copies_fit(self, scenario_id, copies, session):
+            self.checked = copies
+
     fake_runner = FakeRunner()
     drill_id = _run(_seed())
 
@@ -1361,6 +1364,7 @@ def test_v2_prepare_builds_one_range_copy_per_match_and_stop_removes_all(session
         app.dependency_overrides.pop(get_session, None)
 
     assert response.status_code == 200, response.text
+    assert fake_runner.checked == 2  # memory for both copies is checked before any is built
     assert [r.instance for r in fake_runner.requests] == [1, 2]
     assert env["provision_run_id"] == 321 and env["match_runs"] == {"2": 322}
 

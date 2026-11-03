@@ -590,6 +590,35 @@ class Runner(AssetSeedingMixin, BaselineMixin, WatchdogMixin):
         self._windows_setup_secrets.pop(run.id, None)
         return RunResult(run_id=run.id, status=run.status)
 
+    async def check_copies_fit(self, scenario_id: int, copies: int, session: AsyncSession) -> None:
+        """Refuse up front when ``copies`` range copies need more RAM than the node has free.
+
+        Each copy's own preflight only runs after the earlier copies are already built, so without
+        this a drill that cannot fit fails late and leaves the first copies running. When the node
+        cannot report its memory the check does not block.
+        """
+        if copies <= 1:
+            return
+        scenario = await session.get(models.Scenario, scenario_id)
+        if scenario is None:
+            raise RunnerError(f"scenario id={scenario_id} not found")
+        nodes = await self._adapter.list_nodes()
+        if not nodes:
+            raise RunnerError("adapter reports zero PVE nodes")
+        node = getattr(self._adapter, "_node", None) or nodes[0]
+        spec = scenario.spec.get("spec") or scenario.spec
+        checks = await self._adapter.preflight(spec, node)
+        memory = next((c for c in checks if c.get("id") == "memory"), None)
+        if not memory or memory.get("available_bytes") is None:
+            return
+        need = int(memory.get("required_bytes") or 0) * copies
+        have = int(memory["available_bytes"])
+        if need > have:
+            raise RunnerError(
+                f"{copies} match copies need {need / 1024**3:.1f} GiB RAM, but only "
+                f"{have / 1024**3:.1f} GiB is available on {node}. Free capacity or use fewer matches."
+            )
+
     async def stop_run(
         self,
         run_id: int,

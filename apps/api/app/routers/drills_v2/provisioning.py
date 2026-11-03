@@ -168,6 +168,8 @@ async def _provision_drill_background(
             scenario = await db.get(catalog_models.Scenario, scenario_id)
             doc = (scenario.spec if scenario else None) or {}
             copies = await _match_count(db, drill)
+            if copies > 1:
+                await runner.check_copies_fit(scenario_id, copies, db)
             if ((doc.get("spec") or doc).get("provisioning") or {}).get("auto_baseline"):
                 await _set_drill_provision_status(
                     drill_id,
