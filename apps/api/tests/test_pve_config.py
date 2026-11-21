@@ -393,9 +393,7 @@ class TestPveConfigEndpoints:
         def fake_get_version():
             raise ProxmoxAPIError("401 Unauthorized")
 
-        monkeypatch.setattr(
-            "app.routers.admin.pve_config.get_version", fake_get_version, raising=False
-        )
+        monkeypatch.setattr("app.services.proxmox.get_version", fake_get_version, raising=False)
         tok = _bootstrap_admin_and_token(client)
         r = client.post(
             "/api/v1/admin/pve-config",
