@@ -13,7 +13,6 @@ name: oxblood-cyber-drill-prod
 #   * JSON logging (OXBLOOD_LOG_LEVEL=INFO + structlog formatter)
 #     so logs ship cleanly to Loki / Elasticsearch / CloudWatch.
 #   * Resource limits on every service (CPU + memory).
-#   * Authentik in production mode (instead of dev quickstart).
 #   * No bind mounts for source code -- the api image is built
 #     once via `make build` and used as-is.
 #   * Scenarios are baked into the image at build time (the
@@ -33,7 +32,6 @@ name: oxblood-cyber-drill-prod
 #   PROXMOX_TOKEN_SECRET     -- PVE API token secret
 #   PROXMOX_HOST             -- pve.example.com (LAN)
 #   PROXMOX_TOKEN_ID         -- oxblood@pve!div-api
-#   AUTHENTIK_BOOTSTRAP_PASSWORD  -- admin password (change after first login)
 #   OXBLOOD_BOOTSTRAP_ADMIN_SUB    -- first admin username
 #   OXBLOOD_BOOTSTRAP_ADMIN_PASSWORD  -- first admin password
 #   ACME_EMAIL               -- for Let's Encrypt registration
@@ -112,6 +110,19 @@ services:
         reservations:
           cpus: "1"
           memory: 1G
+    labels:
+      # Traefik routes the public hostname to this service (HTTPS, Let's Encrypt).
+      - "traefik.enable=true"
+      - "traefik.docker.network=oxblood-net"
+      - "traefik.http.routers.api.rule=Host(`${PUBLIC_HOSTNAME}`)"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=8000"
+      # Force HTTPS: 301 redirect from HTTP -> HTTPS for the same host.
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+      - "traefik.http.routers.api-http.rule=Host(`${PUBLIC_HOSTNAME}`)"
+      - "traefik.http.routers.api-http.entrypoints=web"
+      - "traefik.http.routers.api-http.middlewares=redirect-to-https"
     logging:
       driver: "json-file"
       options:
@@ -177,7 +188,6 @@ services:
       # ACME HTTP-01 challenge requires :80.
       - "80:80"
     environment:
-      TRAEFIK_API_DASHBOARD: "true"
       TRAEFIK_LOG_LEVEL: INFO
       TRAEFIK_PROVIDERS_DOCKER: "true"
       TRAEFIK_PROVIDERS_DOCKER_EXPOSEDBYDEFAULT: "false"
@@ -193,109 +203,11 @@ services:
         limits:
           cpus: "1"
           memory: 512M
-    labels:
-      # Traefik dashboard on a separate path / dashboard.
-      - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`${PUBLIC_HOSTNAME}`) && PathPrefix(`/dashboard`)"
-      - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.dashboard.middlewares=auth"
-
-      # Public API + portal routes.
-      - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`${PUBLIC_HOSTNAME}`)"
-      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.api.service=api"
-      - "traefik.http.services.api.loadbalancer.server.port=8000"
-      - "traefik.docker.network=oxblood-net"
-
-      # Force HTTPS: 301 redirect from HTTP -> HTTPS for the same host.
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
-      - "traefik.http.routers.api-http.rule=Host(`${PUBLIC_HOSTNAME}`)"
-      - "traefik.http.routers.api-http.entrypoints=web"
-      - "traefik.http.routers.api-http.middlewares=redirect-to-https"
-
-  # F12.3: Authentik in production mode (instead of dev quickstart).
-  # Replaces the docker-compose dev `authentik-server` + `authentik-worker`
-  # pair -- in prod both run from the same image with different
-  # commands. See https://docs.goauthentik.io/docs/install-config/install/docker-compose
-  authentik-server:
-    image: ghcr.io/goauthentik/server:2024.8
-    container_name: oxblood-authentik-server
-    restart: always
-    environment:
-      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
-      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
-      AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL:-admin@${PUBLIC_HOSTNAME}}
-      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
-      AUTHENTIK_POSTGRESQL__NAME: authentik
-      AUTHENTIK_POSTGRESQL__USER: authentik
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRESQL_PASSWORD}
-      AUTHENTIK_LOG_LEVEL: info
-    volumes:
-      - authentik-media:/media
-      - authentik-templates:/templates
-    networks: [oxblood-net]
-    depends_on:
-      authentik-postgres:
-        condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: "2"
-          memory: 2G
-
-  authentik-worker:
-    image: ghcr.io/goauthentik/server:2024.8
-    container_name: oxblood-authentik-worker
-    restart: always
-    command: worker
-    environment:
-      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
-      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
-      AUTHENTIK_POSTGRESQL__NAME: authentik
-      AUTHENTIK_POSTGRESQL__USER: authentik
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRESQL_PASSWORD}
-    volumes:
-      - authentik-media:/media
-      - authentik-templates:/templates
-    networks: [oxblood-net]
-    depends_on:
-      authentik-postgres:
-        condition: service_healthy
-      authentik-server:
-        condition: service_started
-    deploy:
-      resources:
-        limits:
-          cpus: "2"
-          memory: 2G
-
-  authentik-postgres:
-    image: postgres:16-alpine
-    container_name: oxblood-authentik-postgres
-    restart: always
-    environment:
-      POSTGRES_DB: authentik
-      POSTGRES_USER: authentik
-      POSTGRES_PASSWORD: ${AUTHENTIK_POSTGRESQL_PASSWORD}
-    volumes:
-      - authentik-postgres-data:/var/lib/postgresql/data
-    networks: [oxblood-net]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U authentik -d authentik"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 volumes:
   postgres-data:
   redis-data:
   traefik-letsencrypt:
-  authentik-media:
-  authentik-templates:
-  authentik-postgres-data:
 
 networks:
   oxblood-net:

@@ -5,14 +5,6 @@ Read-only snapshot of the runtime environment the API is running in:
   * PVE probe         -- wraps admin_svc.probe_pve() so the panel can
                           share the same error shape as the other probes
                           on the Config tab.
-  * wg-easy container -- best-effort TCP probe of :51820/udp on the
-                          docker bridge network. wg-easy's healthcheck
-                          already probes this port; if we can reach it
-                          the container is up. Failures are reported as
-                          "unreachable" (string), not raised.
-  * WireGuard env     -- reads WG_HOST, WG_DEFAULT_DNS, OXBLOOD_WG_PEER_SECRET
-                          from os.environ. The secret is reported only as
-                          "<set>" / "<unset>" so we never leak it.
   * API disk          -- shutil.disk_usage on /app (the overlay mount).
                           We expose used/total GB so operators can spot
                           an audit-log or drill-template runaway.
@@ -28,9 +20,7 @@ can poll it on every Refresh.
 from __future__ import annotations
 
 import logging
-import os
 import shutil
-import socket
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -41,46 +31,6 @@ from app.db.models import AuditLog
 from app.services import admin as admin_svc
 
 log = logging.getLogger(__name__)
-
-
-# wg-easy listens on 51820/udp. The container is on the oxblood-net
-# docker network, so reaching the gateway OR a peer should tell us
-# it's alive. We use a non-blocking UDP "ping" (send 0 bytes, accept
-# timeout) -- this is intentionally best-effort and never raises.
-_WG_PORT = 51820
-_WG_PROBE_TIMEOUT_S = 1.0
-
-
-def _probe_wg_easy() -> dict[str, Any]:
-    """Best-effort UDP probe of the wg-easy container."""
-    target = "wg-easy"
-    try:
-        socket.gethostbyname(target)
-    except socket.gaierror:
-        target = "127.0.0.1"
-
-    try:
-        with socket.create_connection((target, _WG_PORT), timeout=_WG_PROBE_TIMEOUT_S):
-            return {"state": "up", "target": f"{target}:{_WG_PORT}/tcp"}
-    except OSError as e:
-        return {
-            "state": "unreachable",
-            "target": f"{target}:{_WG_PORT}/tcp",
-            "error": str(e),
-        }
-
-
-def _wg_env_summary() -> dict[str, Any]:
-    """WG_HOST + secret-presence summary. Never returns the secret."""
-    host = os.environ.get("WG_HOST", "").strip()
-    secret_set = bool(os.environ.get("OXBLOOD_WG_PEER_SECRET", "").strip())
-    dns = os.environ.get("WG_DEFAULT_DNS", "").strip()
-    return {
-        "wg_host": host or None,
-        "wg_default_dns": dns or None,
-        "peer_secret_set": secret_set,
-        "ready": bool(host and secret_set),
-    }
 
 
 def _disk_summary(path: str = "/app") -> dict[str, Any]:
@@ -140,8 +90,6 @@ async def get_service_status(db: AsyncSession) -> dict[str, Any]:
             "version": pve.get("version"),
             "error": pve.get("error"),
         },
-        "wg_easy": _probe_wg_easy(),
-        "wireguard": _wg_env_summary(),
         "disk": _disk_summary(),
         "audit": await _audit_recency(db),
         "all_ok": pve_ok,

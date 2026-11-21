@@ -484,11 +484,6 @@ class User(Base, TimestampMixin):
     disabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
-    # WireGuard peer ID — UUID assigned on first VPN config request.
-    # Stable across logins; used as seed to derive the peer keypair
-    # deterministically from OXBLOOD_WG_PEER_SECRET. NULL until the
-    # user fetches their config for the first time.
-    wg_peer_id: Mapped[str | None] = mapped_column(String(36), nullable=True, unique=True)
     # F-reset-ux: one-time password-reset token. NULL when no reset
     # is in flight. Random per reset, single-use (cleared on a
     # successful ``POST /auth/reset-password``). Stored verbatim —

@@ -204,9 +204,8 @@ export interface paths {
          * @description Return display-only, non-secret settings.
          *
          *     Everything here is safe to render in the portal: token TTL,
-         *     timeouts, sync intervals, scenario dirs, WG host/subnet (no
-         *     secrets), CORS origins. Secrets (WG peer secret, MinIO keys,
-         *     PVE creds) are never included — PVE creds live behind
+         *     timeouts, sync intervals, scenario dirs, CORS origins. Secrets
+         *     (PVE creds) are never included — PVE creds live behind
          *     GET /admin/pve-config (masked), the rest are env-only.
          */
         get: operations["get_public_settings_api_v1_admin_public_settings_get"];
@@ -789,42 +788,6 @@ export interface paths {
          *     checkbox-style controls.
          */
         post: operations["toggle_disabled_endpoint_api_v1_auth_users__sub__toggle_disabled_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/vpn-config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Download your WireGuard VPN config (authenticated users only)
-         * @description Return a WireGuard client .conf for the authenticated user.
-         *
-         *     On first call, a stable peer_id (UUID) is assigned to the user and
-         *     persisted. On subsequent calls the same peer_id is reused, so the
-         *     keypair and IP are stable across logins.
-         *
-         *     The response body contains:
-         *       ``config``    — the full .conf text (save as oxblood.conf)
-         *       ``filename``  — suggested filename (``oxblood-<sub>.conf``)
-         *       ``client_ip`` — the VPN IP assigned to this peer
-         *       ``server_ip`` — the server's VPN IP (for reference)
-         *       ``allowed_ips`` — the CIDRs routed over VPN
-         *
-         *     Status codes:
-         *       * 200 — config returned.
-         *       * 401 — no/invalid token.
-         *       * 503 — wg-easy not reachable (server_pubkey placeholder used).
-         */
-        get: operations["get_vpn_config_api_v1_auth_vpn_config_get"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5998,39 +5961,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserPublic"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_vpn_config_api_v1_auth_vpn_config_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Oxblood-Token"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
                 };
             };
             /** @description Validation Error */

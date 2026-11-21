@@ -4,9 +4,8 @@ The endpoint is read-only and fail-soft by design, so the test
 suite focuses on:
 
   1. Happy path -- all probes run, expected shape returned.
-  2. wg-easy probe falls back gracefully when DNS is broken.
-  3. Audit recency surfaces "empty" on a fresh DB.
-  4. WireGuard env summary correctly reports WG_HOST presence.
+  2. Audit recency surfaces "empty" on a fresh DB.
+  3. The disk summary fails soft on a bad path.
 
 We don't run against a real PVE -- admin_svc.probe_pve() is patched
 to return a sentinel dict.
@@ -41,7 +40,7 @@ def _patch_probe(monkeypatch):
 
 
 async def test_get_service_status_returns_expected_shape():
-    """Top-level aggregator returns all five sub-probes."""
+    """Top-level aggregator returns every sub-probe."""
     from app.db.session import get_sessionmaker
 
     sm = get_sessionmaker()
@@ -49,31 +48,9 @@ async def test_get_service_status_returns_expected_shape():
         result = await svc.get_service_status(session)
     assert "captured_at" in result
     assert "pve" in result
-    assert "wg_easy" in result
-    assert "wireguard" in result
     assert "disk" in result
     assert "audit" in result
     assert result["pve"]["reachable"] is True
-
-
-def test_wg_env_summary_reports_unset(monkeypatch):
-    """When WG_HOST is empty, summary reports not-ready."""
-    monkeypatch.delenv("WG_HOST", raising=False)
-    monkeypatch.delenv("OXBLOOD_WG_PEER_SECRET", raising=False)
-    summary = svc._wg_env_summary()
-    assert summary["wg_host"] is None
-    assert summary["peer_secret_set"] is False
-    assert summary["ready"] is False
-
-
-def test_wg_env_summary_reports_set(monkeypatch):
-    """When both env vars are present, summary is ready."""
-    monkeypatch.setenv("WG_HOST", "203.0.113.42")
-    monkeypatch.setenv("OXBLOOD_WG_PEER_SECRET", "deadbeef" * 4)
-    summary = svc._wg_env_summary()
-    assert summary["wg_host"] == "203.0.113.42"
-    assert summary["peer_secret_set"] is True
-    assert summary["ready"] is True
 
 
 def test_disk_summary_handles_bad_path():

@@ -4594,7 +4594,7 @@
     },
     "/api/v1/admin/public-settings": {
       "get": {
-        "description": "Return display-only, non-secret settings.\n\nEverything here is safe to render in the portal: token TTL,\ntimeouts, sync intervals, scenario dirs, WG host/subnet (no\nsecrets), CORS origins. Secrets (WG peer secret, MinIO keys,\nPVE creds) are never included \u2014 PVE creds live behind\nGET /admin/pve-config (masked), the rest are env-only.",
+        "description": "Return display-only, non-secret settings.\n\nEverything here is safe to render in the portal: token TTL,\ntimeouts, sync intervals, scenario dirs, CORS origins. Secrets\n(PVE creds) are never included \u2014 PVE creds live behind\nGET /admin/pve-config (masked), the rest are env-only.",
         "operationId": "get_public_settings_api_v1_admin_public_settings_get",
         "parameters": [
           {
@@ -6074,58 +6074,6 @@
           }
         },
         "summary": "F9.4: flip a user's disabled flag (admin only)",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/api/v1/auth/vpn-config": {
-      "get": {
-        "description": "Return a WireGuard client .conf for the authenticated user.\n\nOn first call, a stable peer_id (UUID) is assigned to the user and\npersisted. On subsequent calls the same peer_id is reused, so the\nkeypair and IP are stable across logins.\n\nThe response body contains:\n  ``config``    \u2014 the full .conf text (save as oxblood.conf)\n  ``filename``  \u2014 suggested filename (``oxblood-<sub>.conf``)\n  ``client_ip`` \u2014 the VPN IP assigned to this peer\n  ``server_ip`` \u2014 the server's VPN IP (for reference)\n  ``allowed_ips`` \u2014 the CIDRs routed over VPN\n\nStatus codes:\n  * 200 \u2014 config returned.\n  * 401 \u2014 no/invalid token.\n  * 503 \u2014 wg-easy not reachable (server_pubkey placeholder used).",
-        "operationId": "get_vpn_config_api_v1_auth_vpn_config_get",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-Oxblood-Token",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Oxblood-Token"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Vpn Config Api V1 Auth Vpn Config Get",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Download your WireGuard VPN config (authenticated users only)",
         "tags": [
           "auth"
         ]

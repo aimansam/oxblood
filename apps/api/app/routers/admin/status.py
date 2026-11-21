@@ -22,7 +22,7 @@ router = APIRouter(dependencies=[Depends(require_role(Role.ADMIN))])
 
 # -- service-status aggregator --------------------------------------------
 #
-# Aggregates PVE / wg-easy / WireGuard env / disk / audit recency into a
+# Aggregates PVE / disk / audit recency into a
 # single read-only snapshot for the Config tab's "Deployment status"
 # panel. Authenticated (admin or lead) so we don't leak env-derived
 # signals to anonymous callers, but no role gate beyond login -- the
@@ -39,9 +39,8 @@ async def get_public_settings() -> dict[str, Any]:
     """Return display-only, non-secret settings.
 
     Everything here is safe to render in the portal: token TTL,
-    timeouts, sync intervals, scenario dirs, WG host/subnet (no
-    secrets), CORS origins. Secrets (WG peer secret,
-    PVE creds) are never included — PVE creds live behind
+    timeouts, sync intervals, scenario dirs, CORS origins. Secrets
+    (PVE creds) are never included — PVE creds live behind
     GET /admin/pve-config (masked), the rest are env-only.
     """
     from app.core.config import settings as _settings
@@ -56,10 +55,6 @@ async def get_public_settings() -> dict[str, Any]:
         "pve_seed_snippet_storage": _settings.proxmox.seed_snippet_storage,
         "orphan_janitor_enabled": _settings.orphan_janitor_enabled,
         "scenarios_dir": _settings.scenarios_dir,
-        "wg_host": _settings.wg_host or None,
-        "wg_subnet": _settings.wg_subnet,
-        "wg_dns": _settings.wg_dns,
-        "wg_port": _settings.wg_port,
         "cors_allow_origins": _settings.cors_allow_origins,
     }
 

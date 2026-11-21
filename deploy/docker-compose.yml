@@ -125,30 +125,6 @@ services:
       timeout: 3s
       retries: 5
 
-  traefik:
-    image: traefik:v3.1
-    container_name: oxblood-traefik
-    restart: unless-stopped
-    command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=oxblood-net"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.le.acme.email=${ACME_EMAIL:-admin@oxblood.local}"
-      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
-      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=websecure"
-      - "--certificatesresolvers.le.acme.httpchallenge=true"
-      - "--log.level=INFO"
-    # NOTE: ports 80/443 omitted intentionally (host already has nginx-proxy-manager).
-    # When deploying on a clean host, uncomment the ports block below.
-    # ports:
-    #   - "80:80"
-    #   - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-letsencrypt:/letsencrypt
-    networks: [oxblood-net]
-
   # --- observability -----------------------------------------------------
   #
   # Prometheus scrapes the api's /metrics endpoint every 15s.
@@ -232,7 +208,6 @@ services:
 volumes:
   postgres-data:
   redis-data:
-  traefik-letsencrypt:
   prometheus-data:
   alertmanager-data:
   grafana-data:
