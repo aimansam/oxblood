@@ -21,14 +21,14 @@ export default {
         danger: 'hsl(var(--danger))',
         info: 'hsl(var(--info))',
       },
-      borderRadius: { lg: '0.375rem', md: '0.25rem', sm: '0.125rem' },
+      borderRadius: { lg: '1rem', md: '0.75rem', sm: '0.5rem' },
       fontFamily: {
         sans: ['"Inter Variable"', 'Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-        mono: ['"JetBrains Mono Variable"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       boxShadow: {
-        glow: '0 0 0 1px hsl(var(--primary) / 0.5), 0 0 18px hsl(var(--primary) / 0.25)',
-        'glow-success': '0 0 0 1px hsl(var(--success) / 0.5), 0 0 18px hsl(var(--success) / 0.25)',
+        soft: '0 1px 2px hsl(240 25% 8% / 0.05), 0 8px 24px -8px hsl(240 25% 8% / 0.12)',
+        glow: '0 8px 20px -6px hsl(var(--primary) / 0.55)',
       },
       backgroundColor: { scrim: 'hsl(var(--scrim))' },
     },

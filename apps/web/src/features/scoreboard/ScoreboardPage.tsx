@@ -40,7 +40,7 @@ export function ScoreboardPage() {
         <Card>
           <CardContent className="overflow-x-auto p-0">
             <table className="w-full text-left">
-              <thead className="hud-label border-b border-border">
+              <thead className="border-b border-border text-xs font-semibold text-muted-foreground">
                 <tr><th className="px-5 py-3">Rank</th><th>Participant</th><th className="text-right">Points</th><th className="px-5 text-right">Flags</th></tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -48,7 +48,7 @@ export function ScoreboardPage() {
                   <tr key={r.user_id}>
                     <td className="px-5 py-3"><RankBadge rank={r.rank} /></td>
                     <td><span className="font-medium">{r.name}</span><ScoreBar value={r.total_points} max={top} /></td>
-                    <td className="text-right font-mono tabular-nums">{r.total_points}</td>
+                    <td className="text-right font-bold tabular-nums">{r.total_points}</td>
                     <td className="px-5 text-right tabular-nums">{r.flags_captured}</td>
                   </tr>
                 ))}

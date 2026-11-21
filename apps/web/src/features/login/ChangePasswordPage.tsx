@@ -46,25 +46,25 @@ export function ChangePasswordPage() {
 
   return (
     <AuthLayout>
-      <form onSubmit={submit} className="panel w-full max-w-sm space-y-5 rounded-sm p-6">
+      <form onSubmit={submit} className="panel w-full max-w-sm space-y-5 rounded-2xl p-8">
         <div>
-          <Wordmark className="mb-4 lg:hidden" />
-          <h1 className="text-xl font-semibold tracking-tight">Choose your password</h1>
+          <Wordmark className="mb-6 lg:hidden" />
+          <h1 className="text-3xl font-extrabold tracking-tight">Choose your password</h1>
           <p className="mt-1 text-muted-foreground">
             {forced ? `Welcome, ${me.data?.sub}. The password you were given is temporary. Set your own to continue.` : 'Set a new password for your account.'}
           </p>
         </div>
         <div className="space-y-3">
           <label className="block space-y-1.5">
-            <span className="hud-label">Current password</span>
+            <span className="text-[13px] font-semibold">Current password</span>
             <Input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" required autoFocus />
           </label>
           <label className="block space-y-1.5">
-            <span className="hud-label">New password</span>
+            <span className="text-[13px] font-semibold">New password</span>
             <Input type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" required minLength={MIN_PASSWORD} aria-describedby="pw-rules" />
           </label>
           <label className="block space-y-1.5">
-            <span className="hud-label">Repeat the new password</span>
+            <span className="text-[13px] font-semibold">Repeat the new password</span>
             <Input type="password" value={again} onChange={(e) => setAgain(e.target.value)} autoComplete="new-password" required />
           </label>
           <p id="pw-rules" className="text-xs text-muted-foreground">

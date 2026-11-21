@@ -19,8 +19,8 @@ function Metric({ k, v }: { k: string; v: string | number }) {
   return (
     <Card>
       <CardContent className="space-y-1">
-        <div className="hud-label">{k}</div>
-        <div className="font-mono text-2xl font-semibold tabular-nums">{v}</div>
+        <div className="text-sm font-semibold text-muted-foreground">{k}</div>
+        <div className="text-4xl font-extrabold tracking-tight tabular-nums">{v}</div>
       </CardContent>
     </Card>
   );
@@ -88,7 +88,7 @@ export function MissionControlPage() {
           {drills.isLoading ? <Skeleton className="h-14 w-full" /> : (
             <>
               <div className="min-w-0">
-                <div className="hud-label">Current exercise {current ? `#${current.id}` : ''}</div>
+                <div className="text-sm font-semibold text-muted-foreground">Current exercise {current ? `#${current.id}` : ''}</div>
                 <div className="truncate text-xl font-semibold">{current?.title ?? 'No exercise selected'}</div>
                 <div className="mt-1 flex items-center gap-3 text-muted-foreground">
                   {current && <StatusChip status={current.status} />}

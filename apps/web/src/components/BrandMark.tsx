@@ -11,12 +11,11 @@ export function BrandMark({ className }: { className?: string }) {
   );
 }
 
-export function Wordmark({ className, compact }: { className?: string; compact?: boolean }) {
+export function Wordmark({ className, inverse }: { className?: string; inverse?: boolean }) {
   return (
-    <span className={cn('inline-flex items-center gap-2 font-mono text-sm font-semibold uppercase tracking-[0.18em]', className)}>
-      <BrandMark />
-      OxBlood<span className="text-primary">//</span>
-      {!compact && <span className="font-normal text-muted-foreground">Range</span>}
+    <span className={cn('inline-flex items-center gap-2 text-lg font-extrabold tracking-tight', className)}>
+      <BrandMark className={cn('h-6 w-6', inverse && 'text-white')} />
+      OxBlood
     </span>
   );
 }

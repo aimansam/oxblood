@@ -325,7 +325,7 @@ function CatalogStep({ scenarios, loading, selected, onSelect }: { scenarios: Sc
             onClick={() => onSelect(s.id)}
             className={cn('flex gap-3 rounded-lg border p-3 text-left hover:bg-muted', selected === s.id ? 'border-primary bg-muted' : 'border-border')}
           >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-border font-mono text-sm font-bold text-muted-foreground">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-extrabold text-primary-foreground">
               {initials(s)}
             </span>
             <span className="min-w-0">
@@ -357,7 +357,7 @@ function DetailsStep({
     <div className="space-y-4">
       {scenario && (
         <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-md border border-border font-mono text-xs font-bold text-muted-foreground">{initials(scenario)}</span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-xs font-extrabold text-primary-foreground">{initials(scenario)}</span>
           <div className="min-w-0">
             <div className="truncate font-medium">{organization(scenario)}</div>
             <div className="truncate text-xs text-muted-foreground">{summary(scenario)}</div>

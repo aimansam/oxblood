@@ -35,19 +35,19 @@ export function LoginPage() {
 
   return (
     <AuthLayout>
-      <form onSubmit={submit} className="panel w-full max-w-sm space-y-5 rounded-sm p-6">
+      <form onSubmit={submit} className="panel w-full max-w-sm space-y-5 rounded-2xl p-8">
         <div>
-          <Wordmark className="mb-4 lg:hidden" />
-          <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
+          <Wordmark className="mb-6 lg:hidden" />
+          <h1 className="text-3xl font-extrabold tracking-tight">Sign in</h1>
           <p className="mt-1 text-muted-foreground">Use the account your operator gave you.</p>
         </div>
         <div className="space-y-3">
           <label className="block space-y-1.5">
-            <span className="hud-label">Username</span>
+            <span className="text-[13px] font-semibold">Username</span>
             <Input value={sub} onChange={(e) => setSub(e.target.value)} autoComplete="username" required autoFocus />
           </label>
           <label className="block space-y-1.5">
-            <span className="hud-label">Password</span>
+            <span className="text-[13px] font-semibold">Password</span>
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
           </label>
         </div>

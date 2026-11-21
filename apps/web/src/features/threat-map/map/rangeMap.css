@@ -1,19 +1,19 @@
 /* The range map follows the app theme: every colour is an app token, so it works in light and dark. */
-.rm { position: relative; width: 100%; height: 100%; background-image: linear-gradient(hsl(var(--grid)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--grid)) 1px, transparent 1px); background-size: 32px 32px; --rm-dmz: 262 52% 62%; --rm-identity: 188 62% 42%; }
+.rm { position: relative; width: 100%; height: 100%; --rm-dmz: 262 52% 62%; --rm-identity: 188 62% 42%; }
 html.light .rm { --rm-dmz: 262 50% 48%; --rm-identity: 188 70% 32%; }
 .rm-svg { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; user-select: none; }
 .rm-svg.rm-dragging { cursor: grabbing; }
 
 /* zones: a quiet outline with a small coloured marker next to the title */
-.rm-zone { fill: hsl(var(--muted) / 0.3); stroke: hsl(var(--border)); stroke-width: 1.5; stroke-dasharray: 6 4; rx: 3px; }
+.rm-zone { fill: hsl(var(--muted)); stroke: hsl(var(--border)); stroke-width: 1.5; rx: 20px; }
 .rm-zone-dot { fill: hsl(var(--muted-foreground)); }
 .rm-zone-dot[data-zone='red'] { fill: hsl(var(--danger)); }
 .rm-zone-dot[data-zone='dmz'] { fill: hsl(var(--rm-dmz)); }
 .rm-zone-dot[data-zone='transit'] { fill: hsl(var(--warning)); }
 .rm-zone-dot[data-zone='identity'] { fill: hsl(var(--rm-identity)); }
 .rm-zone-dot[data-zone='protected'], .rm-zone-dot[data-zone='blue'] { fill: hsl(var(--info)); }
-.rm-zone-title { font: 600 13px "JetBrains Mono Variable", ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase; fill: hsl(var(--foreground)); }
-.rm-zone-sub { font: 12px "JetBrains Mono Variable", ui-monospace, monospace; fill: hsl(var(--muted-foreground)); }
+.rm-zone-title { font: 700 14px "Inter Variable", ui-sans-serif, system-ui, sans-serif; fill: hsl(var(--foreground)); }
+.rm-zone-sub { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; fill: hsl(var(--muted-foreground)); }
 .rm-fog { opacity: 0.6; }
 .rm-fog-note { font: 13px ui-sans-serif, sans-serif; fill: hsl(var(--muted-foreground)); text-anchor: middle; }
 
@@ -33,27 +33,27 @@ html.light .rm { --rm-dmz: 262 50% 48%; --rm-identity: 188 70% 32%; }
 .rm-node[data-cls='debian'], .rm-node[data-cls='ubuntu'], .rm-node[data-cls='linux'] { --rm-tone: var(--danger); }
 .rm-node[data-cls='router'] { --rm-tone: var(--warning); }
 .rm-node[data-cls='windows'] { --rm-tone: var(--info); }
-.rm-card { fill: hsl(var(--card)); stroke: hsl(var(--border)); stroke-width: 1.5; rx: 3px; transition: stroke 0.15s, filter 0.15s; }
+.rm-card { fill: hsl(var(--card)); stroke: hsl(var(--border)); stroke-width: 1.5; rx: 14px; transition: stroke 0.15s; }
 .rm-node:hover .rm-card { stroke: hsl(var(--muted-foreground)); }
 .rm-node:focus-visible .rm-card { stroke: hsl(var(--foreground)); stroke-width: 2.5; }
-.rm-node.rm-selected .rm-card { stroke: hsl(var(--primary)); stroke-width: 2.5; filter: drop-shadow(0 0 6px hsl(var(--primary) / 0.55)); }
+.rm-node.rm-selected .rm-card { stroke: hsl(var(--primary)); stroke-width: 2.5;  }
 .rm-node[data-state='running'] .rm-card { stroke: hsl(var(--rm-tone) / 0.55); }
-.rm-node[data-state='failed'] .rm-card { stroke: hsl(var(--danger)); filter: drop-shadow(0 0 6px hsl(var(--danger) / 0.5)); }
-.rm-tile { fill: hsl(var(--rm-tone) / 0.14); rx: 2px; }
+.rm-node[data-state='failed'] .rm-card { stroke: hsl(var(--danger)); stroke-width: 2.5; }
+.rm-tile { fill: hsl(var(--rm-tone) / 0.14); rx: 10px; }
 .rm-icon { color: hsl(var(--rm-tone)); }
 .rm-name { font: 600 13px "Inter Variable", ui-sans-serif, system-ui, sans-serif; fill: hsl(var(--foreground)); }
-.rm-sub { font: 12px "JetBrains Mono Variable", ui-monospace, monospace; fill: hsl(var(--muted-foreground)); }
+.rm-sub { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; fill: hsl(var(--muted-foreground)); }
 .rm-node[data-state='failed'] .rm-sub { fill: hsl(var(--danger)); font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif; font-weight: 600; }
 .rm-node[data-state='planned'] .rm-card, .rm-node[data-state='stopped'] .rm-card { stroke-dasharray: 4 3; }
 .rm-node[data-state='planned'], .rm-node[data-state='stopped'] { opacity: 0.75; }
 /* status marks differ by shape as well as colour */
-.rm-st-running { fill: hsl(var(--success)); filter: drop-shadow(0 0 3px hsl(var(--success) / 0.8)); }
+.rm-st-running { fill: hsl(var(--success)); }
 .rm-st-starting { fill: none; stroke: hsl(var(--warning)); stroke-width: 2.5; animation: rm-blink 1.4s ease-in-out infinite; }
 .rm-st-failed { fill: hsl(var(--danger)); }
 .rm-st-stopped { fill: hsl(var(--muted-foreground)); }
 .rm-st-planned { fill: none; stroke: hsl(var(--muted-foreground)); stroke-width: 1.8; stroke-dasharray: 2.5 2.5; }
 .rm-st-bang { fill: hsl(var(--card)); font: 700 9px ui-sans-serif, sans-serif; text-anchor: middle; }
-.rm-bridge { fill: hsl(var(--muted-foreground)); font: 12px "JetBrains Mono Variable", ui-monospace, monospace; text-anchor: middle; }
+.rm-bridge { fill: hsl(var(--muted-foreground)); font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; text-anchor: middle; }
 
 .rm[data-filter='red'] .rm-edge:not([data-side='red']), .rm[data-filter='blue'] .rm-edge:not([data-side='blue']), .rm[data-filter='shared'] .rm-edge:not([data-side='shared']) { opacity: 0.15; }
 .rm[data-filter='red'] .rm-node:not([data-side='red']), .rm[data-filter='blue'] .rm-node:not([data-side='blue']), .rm[data-filter='shared'] .rm-node:not([data-side='shared']) { opacity: 0.35; }

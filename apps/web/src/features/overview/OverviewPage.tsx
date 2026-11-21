@@ -12,17 +12,19 @@ import { useWizard } from '../wizard/WizardProvider';
 import { humanizeAction, visibleActivity } from './activity';
 import { nextDrill } from '../exercises/filter';
 
-function Stat({ label, value, led }: { label: string; value: number | undefined; led: string }) {
+const TILE: Record<string, string> = {
+  success: 'bg-success text-white',
+  warning: 'bg-warning text-black',
+  info: 'bg-info text-white',
+  danger: 'bg-primary text-primary-foreground',
+};
+
+function Stat({ label, value, tone }: { label: string; value: number | undefined; tone: keyof typeof TILE }) {
   return (
-    <Card>
-      <CardContent className="space-y-2">
-        <div className="flex items-center gap-2">
-          <span aria-hidden className={cn('led', value ? led : '')} />
-          <span className="hud-label">{label}</span>
-        </div>
-        {value === undefined ? <Skeleton className="h-9 w-12" /> : <div className="font-mono text-4xl font-semibold tabular-nums tracking-tight">{String(value).padStart(2, '0')}</div>}
-      </CardContent>
-    </Card>
+    <div className={cn('rounded-lg p-5 shadow-soft', TILE[tone])}>
+      <div className="text-sm font-semibold opacity-90">{label}</div>
+      {value === undefined ? <Skeleton className="mt-2 h-12 w-16 bg-white/30" /> : <div className="mt-1 text-6xl font-extrabold leading-none tracking-tight tabular-nums">{value}</div>}
+    </div>
   );
 }
 
@@ -53,10 +55,10 @@ export function OverviewPage() {
       )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="Live" led="led-ok led-pulse" value={count('active')} />
-        <Stat label="Scheduled" led="led-warn" value={count('scheduled')} />
-        <Stat label="Completed" led="led-info" value={count('completed')} />
-        <Stat label="Organizations" led="led-danger" value={scenarios.data?.length} />
+        <Stat label="Live" tone="success" value={count('active')} />
+        <Stat label="Scheduled" tone="warning" value={count('scheduled')} />
+        <Stat label="Completed" tone="info" value={count('completed')} />
+        <Stat label="Organizations" tone="danger" value={scenarios.data?.length} />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">

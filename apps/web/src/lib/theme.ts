@@ -12,7 +12,7 @@ export function storedTheme(): Theme | null {
   }
 }
 
-/** The saved choice wins; otherwise follow the operating system; dark when neither is known. */
+/** The saved choice wins; otherwise follow the operating system; light when neither is known. */
 export function resolveTheme(saved: Theme | null, systemPrefersLight: boolean): Theme {
   return saved ?? (systemPrefersLight ? 'light' : 'dark');
 }
@@ -24,7 +24,7 @@ export function applyTheme(theme: Theme) {
 }
 
 // One shared value so every component (shell, toasts) follows the same toggle.
-let current: Theme = resolveTheme(storedTheme(), globalThis.matchMedia?.('(prefers-color-scheme: light)').matches ?? false);
+let current: Theme = resolveTheme(storedTheme(), !(globalThis.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false));
 const listeners = new Set<() => void>();
 if (typeof document !== 'undefined') applyTheme(current);
 

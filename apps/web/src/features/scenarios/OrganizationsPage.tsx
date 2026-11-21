@@ -41,7 +41,7 @@ export function OrganizationsPage() {
                 <Link to={`/organizations/${s.id}`} className="block h-full">
                   <Card className="h-full transition-colors hover:bg-muted/50">
                     <CardContent className="flex gap-3">
-                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-border font-mono text-sm font-bold text-muted-foreground">{initials(s)}</span>
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-extrabold text-primary-foreground">{initials(s)}</span>
                       <div className="min-w-0">
                         <div className="truncate font-medium">{organization(s)}</div>
                         <div className="truncate text-xs text-muted-foreground">{scenarioName(s)}</div>

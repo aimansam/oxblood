@@ -103,7 +103,7 @@ export function ExercisesPage() {
               role="tab"
               aria-selected={view === v}
               onClick={() => update({ view: v === 'operations' ? null : v, drill: null })}
-              className={cn('rounded-sm px-3 py-1.5 capitalize', view === v ? 'bg-background font-medium' : 'text-muted-foreground')}
+              className={cn('rounded-full px-4 py-1.5 font-semibold capitalize', view === v ? 'bg-card shadow-soft' : 'text-muted-foreground')}
             >
               {v}
             </button>

@@ -10,13 +10,13 @@ export function ScoreboardView({ board, highlightTeamId }: { board: Scoreboard; 
   return (
     <div className="space-y-3">
       {board.frozen && (
-        <p role="status" className="flex items-center gap-2 rounded-sm border border-info/40 bg-info/10 px-3 py-2 text-info">
+        <p role="status" className="flex items-center gap-2 rounded-2xl border border-info/40 bg-info/10 px-3 py-2 text-info">
           <Snowflake className="h-4 w-4" /> The scoreboard is frozen. Final points are revealed when the round ends.
         </p>
       )}
-      <div className="panel overflow-x-auto rounded-sm">
+      <div className="panel overflow-x-auto rounded-lg">
         <table className="w-full text-left">
-          <thead className="hud-label border-b border-border">
+          <thead className="border-b border-border text-xs font-semibold text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Rank</th>
               <th>Team</th>
@@ -43,7 +43,7 @@ export function ScoreboardView({ board, highlightTeamId }: { board: Scoreboard; 
                     {t.by_round?.[String(r.id)] ?? 0}
                   </td>
                 ))}
-                <td className="px-4 text-right font-mono text-lg font-semibold tabular-nums">{t.total}</td>
+                <td className="px-4 text-right text-xl font-extrabold tabular-nums">{t.total}</td>
               </tr>
             ))}
           </tbody>
@@ -52,7 +52,7 @@ export function ScoreboardView({ board, highlightTeamId }: { board: Scoreboard; 
       {board.players.length > 0 && (
         <details>
           <summary className="cursor-pointer text-muted-foreground">Top players</summary>
-          <ol className="mt-2 divide-y divide-border rounded-sm border border-border">
+          <ol className="mt-2 divide-y divide-border rounded-lg border border-border">
             {board.players.slice(0, 10).map((p, i) => (
               <li key={p.user_id} className="flex justify-between px-4 py-2">
                 <span>
