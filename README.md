@@ -33,8 +33,8 @@ FastAPI Backend (internal:8000) — REST API + Proxmox VE integration
 ## Quickstart
 
 ```bash
-git clone https://github.com/aimansam/OXBLOOD-DRILL.git
-cd OXBLOOD-DRILL
+git clone https://github.com/aimansam/oxblood.git
+cd oxblood
 docker compose up -d
 # Portal opens at http://localhost:5000
 ```
