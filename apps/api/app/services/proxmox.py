@@ -350,9 +350,9 @@ def list_acl() -> list[dict]:
     triple that grants permissions on the cluster.
 
     Note: with API-token auth, the token is treated as a separate principal
-    (``oxblood@pve@pam!drill-token``). For our flow the token inherits the
+    (``oxblood@pam!drill-token``). For our flow the token inherits the
     user's roles; we don't grant roles on the token directly. So the check
-    for write-permissions is really: does the *user* ``oxblood@pve@pam``
+    for write-permissions is really: does the *user* ``oxblood@pam``
     have ``PVEVMAdmin`` (or broader) on ``/v2/vm`` or ``/`` with propagate?
 
     Each entry is a dict with keys: ``path``, ``ugid``, ``roleid``, ``type``,

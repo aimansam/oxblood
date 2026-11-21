@@ -157,7 +157,7 @@ async def list_proxmox_templates(
 async def list_proxmox_acl(
     user: str | None = Query(
         default=None,
-        description="Filter by ugid (e.g. 'oxblood@pve@pam'). Default: all entries.",
+        description="Filter by ugid (e.g. 'oxblood@pam'). Default: all entries.",
     ),
 ) -> dict[str, Any]:
     """Return the full ACL table. Each entry has path/ugid/roleid/type/propagate.

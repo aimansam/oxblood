@@ -33,7 +33,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 curl tini \
     && rm -rf /var/lib/apt/lists/* \
-    && useradd --create-home --uid 1000 divide
+    && useradd --create-home --uid 1000 oxblood
 
 COPY --from=builder /wheels /wheels
 RUN pip install --no-index --find-links=/wheels -r /wheels/requirements.txt \
@@ -49,7 +49,7 @@ COPY apps/api/alembic.ini ./alembic.ini
 COPY schemas ./schemas
 # Setup wizard portal (vanilla HTML + JS). Mounted at /portal/ by main.py.
 COPY apps/portal ./portal
-USER divide
+USER oxblood
 
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \

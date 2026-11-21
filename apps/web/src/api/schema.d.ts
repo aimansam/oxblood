@@ -4263,14 +4263,14 @@ export interface components {
             seed_snippet_storage: string;
             /**
              * Token Id
-             * @description e.g. oxblood@pve@pam!drill-token
+             * @description e.g. oxblood@pam!drill-token
              */
             token_id: string;
             /** Token Secret */
             token_secret: string;
             /**
              * User
-             * @description e.g. oxblood@pve@pam
+             * @description e.g. oxblood@pam
              */
             user: string;
             /**
@@ -6929,7 +6929,7 @@ export interface operations {
     list_proxmox_acl_api_v1_proxmox_acl_get: {
         parameters: {
             query?: {
-                /** @description Filter by ugid (e.g. 'oxblood@pve@pam'). Default: all entries. */
+                /** @description Filter by ugid (e.g. 'oxblood@pam'). Default: all entries. */
                 user?: string | null;
             };
             header?: never;

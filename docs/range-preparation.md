@@ -29,6 +29,38 @@ Preparation errors require correction/cleanup before retrying. Validation errors
 do not require recloning: use the map's readiness panel to inspect and recheck,
 then Start exercise to validate again and begin play.
 
+## Snapshot baselines
+
+Cloning and seeding a large range is slow, and a Windows domain controller adds a
+reboot after the AD role install. A baseline pays that cost once: every machine is
+cloned, booted, seeded and checked, then stopped and given a `clean-baseline`
+Proxmox snapshot. Later exercises roll each machine back to its snapshot instead of
+cloning it.
+
+- **Opt in per scenario** with `provisioning.auto_baseline: true`. The first prepare
+  builds the baselines; later prepares restore from them. Both shipped scenarios
+  enable it.
+- **Or build ahead of time** from the Snapshots step of the New exercise wizard
+  (between Setup and Provision). The step is optional.
+- **Restore** happens only when every machine has a ready baseline for the current
+  scenario version. Otherwise the range is cloned as usual.
+- A failed build destroys its clones. Baselines from an older scenario version are
+  never deleted automatically; retire them before building new ones.
+
+Admin API:
+
+- `POST /api/v1/admin/build-baselines/{scenario_id}` starts a build and returns a
+  `job_id`. The optional body takes `snapshot_name` and `job_id`.
+- `GET /api/v1/admin/progress/baseline/{job_id}` reports `step`, `message` and
+  `status` (`running`, `done` or `error`). Progress expires after an hour.
+- `POST /api/v1/admin/snapshot-baselines/from-run/{run_id}` captures baselines from a
+  range that is already running and verified.
+
+The build runs as a background task inside the API process. If the API restarts
+during a build, the job is lost and its progress stays `running` until it expires;
+start the build again. After the AD role install the runner waits up to 900 seconds
+for the Windows guest agent to answer again.
+
 ## Capacity and Validation
 
 `OXBLOOD_RANGE_HOST_RESERVE_MB` defaults to 2048. Preflight reserves running guest

@@ -2604,7 +2604,7 @@
             "type": "string"
           },
           "token_id": {
-            "description": "e.g. oxblood@pve@pam!drill-token",
+            "description": "e.g. oxblood@pam!drill-token",
             "maxLength": 255,
             "minLength": 1,
             "title": "Token Id",
@@ -2617,7 +2617,7 @@
             "type": "string"
           },
           "user": {
-            "description": "e.g. oxblood@pve@pam",
+            "description": "e.g. oxblood@pam",
             "maxLength": 255,
             "minLength": 1,
             "title": "User",
@@ -7677,7 +7677,7 @@
         "operationId": "list_proxmox_acl_api_v1_proxmox_acl_get",
         "parameters": [
           {
-            "description": "Filter by ugid (e.g. 'oxblood@pve@pam'). Default: all entries.",
+            "description": "Filter by ugid (e.g. 'oxblood@pam'). Default: all entries.",
             "in": "query",
             "name": "user",
             "required": false,
@@ -7690,7 +7690,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by ugid (e.g. 'oxblood@pve@pam'). Default: all entries.",
+              "description": "Filter by ugid (e.g. 'oxblood@pam'). Default: all entries.",
               "title": "User"
             }
           }
