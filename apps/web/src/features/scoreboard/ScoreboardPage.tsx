@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScoreboardView } from '../competition/ScoreboardView';
 import { useScoreboard } from '../competition/api';
 import { useLeaderboard } from './api';
+import { scoreboardSummary } from './summary';
 
 export function ScoreboardPage() {
   const drills = useDrills();
@@ -24,7 +25,7 @@ export function ScoreboardPage() {
   const top = Math.max(0, ...rows.map((r) => r.total_points));
   return (
     <>
-      <PageHeader title="Scoreboard" description={`${rows.length} ${rows.length === 1 ? 'participant' : 'participants'}`} />
+      <PageHeader title="Scoreboard" description={scoreboardSummary(team.data?.teams ?? [], rows.length)} />
       <div className="mb-4 max-w-md">
         <Select aria-label="Exercise" value={drillId ?? ''} onChange={(e) => setParams({ drill: e.target.value }, { replace: true })}>
           {list.map((d) => <option key={d.id} value={d.id}>{d.title} #{d.id}</option>)}
