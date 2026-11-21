@@ -63,6 +63,29 @@
         "title": "Body_upload_qcow2_api_v1_admin_upload_qcow2_post",
         "type": "object"
       },
+      "BuildBaselinesRequest": {
+        "properties": {
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "snapshot_name": {
+            "default": "clean-baseline",
+            "pattern": "^[A-Za-z0-9_-]{1,40}$",
+            "title": "Snapshot Name",
+            "type": "string"
+          }
+        },
+        "title": "BuildBaselinesRequest",
+        "type": "object"
+      },
       "BulkPlayers": {
         "properties": {
           "names": {
@@ -4159,6 +4182,77 @@
           }
         },
         "summary": "List Asset rows in ORPHANED state (dry-run cleanup preview)",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/build-baselines/{scenario_id}": {
+      "post": {
+        "description": "Kick off a snapshot baseline build. Returns immediately with a job_id.\n\nThe build runs as a background task (clone+seed+snapshot can take 15+ min).\nPoll ``/progress/baseline/{job_id}`` for status.",
+        "operationId": "build_baselines_api_v1_admin_build_baselines__scenario_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "title": "Scenario Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Oxblood-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Oxblood-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildBaselinesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Build Baselines Api V1 Admin Build Baselines  Scenario Id  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Build snapshot baselines for a scenario (async)",
         "tags": [
           "admin"
         ]

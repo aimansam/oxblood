@@ -562,7 +562,6 @@ function SetupStep({
 
 function SnapshotsStep({ scenarioId, scenario }: { scenarioId: number | null; scenario: Scenario | undefined }) {
   const [jobId, setJobId] = useState<string | null>(null);
-  const [jobDone, setJobDone] = useState(false);
   const [building, setBuilding] = useState(false);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -570,7 +569,7 @@ function SnapshotsStep({ scenarioId, scenario }: { scenarioId: number | null; sc
 
   const progress = useQuery<Record<string, unknown>>({
     queryKey: ['baseline-progress', jobId],
-    enabled: jobId !== null && !jobDone,
+    enabled: jobId !== null,
     queryFn: () => http.get<Record<string, unknown>>(`/api/v1/admin/progress/baseline/${jobId}`),
     refetchInterval: (q) => {
       const st = q.state.data?.status as string | undefined;
@@ -582,10 +581,7 @@ function SnapshotsStep({ scenarioId, scenario }: { scenarioId: number | null; sc
   const message = progress.data?.message as string | undefined;
   const jobStep = progress.data?.step as string | undefined;
   const failed = jobStatus === 'error';
-
-  useEffect(() => {
-    if (jobStatus === 'done') setJobDone(true);
-  }, [jobStatus]);
+  const jobDone = jobStatus === 'done';
 
   const build = async () => {
     if (!scenarioId) return;

@@ -900,7 +900,7 @@ def test_compact_blue_workstation_receives_investigation_bundle() -> None:
     assert seed is not None
     assert "/opt/oxblood/evidence/incident-timeline.log" in seed.files
     assert (
-        "dmz_gateway authenticated to dc01"
+        "dc_server DCSync-equivalent request observed"
         in seed.files["/opt/oxblood/evidence/incident-timeline.log"]
     )
     assert seed.files["/opt/oxblood/flags/blue-pivot.txt"] == "FLAG{pivot}\n"

@@ -52,6 +52,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/build-baselines/{scenario_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Build snapshot baselines for a scenario (async)
+         * @description Kick off a snapshot baseline build. Returns immediately with a job_id.
+         *
+         *     The build runs as a background task (clone+seed+snapshot can take 15+ min).
+         *     Poll ``/progress/baseline/{job_id}`` for status.
+         */
+        post: operations["build_baselines_api_v1_admin_build_baselines__scenario_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/create-template": {
         parameters: {
             query?: never;
@@ -3358,6 +3381,16 @@ export interface components {
              */
             storage: string;
         };
+        /** BuildBaselinesRequest */
+        BuildBaselinesRequest: {
+            /** Job Id */
+            job_id?: string | null;
+            /**
+             * Snapshot Name
+             * @default clean-baseline
+             */
+            snapshot_name: string;
+        };
         /** BulkPlayers */
         BulkPlayers: {
             /** Names */
@@ -4846,6 +4879,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrphanListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    build_baselines_api_v1_admin_build_baselines__scenario_id__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Oxblood-Token"?: string | null;
+            };
+            path: {
+                scenario_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BuildBaselinesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

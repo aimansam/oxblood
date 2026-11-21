@@ -8,6 +8,7 @@ observations ("nobody captured the backup flag").
 from __future__ import annotations
 
 import statistics
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -128,9 +129,10 @@ async def build_quality_report(db: AsyncSession, drill: Drill) -> dict[str, Any]
         for event in events:
             if event.team_id is not None:
                 points[event.team_id] = points.get(event.team_id, 0) + int(event.points)
-        team_rows = []
+        team_rows: list[dict[str, Any]] = []
         for team_id, total in sorted(points.items(), key=lambda item: -item[1]):
             mine = [_utc(e.created_at) for e in captures if e.team_id == team_id]
+            stamped = [t for t in mine if t is not None]
             team_rows.append(
                 {
                     "team_id": team_id,
@@ -138,17 +140,17 @@ async def build_quality_report(db: AsyncSession, drill: Drill) -> dict[str, Any]
                     "side": _round_side(round_, team_id),
                     "points": total,
                     "flags": len(mine),
-                    "first_capture_s": _seconds(started, min(mine)) if mine else None,
+                    "first_capture_s": _seconds(started, min(stamped)) if stamped else None,
                 }
             )
 
-        flag_rows = []
+        flag_rows: list[dict[str, Any]] = []
         for flag in flags.values():
             hits = [e for e in captures if e.flag_id == flag.id]
             elapsed = [
                 s for s in (_seconds(started, _utc(e.created_at)) for e in hits) if s is not None
             ]
-            row = {
+            row: dict[str, Any] = {
                 "flag_id": flag.id,
                 "name": flag.name,
                 "captured_by": len({e.team_id for e in hits}),
@@ -251,8 +253,8 @@ def _rate(correct: int, wrong: int) -> float | None:
 async def _scorecards(
     db: AsyncSession,
     drill: Drill,
-    ledger: list[DrillScoreEvent],
-    rounds: list[DrillRound],
+    ledger: Sequence[DrillScoreEvent],
+    rounds: Sequence[DrillRound],
     teams: dict[int, DrillTeam],
     notes: list[str],
 ) -> dict[str, Any]:
@@ -304,7 +306,10 @@ async def _scorecards(
                 row[f"{side}_points"] += int(event.points)
             if event.kind == "flag":
                 row["flags"] += 1
-                took = _seconds(starts.get(event.round_id), _utc(event.created_at))
+                took = _seconds(
+                    starts.get(event.round_id) if event.round_id is not None else None,
+                    _utc(event.created_at),
+                )
                 if took is not None:
                     row["capture_s"].append(took)
             elif event.kind == "first_blood":
