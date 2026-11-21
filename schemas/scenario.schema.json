@@ -524,12 +524,11 @@
                     "type": "string",
                     "enum": [
                       "misp",
-                      "minio",
                       "stdout"
                     ]
                   },
                   "endpoint": {
-                    "description": "host:port or URL. Required for misp, optional for minio/stdout.",
+                    "description": "host:port or URL. Required for misp, optional for stdout.",
                     "type": "string"
                   },
                   "channels": {
@@ -541,10 +540,6 @@
                       "maxLength": 64
                     },
                     "uniqueItems": true
-                  },
-                  "bucket": {
-                    "description": "For minio sinks only.",
-                    "type": "string"
                   },
                   "tag": {
                     "description": "Tag every forwarded event with this label (e.g. scenario name + run id).",
@@ -735,7 +730,6 @@
             "sink_to": {
               "type": "string",
               "enum": [
-                "minio",
                 "local",
                 "s3"
               ]

@@ -80,7 +80,7 @@ def _valid_scenario(name: str = "demo", **overrides) -> dict:
                 }
             ],
             "telemetry": {
-                "sinks": [{"type": "minio", "bucket": "oxblood-runs"}],
+                "sinks": [{"type": "stdout"}],
             },
             "scoring": {
                 "blue": {"rules": [{"id": "detect_lateral", "weight": 10}], "pass_threshold": 5},
@@ -90,7 +90,7 @@ def _valid_scenario(name: str = "demo", **overrides) -> dict:
                 "red": ["asset.ran_command:whoami on red_attacker"],
                 "blue": ["alert.fired:lateral_movement on corp"],
             },
-            "artifacts": {"sink_to": "minio", "bucket": "oxblood-runs", "retention_days": 14},
+            "artifacts": {"sink_to": "local", "retention_days": 14},
         },
     }
     body["metadata"].update(overrides.pop("metadata", {}))

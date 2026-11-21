@@ -606,8 +606,8 @@ def test_post_drill_with_exercise_id_creates_runs_with_team():
                 }
             ],
             "flags": [],
-            "telemetry": {"sinks": [{"type": "minio"}]},
-            "artifacts": {"sink_to": "minio", "retention_days": 7},
+            "telemetry": {"sinks": [{"type": "stdout"}]},
+            "artifacts": {"sink_to": "local", "retention_days": 7},
             "win_conditions": {"red": ["x" * 10], "blue": ["y" * 10]},
             "scoring": {
                 "red": {"rules": [{"id": "rule1", "weight": 100}], "pass_threshold": 50},

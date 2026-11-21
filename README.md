@@ -45,7 +45,6 @@ Browser ──► Portal (Flask, :5000)
               └── /api/*  proxy ──► API (FastAPI, :8000, internal)
                                       ├── PostgreSQL   state and score ledger
                                       ├── Redis        progress, rate limits, event bus
-                                      ├── MinIO        artifacts
                                       └── Proxmox VE   clones, boots and seeds the range
 ```
 

@@ -28,7 +28,7 @@ Acceptance: seven VMs provision, receive role data, and clean up with no orphane
 - Preserve authentication, web access, file access, network-flow, and system channels.
 - Seed the Blue workstation with a scenario timeline and preserve local logs.
 - Add scenario-specific event markers for web compromise, file access, staging, and backup access.
-- Keep raw artifacts in MinIO with a run tag and retention policy.
+- Keep raw artifacts with a run tag and retention policy.
 
 Acceptance: blue can reconstruct source, first access, pivot, collection, and backup targeting from the investigation workstation.
 

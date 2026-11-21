@@ -117,8 +117,8 @@ def test_cancel_drill_returns_409_for_already_terminal(client):
                     }
                 ],
                 "networks": [{"name": "n1", "cidr": "10.0.0.0/24"}],
-                "telemetry": {"sinks": [{"type": "minio"}]},
-                "artifacts": {"sink_to": "minio", "retention_days": 1},
+                "telemetry": {"sinks": [{"type": "stdout"}]},
+                "artifacts": {"sink_to": "local", "retention_days": 1},
                 "win_conditions": {
                     "red": ["x" * 10],
                     "blue": ["y" * 10],

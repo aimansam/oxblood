@@ -1,13 +1,13 @@
 """Tests for the telemetry sink dispatcher (L2 2.11).
 
-Telemetry is best-effort: a failing sink (e.g. MinIO down) must NOT
+Telemetry is best-effort: a failing sink (e.g. an unreachable endpoint) must NOT
 fail the drill run. We test that contract by injecting broken sinks
 and confirming dispatch returns gracefully.
 
 What we assert:
   * Empty sink list → empty results, no exceptions.
   * Stdout sink writes the JSON to its logger.
-  * MinIO not configured → sink list is empty (or stdout-only).
+  * An unknown sink type is skipped, not fatal.
   * Sink failure → dispatch returns SinkResult(ok=False); the other
     sinks still fire.
   * build_sinks_from_spec() honours the scenario spec.
@@ -152,16 +152,11 @@ def test_build_sinks_returns_stdout_when_configured():
     assert [s.name for s in sinks] == ["stdout"]
 
 
-def test_build_sinks_skips_minio_when_package_missing(monkeypatch):
-    """Without ``minio-py`` installed, no MinIO sink is built."""
-    import app.services.telemetry as t_module
+def test_build_sinks_skips_unknown_types():
+    """A sink type the platform does not provide is skipped, never fatal."""
     from app.services.telemetry import build_sinks_from_spec
 
-    # Force the missing-pkg code path by hiding the already-imported
-    # ``minio`` module.
-    monkeypatch.setattr(t_module, "_MINIO_AVAILABLE", False, raising=False)
-
-    sinks = build_sinks_from_spec({"telemetry": {"sinks": [{"type": "minio", "bucket": "x"}]}})
+    sinks = build_sinks_from_spec({"telemetry": {"sinks": [{"type": "no-such-sink"}]}})
     assert sinks == []
 
 

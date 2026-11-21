@@ -1,8 +1,7 @@
 # OxBlood Prometheus scrape configuration.
 #
 # Scrapes the API's /metrics endpoint every 15s. Prometheus itself is
-# only exposed on localhost:9090 — same dev-friendly pattern as the
-# MinIO console on :9001.
+# only exposed on localhost:9090.
 #
 # In production you'd add an Alertmanager + retention tuning. For now
 # 15d retention is more than enough for drill telemetry.

@@ -8,7 +8,7 @@ method.
 
 Design choices:
 
-  * **Best-effort.** A failing sink (for example MinIO down) must
+  * **Best-effort.** A failing sink (for example an unreachable endpoint) must
     NOT fail the drill run. Each sink is wrapped; the error is
     logged and we move on. Telemetry is a side-channel for offline
     analysis; it cannot be on the critical path of "did the drill
@@ -117,13 +117,6 @@ def build_sinks_from_spec(spec: dict | None) -> list[TelemetrySink]:
         kind = s.get("type")
         if kind == "stdout":
             sinks.append(StdoutSink())
-        elif kind == "minio":
-            sink = _build_minio_sink(
-                bucket=s.get("bucket"),
-                endpoint_override=s.get("endpoint"),
-            )
-            if sink is not None:
-                sinks.append(sink)
         elif kind == "misp":
             logging.getLogger(__name__).info(
                 "oxblood.telemetry.sink_deferred type=%s reason=L3_scope",
@@ -134,90 +127,6 @@ def build_sinks_from_spec(spec: dict | None) -> list[TelemetrySink]:
     return sinks
 
 
-def _build_minio_sink(
-    bucket: str | None = None, endpoint_override: str | None = None
-) -> TelemetrySink | None:
-    """Construct a MinIO sink. Returns None if minio-py is missing."""
-    try:
-        from minio import Minio  # type: ignore[import-not-found]
-    except ImportError:
-        logging.getLogger(__name__).info("oxblood.telemetry.minio_skip reason=minio_not_installed")
-        return None
-
-    from app.core.config import settings
-
-    bucket = bucket or settings.minio_bucket
-    secret = settings.minio_secret_key
-    secret_value = secret.get_secret_value() if secret else ""
-    client = Minio(
-        endpoint_override or settings.minio_endpoint,
-        access_key=settings.minio_access_key,
-        secret_key=secret_value,
-        secure=settings.minio_secure,
-    )
-    return _MinioTelemetrySink(client=client, bucket=bucket, name="minio")
-
-
-class _MinioTelemetrySink:
-    """MinIO sink using the optional ``minio-py`` package.
-
-    PUTs the event JSON under ``drills/<run_id>/<event_type>-<at>.json``.
-    Failures bubble as exceptions — ``dispatch`` catches them.
-    """
-
-    def __init__(self, *, client: Any, bucket: str, name: str = "minio") -> None:
-        self._client = client
-        self._bucket = bucket
-        self.name = name
-
-    async def send(self, event: dict[str, Any]) -> None:
-
-        body = json.dumps(event, default=str).encode("utf-8")
-        run_id = event.get("run_id", "anon")
-        event_type = event.get("type", "event")
-        at = event.get("at", "unknown")
-        object_name = f"drills/{run_id}/{event_type}-{at}.json"
-        await _put_object_sync(self._client, self._bucket, object_name, body)
-
-
-async def _put_object_sync(client: Any, bucket: str, object_name: str, body: bytes) -> None:
-    """Offload the sync minio PUT to a worker thread.
-
-    Keeps the event loop responsive even if MinIO is on the slow side.
-    """
-    import asyncio
-    import io
-
-    def _do_put() -> None:
-        try:
-            if not client.bucket_exists(bucket):
-                client.make_bucket(bucket)
-        except Exception:  # noqa: BLE001 — pre-existing bucket is fine
-            pass
-        client.put_object(
-            bucket,
-            object_name,
-            io.BytesIO(body),
-            length=len(body),
-            content_type="application/json",
-        )
-
-    await asyncio.to_thread(_do_put)
-
-
-# Resolved once at import (no per-call cost).
-_MINIO_AVAILABLE = True
-try:
-    import minio  # type: ignore[import-not-found]  # noqa: F401
-except ImportError:
-    _MINIO_AVAILABLE = False
-
-
-def is_minio_enabled() -> bool:
-    """Whether the MinIO sink can be constructed at runtime."""
-    return _MINIO_AVAILABLE
-
-
 __all__ = [
     "TelemetrySink",
     "StdoutSink",
@@ -225,5 +134,4 @@ __all__ = [
     "SinkResult",
     "build_sinks_from_spec",
     "dispatch",
-    "is_minio_enabled",
 ]

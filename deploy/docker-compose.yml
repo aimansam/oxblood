@@ -50,10 +50,6 @@ services:
       # across workers. Single-worker deployments can leave this
       # unset (OXBLOOD_EVENT_BUS=memory).
       OXBLOOD_EVENT_BUS: ${OXBLOOD_EVENT_BUS:-memory}
-      OXBLOOD_MINIO_ENDPOINT: minio:9000
-      OXBLOOD_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-oxblood}
-      OXBLOOD_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-oxbloodoxbloodoxblood}
-      OXBLOOD_MINIO_BUCKET: ${MINIO_BUCKET:-oxblood-artifacts}
       # Scenario catalog. The repo's examples/ is mounted read-only so the
       # API can sync them into the DB on startup.
       OXBLOOD_SCENARIOS_DIR: ${OXBLOOD_SCENARIOS_DIR:-/workdir/examples/scenarios}
@@ -86,8 +82,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_started
     networks: [oxblood-net]
     volumes:
       # Repo root mounted read-only so the api container can read scenario
@@ -131,41 +125,6 @@ services:
       timeout: 3s
       retries: 5
 
-  minio:
-    image: minio/minio:latest
-    container_name: oxblood-minio
-    restart: unless-stopped
-    command: ["server", "/data", "--console-address", ":9001"]
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-oxblood}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-oxbloodoxbloodoxblood}
-    volumes:
-      - minio-data:/data
-    ports:
-      - "127.0.0.1:9001:9001"
-    networks: [oxblood-net]
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-
-  minio-init:
-    image: minio/minio:latest
-    container_name: oxblood-minio-init
-    depends_on:
-      minio:
-        condition: service_healthy
-    networks: [oxblood-net]
-    entrypoint: >
-      /bin/sh -c "
-      /usr/bin/mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-oxblood} ${MINIO_ROOT_PASSWORD:-oxbloodoxbloodoxblood} &&
-      /usr/bin/mc mb -p local/${MINIO_BUCKET:-oxblood-artifacts} || true &&
-      /usr/bin/mc anonymous set none local/${MINIO_BUCKET:-oxblood-artifacts} &&
-      echo 'MinIO bucket ${MINIO_BUCKET:-oxblood-artifacts} ready'
-      "
-    restart: "no"
-
   traefik:
     image: traefik:v3.1
     container_name: oxblood-traefik
@@ -196,8 +155,7 @@ services:
   # Grafana reads from Prometheus and serves the starter dashboard
   # defined in deploy/grafana/dashboards/.
   #
-  # Both are exposed on localhost only (same dev pattern as the
-  # MinIO console on :9001). In production, hide them behind the
+  # Both are exposed on localhost only. In production, hide them behind the
   # oxblood-net bridge + put an authenticating reverse proxy in front.
 
   prometheus:
@@ -274,7 +232,6 @@ services:
 volumes:
   postgres-data:
   redis-data:
-  minio-data:
   traefik-letsencrypt:
   prometheus-data:
   alertmanager-data:

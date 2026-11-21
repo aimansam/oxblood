@@ -29,7 +29,6 @@ name: oxblood-cyber-drill-prod
 # Required env vars (all from the .env.production file):
 #
 #   POSTGRES_PASSWORD        -- strong random 32+ chars
-#   MINIO_ROOT_PASSWORD      -- strong random 32+ chars
 #   OXBLOOD_TOKEN_SECRET      -- strong random 32+ chars (HMAC)
 #   PROXMOX_TOKEN_SECRET     -- PVE API token secret
 #   PROXMOX_HOST             -- pve.example.com (LAN)
@@ -56,10 +55,6 @@ services:
       # R1: SSE across workers requires the Redis-backed bus.
       # Overriding the default in the dev compose.
       OXBLOOD_EVENT_BUS: redis
-      OXBLOOD_MINIO_ENDPOINT: minio:9000
-      OXBLOOD_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
-      OXBLOOD_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-      OXBLOOD_MINIO_BUCKET: ${MINIO_BUCKET:-oxblood-artifacts}
       # Scenarios are baked into the image; no OXBLOOD_SCENARIOS_DIR.
       # Sync still runs on startup so any DB-side edits get rolled in.
       OXBLOOD_SYNC_ON_STARTUP: "true"
@@ -101,8 +96,6 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      minio:
         condition: service_healthy
     networks: [oxblood-net]
     healthcheck:
@@ -172,28 +165,6 @@ services:
         limits:
           cpus: "1"
           memory: 1G
-
-  minio:
-    image: minio/minio:RELEASE.2024-08-29T01-40-52Z
-    container_name: oxblood-minio
-    restart: always
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    volumes:
-      - minio-data:/data
-    networks: [oxblood-net]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: "2"
-          memory: 2G
 
   # F12.3: Traefik fronts the public ingress with Let's Encrypt.
   # Public hostname is ${PUBLIC_HOSTNAME}; ACME email is ${ACME_EMAIL}.
@@ -321,7 +292,6 @@ services:
 volumes:
   postgres-data:
   redis-data:
-  minio-data:
   traefik-letsencrypt:
   authentik-media:
   authentik-templates:

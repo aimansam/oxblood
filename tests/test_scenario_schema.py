@@ -144,7 +144,7 @@ def _minimal_valid() -> dict:
                 },
             },
             "win_conditions": {"red": ["Compromise the box."], "blue": ["Detect the box."]},
-            "artifacts": {"sink_to": "minio", "retention_days": 7},
+            "artifacts": {"sink_to": "local", "retention_days": 7},
         },
     }
 

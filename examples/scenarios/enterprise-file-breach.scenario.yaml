@@ -310,13 +310,11 @@ spec:
 
   telemetry:
     sinks:
-      - type: minio
-        bucket: oxblood-artifacts
+      - type: stdout
         channels: [pcap, web_access, authentication, system]
 
   artifacts:
-    sink_to: minio
-    bucket: oxblood-artifacts
+    sink_to: local
     required_pcaps: [red_vlan, dmz_vlan, dc01_vlan, backup_vlan]
     retention_days: 30
 

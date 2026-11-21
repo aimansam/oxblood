@@ -38,12 +38,10 @@ spec:
 
   telemetry:
     sinks:
-      - type: minio
-        bucket: oxblood-artifacts
+      - type: stdout
 
   artifacts:
-    sink_to: minio
-    bucket: oxblood-artifacts
+    sink_to: local
     retention_days: 7
 
   win_conditions:

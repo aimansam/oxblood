@@ -40,7 +40,7 @@ async def get_public_settings() -> dict[str, Any]:
 
     Everything here is safe to render in the portal: token TTL,
     timeouts, sync intervals, scenario dirs, WG host/subnet (no
-    secrets), CORS origins. Secrets (WG peer secret, MinIO keys,
+    secrets), CORS origins. Secrets (WG peer secret,
     PVE creds) are never included — PVE creds live behind
     GET /admin/pve-config (masked), the rest are env-only.
     """

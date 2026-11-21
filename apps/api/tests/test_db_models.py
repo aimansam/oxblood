@@ -312,7 +312,7 @@ async def test_scenario_spec_is_json_blob(session: AsyncSession) -> None:
                 "red": {"rules": [{"id": "r", "weight": 100}], "pass_threshold": 50},
             },
             "win_conditions": {"red": ["x"], "blue": ["y"]},
-            "artifacts": {"sink_to": "minio", "retention_days": 7},
+            "artifacts": {"sink_to": "local", "retention_days": 7},
         },
     }
     s = _scenario()

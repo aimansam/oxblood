@@ -45,13 +45,6 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://redis:6379/0"
 
-    # MinIO
-    minio_endpoint: str = "minio:9000"
-    minio_access_key: str = "oxblood"
-    minio_secret_key: SecretStr = SecretStr("oxbloodoxbloodoxblood")
-    minio_bucket: str = "oxblood-artifacts"
-    minio_secure: bool = False
-
     # CORS
     # Comma-separated list of allowed origins. The browser sends an Origin
     # header on every cross-origin request, and the CORS middleware only
