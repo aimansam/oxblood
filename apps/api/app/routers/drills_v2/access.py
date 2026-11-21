@@ -55,8 +55,8 @@ def _asset_credentials(role: str, asset_spec: dict | None = None) -> dict | None
         }
     if spec_access.get("user") or spec_access.get("password"):
         return {
-            "username": str(spec_access.get("user") or "divide"),
-            "password": str(spec_access.get("password") or "divide"),
+            "username": str(spec_access.get("user") or "oxblood"),
+            "password": str(spec_access.get("password") or "oxblood"),
         }
     return None
 

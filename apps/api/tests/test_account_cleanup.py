@@ -66,7 +66,7 @@ def world(tmp_path):
 
 
 def admin():
-    return {"X-Divide-Token": sign_token("root", "admin", 3600)}
+    return {"X-Oxblood-Token": sign_token("root", "admin", 3600)}
 
 
 async def _add_user(db, sub, role="red", drill=None, enrolled_in=(), team=None):

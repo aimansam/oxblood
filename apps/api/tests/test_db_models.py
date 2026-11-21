@@ -67,7 +67,7 @@ def _scenario(name: str = "test-scenario") -> Scenario:
         difficulty="beginner",
         duration_min=30,
         tags=["x"],
-        spec={"apiVersion": "divide/v1", "kind": "Scenario"},
+        spec={"apiVersion": "oxblood/v1", "kind": "Scenario"},
         authors=[{"handle": "tester"}],
         source_path="examples/scenarios/test.scenario.yaml",
     )
@@ -293,7 +293,7 @@ async def test_audit_log_foreign_keys_null_on_delete(session: AsyncSession) -> N
 async def test_scenario_spec_is_json_blob(session: AsyncSession) -> None:
     """Spec survives round-trip with nested structure intact."""
     spec = {
-        "apiVersion": "divide/v1",
+        "apiVersion": "oxblood/v1",
         "kind": "Scenario",
         "metadata": {
             "name": "x",

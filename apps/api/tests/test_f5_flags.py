@@ -245,7 +245,7 @@ async def _seed_scenario_with_flag():
             difficulty="beginner",
             duration_min=30,
             spec={
-                "apiVersion": "divide/v1",
+                "apiVersion": "oxblood/v1",
                 "kind": "Scenario",
                 "spec": {
                     "assets": [],
@@ -281,7 +281,7 @@ def test_submit_flag_correct_value_200():
     from app.main import app
 
     token = sign_token(sub="alice", role="blue", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r = client.post(
         f"/api/v1/drills/{run_id}/submit-flag",
         json={"flag_id": "f1", "value": "FLAG{pwned}"},
@@ -299,7 +299,7 @@ def test_submit_flag_wrong_value_422():
     from app.main import app
 
     token = sign_token(sub="alice", role="blue", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r = client.post(
         f"/api/v1/drills/{run_id}/submit-flag",
         json={"flag_id": "f1", "value": "wrong"},
@@ -311,7 +311,7 @@ def test_submit_flag_missing_run_404():
     from app.main import app
 
     token = sign_token(sub="alice", role="blue", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r = client.post(
         "/api/v1/drills/99999/submit-flag",
         json={"flag_id": "f1", "value": "x"},
@@ -325,7 +325,7 @@ def test_submit_flag_missing_in_spec_404():
     from app.main import app
 
     token = sign_token(sub="alice", role="blue", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r = client.post(
         f"/api/v1/drills/{run_id}/submit-flag",
         json={"flag_id": "ghost", "value": "any"},
@@ -339,7 +339,7 @@ def test_submit_flag_duplicate_409():
     from app.main import app
 
     token = sign_token(sub="alice", role="blue", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r1 = client.post(
         f"/api/v1/drills/{run_id}/submit-flag",
         json={"flag_id": "f1", "value": "FLAG{pwned}"},
@@ -358,7 +358,7 @@ def test_submit_flag_terminal_run_409():
     from app.main import app
 
     token = sign_token(sub="alice", role="blue", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r = client.post(
         f"/api/v1/drills/{run_id}/submit-flag",
         json={"flag_id": "f1", "value": "FLAG{pwned}"},
@@ -379,7 +379,7 @@ async def _seed_terminal_run():
             difficulty="beginner",
             duration_min=30,
             spec={
-                "apiVersion": "divide/v1",
+                "apiVersion": "oxblood/v1",
                 "kind": "Scenario",
                 "spec": {
                     "assets": [],
@@ -417,7 +417,7 @@ def test_submit_flag_403_for_unauthorized_submitter():
 
     # alice owns the run; eve is a red user.
     token = sign_token(sub="eve", role="red", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r = client.post(
         f"/api/v1/drills/{run_id}/submit-flag",
         json={"flag_id": "f1", "value": "FLAG{pwned}"},
@@ -512,7 +512,7 @@ async def test_runner_writes_flag_planted_audit(
             difficulty="beginner",
             duration_min=30,
             spec={
-                "apiVersion": "divide/v1",
+                "apiVersion": "oxblood/v1",
                 "kind": "Scenario",
                 "spec": {
                     "assets": [
@@ -579,7 +579,7 @@ async def test_runner_logs_warning_when_planted_on_unknown_role(
             difficulty="beginner",
             duration_min=30,
             spec={
-                "apiVersion": "divide/v1",
+                "apiVersion": "oxblood/v1",
                 "kind": "Scenario",
                 "spec": {
                     "assets": [

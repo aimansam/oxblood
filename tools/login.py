@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mint an X-Divide-Token by signing in with username + password.
+"""Mint an X-Oxblood-Token by signing in with username + password.
 
 F3-prep companion to ``issue_token.py``. Whereas ``issue_token.py``
 signs tokens locally with the API's HMAC secret (the SSH-operator
@@ -83,7 +83,7 @@ def _post_login(api: str, sub: str, password: str) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="Sign in to OxBlood and print an X-Divide-Token.",
+        description="Sign in to OxBlood and print an X-Oxblood-Token.",
     )
     ap.add_argument(
         "--user",

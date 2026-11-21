@@ -3,13 +3,13 @@
 Generates per-user WireGuard client configs entirely in Python —
 no ``wg`` binary required on the API container.
 
-Key derivation: HMAC-SHA256(key=DIVIDE_WG_PEER_SECRET, msg=peer_id)
+Key derivation: HMAC-SHA256(key=OXBLOOD_WG_PEER_SECRET, msg=peer_id)
 clamped to a valid Curve25519 scalar.  The public key is derived via
 the Montgomery ladder (RFC 7748 §5).  A user always gets the same
-keypair from the same peer_id; rotating DIVIDE_WG_PEER_SECRET
+keypair from the same peer_id; rotating OXBLOOD_WG_PEER_SECRET
 invalidates all configs at once.
 
-IP allocation: each user gets a /32 in DIVIDE_WG_SUBNET based on
+IP allocation: each user gets a /32 in OXBLOOD_WG_SUBNET based on
 their peer_index (server = index 0 → .1, clients start at .2).
 """
 

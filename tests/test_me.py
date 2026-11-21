@@ -38,7 +38,7 @@ def test_me_admin_returns_full_payload(client: TestClient, admin_token: str):
     plus ttl_remaining_s. The ttl must be positive (less than 3600)
     and reasonably close to the ttl we minted.
     """
-    r = client.get("/api/v1/me", headers={"X-Divide-Token": admin_token})
+    r = client.get("/api/v1/me", headers={"X-Oxblood-Token": admin_token})
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["sub"] == "admin-test"
@@ -62,7 +62,7 @@ def test_me_every_role_returns_correct_role_string(client: TestClient, role_valu
     from app.core.auth import sign_token
 
     tok = sign_token(f"user-{role_value}", role_value, 3600)
-    r = client.get("/api/v1/me", headers={"X-Divide-Token": tok})
+    r = client.get("/api/v1/me", headers={"X-Oxblood-Token": tok})
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["role"] == role_value
@@ -70,20 +70,20 @@ def test_me_every_role_returns_correct_role_string(client: TestClient, role_valu
 
 
 def test_me_anonymous_returns_401(client: TestClient):
-    """No X-Divide-Token -> require_token kicks in -> 401."""
+    """No X-Oxblood-Token -> require_token kicks in -> 401."""
     r = client.get("/api/v1/me")
     assert r.status_code == 401, r.text
-    assert "X-Divide-Token" in r.text
+    assert "X-Oxblood-Token" in r.text
 
 
 def test_me_malformed_token_returns_401(client: TestClient):
-    """Garbage in the X-Divide-Token header is a real auth failure,
+    """Garbage in the X-Oxblood-Token header is a real auth failure,
     not anonymous -- but the response shape is still 401 (with the
     'invalid token' detail). Same split as the rest of the API.
     """
     r = client.get(
         "/api/v1/me",
-        headers={"X-Divide-Token": "this.is.not.a.token"},
+        headers={"X-Oxblood-Token": "this.is.not.a.token"},
     )
     assert r.status_code == 401, r.text
 
@@ -102,7 +102,7 @@ def test_me_ttl_remaining_decreases_with_token_age(
 
     fresh = sign_token("fresh", "red", 3600)
     _time.sleep(1.2)
-    r = client.get("/api/v1/me", headers={"X-Divide-Token": fresh})
+    r = client.get("/api/v1/me", headers={"X-Oxblood-Token": fresh})
     assert r.status_code == 200
     body = r.json()
     # We slept >=1.2s; ttl should be <= 3600 - 1 (very loose).
@@ -131,7 +131,7 @@ def test_me_does_not_leak_signing_secret(client: TestClient, admin_token: str):
     no raw token string. Catches a future refactor that returns
     the whole JWS instead of the parsed payload.
     """
-    r = client.get("/api/v1/me", headers={"X-Divide-Token": admin_token})
+    r = client.get("/api/v1/me", headers={"X-Oxblood-Token": admin_token})
     body = r.json()
     forbidden = {"signature", "sig", "secret", "token", "raw", "jws"}
     assert not (forbidden & set(body.keys())), body

@@ -21,7 +21,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-os.environ.setdefault("DIVIDE_TOKEN_SECRET", "test-secret-do-not-use-in-prod")
+os.environ.setdefault("OXBLOOD_TOKEN_SECRET", "test-secret-do-not-use-in-prod")
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ async def test_current_token_uses_query_param_when_header_missing(
     request = MagicMock()
     request.query_params = {"token": admin_token}
     request.state = MagicMock()
-    result = await current_token(request, x_divide_token=None)
+    result = await current_token(request, x_oxblood_token=None)
     assert result is not None
     assert result.sub == "admin-test"
 
@@ -56,7 +56,7 @@ async def test_current_token_header_takes_precedence(admin_token: str):
     request = MagicMock()
     request.query_params = {"token": "garbage-from-query"}
     request.state = MagicMock()
-    result = await current_token(request, x_divide_token=admin_token)
+    result = await current_token(request, x_oxblood_token=admin_token)
     assert result is not None
     assert result.sub == "admin-test"
 
@@ -69,7 +69,7 @@ async def test_current_token_anonymous_when_neither_present():
     request = MagicMock()
     request.query_params = {}
     request.state = MagicMock()
-    result = await current_token(request, x_divide_token=None)
+    result = await current_token(request, x_oxblood_token=None)
     assert result is None
 
 
@@ -83,5 +83,5 @@ async def test_current_token_rejects_invalid_query_token():
     request.query_params = {"token": "garbage"}
     request.state = MagicMock()
     with pytest.raises(HTTPException) as exc_info:
-        await current_token(request, x_divide_token=None)
+        await current_token(request, x_oxblood_token=None)
     assert exc_info.value.status_code == 401

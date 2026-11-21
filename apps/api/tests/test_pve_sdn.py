@@ -55,9 +55,9 @@ from app.services.pve_sdn import (
 def _make_auth(
     *,
     base_url: str = "https://192.168.0.10:8006",
-    token_id: str = "divide@pve!drill-token",
+    token_id: str = "oxblood@pve!drill-token",
     token_secret: str = "secret-uuid",
-    user: str = "divide@pve",
+    user: str = "oxblood@pve",
     node: str = "pve",
 ) -> SdnAuth:
     return SdnAuth(
@@ -338,7 +338,7 @@ class TestPermissionErrors:
         assert "SDN.Allocate" in str(ei.value)
         assert ei.value.required_role == "SDN.Allocate"
         assert "pveum aclmod" in ei.value.pveum_hint
-        assert "divide@pve" in ei.value.pveum_hint
+        assert "oxblood@pve" in ei.value.pveum_hint
 
     def test_vnet_create_403_raises_permission_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         def on_vnet_create(req: httpx.Request) -> httpx.Response:
@@ -504,12 +504,12 @@ class TestListEndpoints:
     """Smoke tests for the read-only list helpers."""
 
     def test_list_zones(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        transport, _ = _make_handler(zones=[{"zone": "divide"}])
+        transport, _ = _make_handler(zones=[{"zone": "oxblood"}])
         _patch_httpx(monkeypatch, transport)
 
         auth = _make_auth()
         zones = asyncio.run(list_zones(auth))
-        assert zones == [{"zone": "divide"}]
+        assert zones == [{"zone": "oxblood"}]
 
     def test_list_vnets(self, monkeypatch: pytest.MonkeyPatch) -> None:
         transport, _ = _make_handler(vnets=[{"vnet": "vmbr100"}])

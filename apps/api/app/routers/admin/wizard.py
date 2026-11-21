@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json as _json
 import os
+import uuid as _uuid
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -101,6 +103,61 @@ class SnapshotBaselineRequest(BaseModel):
     snapshot_name: str = Field(default="clean-baseline", pattern=r"^[A-Za-z0-9_-]{1,40}$")
 
 
+class BuildBaselinesRequest(BaseModel):
+    snapshot_name: str = Field(default="clean-baseline", pattern=r"^[A-Za-z0-9_-]{1,40}$")
+    job_id: str | None = None
+
+
+_BASELINE_KEY_PREFIX = "oxblood:setup:baseline:"
+
+
+async def _build_baselines_bg(
+    scenario_id: int,
+    actor: str,
+    snapshot_name: str,
+    job_id: str,
+) -> None:
+    """Background: clone+seed+snapshot all roles, write Redis progress."""
+    from app.db.session import get_sessionmaker
+    from app.services.cache import get_redis
+
+    redis = get_redis()
+    key = f"{_BASELINE_KEY_PREFIX}{job_id}"
+
+    async def _write(step: str, message: str, job_status: str = "running") -> None:
+        await redis.hset(
+            key,
+            mapping={
+                k: _json.dumps(v)
+                for k, v in {
+                    "job_id": job_id,
+                    "step": step,
+                    "message": message,
+                    "status": job_status,
+                }.items()
+            },
+        )
+        await redis.expire(key, 3600)
+
+    await _write("start", "Queued — waiting for runner…")
+    try:
+        sm = get_sessionmaker()
+        async with sm() as session:
+            runner = build_runner()
+            await _write("build", "Cloning, seeding and snapshotting VMs…")
+            await runner.build_snapshot_baselines(
+                scenario_id,
+                session,
+                actor=actor,
+                snapshot_name=snapshot_name,
+                instance=1,
+            )
+        await _write("done", "Snapshot baselines built successfully.", "done")
+    except Exception as exc:  # noqa: BLE001
+        await _write("error", str(exc), "error")
+        log.error("baseline_build_failed", scenario_id=scenario_id, exc=str(exc))
+
+
 @router.get(
     "/probe",
     response_model=ProbeResponse,
@@ -129,6 +186,37 @@ async def storage_pools() -> dict[str, Any]:
             detail=f"PVE unreachable: {exc}",
         ) from exc
     return {"items": items, "total": len(items)}
+
+
+@router.post(
+    "/build-baselines/{scenario_id}",
+    summary="Build snapshot baselines for a scenario (async)",
+)
+async def build_baselines(
+    scenario_id: int,
+    body: BuildBaselinesRequest,
+    background_tasks: BackgroundTasks,
+    token: TokenData = Depends(current_token),
+) -> dict[str, Any]:
+    """Kick off a snapshot baseline build. Returns immediately with a job_id.
+
+    The build runs as a background task (clone+seed+snapshot can take 15+ min).
+    Poll ``/progress/baseline/{job_id}`` for status.
+    """
+    job_id = body.job_id or str(_uuid.uuid4())
+    background_tasks.add_task(
+        _build_baselines_bg,
+        scenario_id,
+        token.sub,
+        body.snapshot_name,
+        job_id,
+    )
+    return {
+        "job_id": job_id,
+        "status": "pending",
+        "step": "queued",
+        "message": f"Baseline build queued; poll /api/v1/admin/progress/baseline/{job_id}",
+    }
 
 
 @router.post(
@@ -164,7 +252,7 @@ async def capture_snapshot_baselines(
     }
 
 
-UPLOAD_TMP_DIR = Path(os.environ.get("DIVIDE_UPLOAD_TMP_DIR", "/tmp/divide-uploads"))
+UPLOAD_TMP_DIR = Path(os.environ.get("OXBLOOD_UPLOAD_TMP_DIR", "/tmp/oxblood-uploads"))
 
 
 @router.post(
@@ -281,10 +369,10 @@ async def set_template(vmid: int, body: SetTemplateRequest) -> dict[str, Any]:
     summary="Poll a setup job's progress",
 )
 async def get_job_progress(kind: str, job_id: str) -> dict[str, Any]:
-    if kind not in ("upload", "template"):
+    if kind not in ("upload", "template", "baseline"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"unknown kind: {kind!r} (expected 'upload' or 'template')",
+            detail=f"unknown kind: {kind!r} (expected 'upload', 'template' or 'baseline')",
         )
     progress = await admin_svc.get_progress(job_id, kind=kind)
     if progress is None:
@@ -393,7 +481,7 @@ async def start_first_drill(
     """Run the canonical L1 demo drill.
 
     Q14: was a loopback HTTP call to ``/api/v1/drills`` which
-    required ``X-Divide-Token`` to be forwarded. The forward
+    required ``X-Oxblood-Token`` to be forwarded. The forward
     was missing, so every call returned a doubly-nested 401.
     Rewritten to call the runner in-process:
       * look up the scenario in the same DB session,

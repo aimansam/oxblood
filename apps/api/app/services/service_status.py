@@ -10,7 +10,7 @@ Read-only snapshot of the runtime environment the API is running in:
                           already probes this port; if we can reach it
                           the container is up. Failures are reported as
                           "unreachable" (string), not raised.
-  * WireGuard env     -- reads WG_HOST, WG_DEFAULT_DNS, DIVIDE_WG_PEER_SECRET
+  * WireGuard env     -- reads WG_HOST, WG_DEFAULT_DNS, OXBLOOD_WG_PEER_SECRET
                           from os.environ. The secret is reported only as
                           "<set>" / "<unset>" so we never leak it.
   * API disk          -- shutil.disk_usage on /app (the overlay mount).
@@ -43,7 +43,7 @@ from app.services import admin as admin_svc
 log = logging.getLogger(__name__)
 
 
-# wg-easy listens on 51820/udp. The container is on the divide-net
+# wg-easy listens on 51820/udp. The container is on the oxblood-net
 # docker network, so reaching the gateway OR a peer should tell us
 # it's alive. We use a non-blocking UDP "ping" (send 0 bytes, accept
 # timeout) -- this is intentionally best-effort and never raises.
@@ -73,7 +73,7 @@ def _probe_wg_easy() -> dict[str, Any]:
 def _wg_env_summary() -> dict[str, Any]:
     """WG_HOST + secret-presence summary. Never returns the secret."""
     host = os.environ.get("WG_HOST", "").strip()
-    secret_set = bool(os.environ.get("DIVIDE_WG_PEER_SECRET", "").strip())
+    secret_set = bool(os.environ.get("OXBLOOD_WG_PEER_SECRET", "").strip())
     dns = os.environ.get("WG_DEFAULT_DNS", "").strip()
     return {
         "wg_host": host or None,

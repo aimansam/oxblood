@@ -14,15 +14,15 @@ The startup sequence becomes:
         -> uvicorn app.main:app   (long-running)
 
 Behaviour:
-  * Migrations are run with the same ``DIVIDE_DB_URL`` env vars that
+  * Migrations are run with the same ``OXBLOOD_DB_URL`` env vars that
     uvicorn sees, so dev / staging / prod all use their own DB.
   * Exit code from ``alembic`` propagates. If migrations fail, the
     container fails to start, which is what an operator wants (a
     loud failure beats a half-broken API).
   * The script is a thin wrapper, so you can also invoke it directly
-    for ``docker exec divide-api prestart.sh``.
+    for ``docker exec oxblood-api prestart.sh``.
 
-Disable with ``DIVIDE_SKIP_MIGRATIONS=1`` for the rare case where the
+Disable with ``OXBLOOD_SKIP_MIGRATIONS=1`` for the rare case where the
 DB is intentionally pinned to an older revision (e.g. downgrade tests).
 """
 
@@ -34,12 +34,12 @@ import sys
 
 
 def main() -> int:
-    if os.environ.get("DIVIDE_SKIP_MIGRATIONS", "").strip().lower() in (
+    if os.environ.get("OXBLOOD_SKIP_MIGRATIONS", "").strip().lower() in (
         "1",
         "true",
         "yes",
     ):
-        print("[prestart] DIVIDE_SKIP_MIGRATIONS=1, skipping alembic upgrade")
+        print("[prestart] OXBLOOD_SKIP_MIGRATIONS=1, skipping alembic upgrade")
         return 0
 
     print("[prestart] running alembic upgrade head ...")

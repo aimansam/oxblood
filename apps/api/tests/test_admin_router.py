@@ -70,7 +70,7 @@ def admin_headers():
     from app.core.auth import Role, sign_token
 
     tok = sign_token("admin-test", Role.ADMIN.value, 3600)
-    return {"X-Divide-Token": tok}
+    return {"X-Oxblood-Token": tok}
 
 
 def test_probe_endpoint_returns_snapshot(client, admin_headers):
@@ -81,7 +81,7 @@ def test_probe_endpoint_returns_snapshot(client, admin_headers):
     fake_result = PveProbeResult(
         reachable=True,
         version="9.1.7 (9)",
-        pve_user="divide@pve@pam",
+        pve_user="oxblood@pve@pam",
         has_drill_privs=True,
         has_setup_privs=False,
         drill_privs_present=["VM.Allocate", "VM.Clone", "VM.PowerMgmt"],
@@ -273,13 +273,13 @@ def test_upload_qcow2_streams_real_file(client, tmp_path: Path, monkeypatch):
     # the admin token so the token's HMAC matches what the server
     # will compute later.
     monkeypatch.setenv("PROXMOX_HOST", "pve.lan")
-    monkeypatch.setenv("PROXMOX_TOKEN_ID", "divide@pve!t")
+    monkeypatch.setenv("PROXMOX_TOKEN_ID", "oxblood@pve!t")
     monkeypatch.setenv("PROXMOX_TOKEN_SECRET", "secret")
     get_settings.cache_clear()
     px.get_proxmox_client.cache_clear()
     monkeypatch.setattr("app.services.cache.get_redis", lambda: _FakeRedis())
 
-    admin_headers = {"X-Divide-Token": sign_token("admin-test", Role.ADMIN.value, 3600)}
+    admin_headers = {"X-Oxblood-Token": sign_token("admin-test", Role.ADMIN.value, 3600)}
 
     fpath = tmp_path / "debian-13.qcow2"
     fpath.write_bytes(b"\x00" * (64 * 1024))  # 64 KB
@@ -342,7 +342,7 @@ def test_admin_probe_returns_403_for_non_admin_token(client):
     from app.core.auth import Role, sign_token
 
     tok = sign_token("mallory", Role.RED.value, 3600)
-    r = client.get("/api/v1/admin/probe", headers={"X-Divide-Token": tok})
+    r = client.get("/api/v1/admin/probe", headers={"X-Oxblood-Token": tok})
     assert r.status_code == 403
     # Detail names the rejected role so the developer can debug.
     assert "'red'" in r.json()["detail"]

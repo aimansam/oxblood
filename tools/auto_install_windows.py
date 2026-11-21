@@ -133,8 +133,8 @@ def create_autounattend_files():
             </ImageInstall>
             <UserData>
                 <AcceptEula>true</AcceptEula>
-                <FullName>Divide</FullName>
-                <Organization>Divide Cyber Drill</Organization>
+                <FullName>Oxblood</FullName>
+                <Organization>Oxblood Cyber Drill</Organization>
             </UserData>
         </component>
     </settings>
@@ -147,12 +147,12 @@ def create_autounattend_files():
         <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
             <UserAccounts>
                 <AdministratorPassword>
-                    <Value>Divide123!</Value>
+                    <Value>Oxblood123!</Value>
                     <PlainText>true</PlainText>
                 </AdministratorPassword>
             </UserAccounts>
             <AutoLogon>
-                <Password><Value>Divide123!</Value><PlainText>true</PlainText></Password>
+                <Password><Value>Oxblood123!</Value><PlainText>true</PlainText></Password>
                 <Enabled>true</Enabled>
                 <LogonCount>1</LogonCount>
                 <Username>Administrator</Username>

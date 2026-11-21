@@ -70,7 +70,7 @@ def world(tmp_path):
 
 
 def player(sub, role):
-    return {"X-Divide-Token": sign_token(sub, role, 3600)}
+    return {"X-Oxblood-Token": sign_token(sub, role, 3600)}
 
 
 # Signed on use (not at import): another test may change the signing key in between.

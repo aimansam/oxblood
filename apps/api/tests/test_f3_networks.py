@@ -57,7 +57,7 @@ def _scenario(name: str, networks_spec, assets_spec) -> models.Scenario:
         difficulty="beginner",
         duration_min=30,
         spec={
-            "apiVersion": "divide/v1",
+            "apiVersion": "oxblood/v1",
             "kind": "Scenario",
             "spec": {
                 "networks": networks_spec,
@@ -122,7 +122,7 @@ async def test_no_networks_creates_no_bridges(session: AsyncSession) -> None:
             difficulty="beginner",
             duration_min=30,
             spec={
-                "apiVersion": "divide/v1",
+                "apiVersion": "oxblood/v1",
                 "kind": "Scenario",
                 "spec": {
                     "networks": [],
@@ -147,15 +147,15 @@ async def test_runner_uses_bridge_plan_not_sdn_inventory(
 ) -> None:
     """Provisioning follows the same direct Linux bridge plan as Setup.
 
-    The runner used to count SDN VNets in the ``divide`` zone here, which
+    The runner used to count SDN VNets in the ``oxblood`` zone here, which
     made Start Drill fail when Setup had prepared direct node bridges.
     """
 
     class NoSdnInventoryAdapter(MockProxmoxAdapter):
-        async def get_sdn_bridges(self, zone: str = "divide") -> list[str]:
+        async def get_sdn_bridges(self, zone: str = "oxblood") -> list[str]:
             raise AssertionError("runner must not query SDN inventory")
 
-        async def create_sdn_vnet(self, bridge: str, zone: str = "divide") -> None:
+        async def create_sdn_vnet(self, bridge: str, zone: str = "oxblood") -> None:
             raise AssertionError("runner must not create SDN VNets")
 
     adapter = NoSdnInventoryAdapter(templates={"tpl-x": 9000})
@@ -517,7 +517,7 @@ async def test_red_vs_blue_baseline_yaml_topology_runs(
 
     by_role: dict[str, int] = {}
     for c in adapter.cloned:
-        # name format: divide-<run_id>-<sanitized_role>
+        # name format: oxblood-<run_id>-<sanitized_role>
         parts = c.name.split("-", 2)
         by_role[parts[2]] = by_role.get(parts[2], 0) + 1
     assert by_role.get("redattacker") == 1

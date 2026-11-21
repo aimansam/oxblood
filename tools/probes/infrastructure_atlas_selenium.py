@@ -1,6 +1,6 @@
 """Read-only live Infrastructure UI checks; requires Selenium and Chrome.
 
-Set DIVIDE_UI_TEST_TOKEN to an admin token. Optional DIVIDE_UI_TEST_URL defaults
+Set OXBLOOD_UI_TEST_TOKEN to an admin token. Optional OXBLOOD_UI_TEST_URL defaults
 to http://127.0.0.1:5000. Use --inspect to capture baseline defects without
 asserting. Screenshots go to /tmp/infrastructure-atlas-check by default.
 No infrastructure mutation buttons are used.
@@ -19,9 +19,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def main():
-    token = os.environ["DIVIDE_UI_TEST_TOKEN"]
-    url = os.environ.get("DIVIDE_UI_TEST_URL", "http://127.0.0.1:5000").rstrip("/")
-    artifacts = Path(os.environ.get("DIVIDE_UI_TEST_ARTIFACTS", "/tmp/infrastructure-atlas-check"))
+    token = os.environ["OXBLOOD_UI_TEST_TOKEN"]
+    url = os.environ.get("OXBLOOD_UI_TEST_URL", "http://127.0.0.1:5000").rstrip("/")
+    artifacts = Path(os.environ.get("OXBLOOD_UI_TEST_ARTIFACTS", "/tmp/infrastructure-atlas-check"))
     artifacts.mkdir(parents=True, exist_ok=True)
     inspect = "--inspect" in sys.argv
     options = webdriver.ChromeOptions()
@@ -93,7 +93,7 @@ def main():
     try:
         resize(1616, 900)
         driver.get(url + "/login")
-        driver.execute_script("localStorage.setItem('divide_token',arguments[0])", token)
+        driver.execute_script("localStorage.setItem('oxblood_token',arguments[0])", token)
         driver.get(url + "/drill/")
         wait.until(lambda d: d.execute_script("return !!window.app && !!app.user"))
         settle()

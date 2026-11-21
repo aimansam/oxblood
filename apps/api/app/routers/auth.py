@@ -57,7 +57,7 @@ Security considerations:
     - Reset tokens are 32 bytes of ``secrets.token_urlsafe``
       randomness (~43 base64 chars). 24h TTL. Single-use: cleared
       on a successful ``POST /reset-password``.
-    - The token TTL is configurable via ``DIVIDE_LOGIN_TOKEN_TTL_S``
+    - The token TTL is configurable via ``OXBLOOD_LOGIN_TOKEN_TTL_S``
       (default 8h — covers a working day; longer than a drill).
     - Password is never logged, never echoed in the response, and
       ``password_hash`` is never returned by ``GET /auth/users``.
@@ -107,7 +107,7 @@ _LOGIN_WINDOW_SECONDS: int = 15 * 60
 
 
 def _login_bucket_key(sub: str) -> str:
-    return f"divide:rl:auth:{sub}"
+    return f"oxblood:rl:auth:{sub}"
 
 
 async def _read_login_count(sub: str) -> int:
@@ -127,13 +127,13 @@ async def _read_login_count(sub: str) -> int:
         client = _cache_module.get_redis()
         raw = await client.get(_login_bucket_key(sub))
     except Exception as exc:  # noqa: BLE001
-        if os.environ.get("DIVIDE_RATE_LIMIT_FAIL_CLOSED", "").lower() in ("1", "true", "yes"):
+        if os.environ.get("OXBLOOD_RATE_LIMIT_FAIL_CLOSED", "").lower() in ("1", "true", "yes"):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"rate limiter unavailable: {exc}",
             ) from exc
         structlog.get_logger().warning(
-            "divide.auth.rate_limit_redis_unreachable",
+            "oxblood.auth.rate_limit_redis_unreachable",
             subject=sub,
             error=str(exc),
         )
@@ -181,13 +181,13 @@ async def _increment_login_limit(sub: str) -> None:
         pipe.expire(key, _LOGIN_WINDOW_SECONDS)
         await pipe.execute()
     except Exception as exc:  # noqa: BLE001 — fail-open is intentional
-        if os.environ.get("DIVIDE_RATE_LIMIT_FAIL_CLOSED", "").lower() in ("1", "true", "yes"):
+        if os.environ.get("OXBLOOD_RATE_LIMIT_FAIL_CLOSED", "").lower() in ("1", "true", "yes"):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"rate limiter unavailable: {exc}",
             ) from exc
         structlog.get_logger().warning(
-            "divide.auth.rate_limit_redis_unreachable",
+            "oxblood.auth.rate_limit_redis_unreachable",
             subject=sub,
             error=str(exc),
         )
@@ -197,7 +197,7 @@ async def _increment_login_limit(sub: str) -> None:
 
 
 def _login_token_ttl_s() -> int:
-    """Default 8h. Overridable via ``DIVIDE_LOGIN_TOKEN_TTL_S``."""
+    """Default 8h. Overridable via ``OXBLOOD_LOGIN_TOKEN_TTL_S``."""
     raw = getattr(settings, "login_token_ttl_s", None)
     if raw is None:
         return 8 * 3600
@@ -436,7 +436,7 @@ class SetupRequest(BaseModel):
 
     Used by the in-portal onboarding wizard (F10.3) to create
     the very first admin without requiring the operator to set
-    ``DIVIDE_BOOTSTRAP_ADMIN_*`` env vars + restart the API.
+    ``OXBLOOD_BOOTSTRAP_ADMIN_*`` env vars + restart the API.
 
     Public endpoint; only the first call succeeds. Once any
     user exists, the wizard falls through to the sign-in flow.
@@ -899,8 +899,8 @@ async def get_vpn_config(
     keypair and IP are stable across logins.
 
     The response body contains:
-      ``config``    — the full .conf text (save as divide.conf)
-      ``filename``  — suggested filename (``divide-<sub>.conf``)
+      ``config``    — the full .conf text (save as oxblood.conf)
+      ``filename``  — suggested filename (``oxblood-<sub>.conf``)
       ``client_ip`` — the VPN IP assigned to this peer
       ``server_ip`` — the server's VPN IP (for reference)
       ``allowed_ips`` — the CIDRs routed over VPN
@@ -963,7 +963,7 @@ async def get_vpn_config(
 
     return {
         "config": conf,
-        "filename": f"divide-{sub}.conf",
+        "filename": f"oxblood-{sub}.conf",
         "client_ip": client_ip(peer_index),
         "server_ip": server_ip(),
         "allowed_ips": settings.wg_allowed_ips,
@@ -988,7 +988,7 @@ async def _fetch_wg_server_pubkey() -> str:
                 return data.get("publicKey", "") or data.get("key", "")
     except Exception:  # noqa: BLE001
         pass
-    # Fallback: operator must fill in manually or set DIVIDE_WG_SERVER_PUBKEY.
+    # Fallback: operator must fill in manually or set OXBLOOD_WG_SERVER_PUBKEY.
     from app.core.config import settings as _s
 
     fallback = getattr(_s, "wg_server_pubkey", "") or "<server-public-key>"

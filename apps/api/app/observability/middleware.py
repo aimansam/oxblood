@@ -1,8 +1,8 @@
 """FastAPI middleware that records HTTP request metrics.
 
 We record:
-  * divide_http_requests_total{method, route, status}
-  * divide_http_request_latency_seconds{method, route}
+  * oxblood_http_requests_total{method, route, status}
+  * oxblood_http_request_latency_seconds{method, route}
 
 ``route`` is a bounded-cardinality identifier for the matched route.
 We use the FastAPI route *template* (``scope['route'].path``) which

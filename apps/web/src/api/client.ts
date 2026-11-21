@@ -6,7 +6,7 @@ import { getToken, setToken } from './token';
 const auth: Middleware = {
   onRequest({ request }) {
     const token = getToken();
-    if (token) request.headers.set('X-Divide-Token', token);
+    if (token) request.headers.set('X-Oxblood-Token', token);
     return request;
   },
   onResponse({ response }) {

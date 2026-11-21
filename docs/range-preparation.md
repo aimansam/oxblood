@@ -31,7 +31,7 @@ then Start exercise to validate again and begin play.
 
 ## Capacity and Validation
 
-`DIVIDE_RANGE_HOST_RESERVE_MB` defaults to 2048. Preflight reserves running guest
+`OXBLOOD_RANGE_HOST_RESERVE_MB` defaults to 2048. Preflight reserves running guest
 allocations even if current usage is lower. No permanent SIEM VM is started or
 budgeted by the runner. Storage budgeting uses full provisioned disk sizes;
 this is conservative and does not promise thin-provisioning savings.

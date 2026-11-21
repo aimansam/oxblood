@@ -38,7 +38,7 @@ from pathlib import Path
 import httpx
 
 REPO = Path(__file__).resolve().parents[1]
-DEFAULT_API_BASE = os.environ.get("DIVIDE_API_BASE", "http://localhost:8000")
+DEFAULT_API_BASE = os.environ.get("OXBLOOD_API_BASE", "http://localhost:8000")
 
 
 def _client(base: str) -> httpx.Client:

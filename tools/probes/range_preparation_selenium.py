@@ -1,6 +1,6 @@
 """Read-only portal checks. Lifecycle states are rendered locally, not provisioned.
 
-Requires DIVIDE_UI_TEST_TOKEN, Selenium and Chrome. Never calls prepare/start/stop.
+Requires OXBLOOD_UI_TEST_TOKEN, Selenium and Chrome. Never calls prepare/start/stop.
 """
 
 import os
@@ -13,7 +13,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def main():
-    url = os.environ.get("DIVIDE_UI_TEST_URL", "http://127.0.0.1:5000").rstrip("/")
+    url = os.environ.get("OXBLOOD_UI_TEST_URL", "http://127.0.0.1:5000").rstrip("/")
     output = Path("/tmp/range-preparation-check")
     output.mkdir(exist_ok=True)
     options = webdriver.ChromeOptions()
@@ -25,7 +25,8 @@ def main():
         driver.set_window_size(1440, 1000)
         driver.get(url + "/login")
         driver.execute_script(
-            "localStorage.setItem('divide_token',arguments[0])", os.environ["DIVIDE_UI_TEST_TOKEN"]
+            "localStorage.setItem('oxblood_token',arguments[0])",
+            os.environ["OXBLOOD_UI_TEST_TOKEN"],
         )
         driver.get(url + "/drill/")
         wait.until(lambda d: d.execute_script("return !!window.app && !!app.user"))

@@ -3,7 +3,7 @@
 CORS is the runtime envelope around the API. A misconfiguration here
 either blocks the user-portal (if it's too tight) or opens it up to
 attackers (if it's too loose). The allowlist is the explicit list from
-``DIVIDE_CORS_ALLOW_ORIGINS`` (comma-separated). The default is local-
+``OXBLOOD_CORS_ALLOW_ORIGINS`` (comma-separated). The default is local-
 only; every deployment overrides.
 
 What we assert:
@@ -51,15 +51,15 @@ def _new_client():
 @pytest.fixture
 def with_cors(monkeypatch):
     """Yield a callable that builds a fresh client after monkey-patching
-    ``DIVIDE_CORS_ALLOW_ORIGINS``. ``monkeypatch`` undoes itself at the
+    ``OXBLOOD_CORS_ALLOW_ORIGINS``. ``monkeypatch`` undoes itself at the
     end of each test, so cross-test pollution is impossible.
     """
 
     def _make(origins: str | None):
         if origins is None:
-            monkeypatch.delenv("DIVIDE_CORS_ALLOW_ORIGINS", raising=False)
+            monkeypatch.delenv("OXBLOOD_CORS_ALLOW_ORIGINS", raising=False)
         else:
-            monkeypatch.setenv("DIVIDE_CORS_ALLOW_ORIGINS", origins)
+            monkeypatch.setenv("OXBLOOD_CORS_ALLOW_ORIGINS", origins)
         return _new_client()
 
     return _make
@@ -108,7 +108,7 @@ def test_empty_origin_list_blocks_all_cross_origin(with_cors):
 def test_origins_list_is_parsed_from_comma_separated_env():
     """Unit-test the parser directly.
 
-    ``validation_alias="DIVIDE_CORS_ALLOW_ORIGINS"`` makes pydantic-
+    ``validation_alias="OXBLOOD_CORS_ALLOW_ORIGINS"`` makes pydantic-
     settings look up env by that alias. Pass the kwarg via the alias.
     """
     cases = [
@@ -119,6 +119,6 @@ def test_origins_list_is_parsed_from_comma_separated_env():
     ]
     for raw, expected in cases:
         s = __import__("app.core.config", fromlist=["Settings"]).Settings(
-            DIVIDE_CORS_ALLOW_ORIGINS=raw
+            OXBLOOD_CORS_ALLOW_ORIGINS=raw
         )
         assert s.cors_allow_origins == expected, f"raw={raw!r} -> {s.cors_allow_origins!r}"

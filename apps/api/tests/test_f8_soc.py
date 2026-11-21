@@ -166,7 +166,7 @@ def _seed_run_in_succeeded_state() -> tuple[int, int]:
                 difficulty="beginner",
                 duration_min=30,
                 spec={
-                    "apiVersion": "divide/v1",
+                    "apiVersion": "oxblood/v1",
                     "kind": "Scenario",
                     "spec": {"assets": []},
                 },
@@ -190,7 +190,7 @@ def test_admin_injects_event_and_persists():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     r = admin.post(
         f"/api/v1/runs/{run_id}/events",
@@ -213,7 +213,7 @@ def test_inject_event_requires_admin_or_lead():
     from app.main import app
 
     red = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="alice", role="red", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="alice", role="red", ttl_s=300)}
     )
     r = red.post(
         f"/api/v1/runs/{run_id}/events",
@@ -230,7 +230,7 @@ def test_inject_event_rejects_bad_severity():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     r = admin.post(
         f"/api/v1/runs/{run_id}/events",
@@ -246,7 +246,7 @@ def test_inject_event_rejects_unknown_run():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     r = admin.post(
         "/api/v1/runs/99999/events",
@@ -263,7 +263,7 @@ def test_list_events_returns_history():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     for k in ("a", "b", "c"):
         admin.post(
@@ -285,7 +285,7 @@ def test_list_events_severity_filter():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     for sev in ("info", "low", "high", "info"):
         admin.post(
@@ -310,7 +310,7 @@ def test_inject_event_fans_out_to_bus():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     admin.post(
         f"/api/v1/runs/{run_id}/events",
@@ -335,7 +335,7 @@ def test_recent_endpoint_filters_by_run_id():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     admin.post(
         f"/api/v1/runs/{run_a}/events",
@@ -376,7 +376,7 @@ def test_post_drill_emits_run_started_event():
                 difficulty="beginner",
                 duration_min=30,
                 spec={
-                    "apiVersion": "divide/v1",
+                    "apiVersion": "oxblood/v1",
                     "kind": "Scenario",
                     "spec": {
                         "assets": [
@@ -404,7 +404,7 @@ def test_post_drill_emits_run_started_event():
     drills_mod.build_runner = _patched
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     r = admin.post("/api/v1/drills", json={"scenario_id": scenario_id})
     assert r.status_code == 200, r.text
@@ -433,7 +433,7 @@ def test_post_drill_emits_asset_running_event():
                 difficulty="beginner",
                 duration_min=30,
                 spec={
-                    "apiVersion": "divide/v1",
+                    "apiVersion": "oxblood/v1",
                     "kind": "Scenario",
                     "spec": {
                         "assets": [
@@ -461,7 +461,7 @@ def test_post_drill_emits_asset_running_event():
     drills_mod.build_runner = _patched
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     r = admin.post("/api/v1/drills", json={"scenario_id": scenario_id})
     run_id = r.json()["run_id"]
@@ -486,7 +486,7 @@ def test_stopping_drill_emits_run_completed_event():
                 difficulty="beginner",
                 duration_min=30,
                 spec={
-                    "apiVersion": "divide/v1",
+                    "apiVersion": "oxblood/v1",
                     "kind": "Scenario",
                     "spec": {
                         "assets": [
@@ -514,7 +514,7 @@ def test_stopping_drill_emits_run_completed_event():
     drills_mod.build_runner = _patched
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     r = admin.post("/api/v1/drills", json={"scenario_id": scenario_id})
     run_id = r.json()["run_id"]
@@ -542,7 +542,7 @@ def test_flag_capture_emits_flag_captured_event():
                 difficulty="beginner",
                 duration_min=30,
                 spec={
-                    "apiVersion": "divide/v1",
+                    "apiVersion": "oxblood/v1",
                     "kind": "Scenario",
                     "spec": {
                         "assets": [
@@ -576,7 +576,7 @@ def test_flag_capture_emits_flag_captured_event():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
 
     # Backdate started_at so scoring window gives nonzero points.
@@ -622,7 +622,7 @@ def test_sse_stream_endpoint_metadata():
     from app.main import app
 
     admin_token = sign_token(sub="root", role="admin", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": admin_token})
+    client = TestClient(app, headers={"X-Oxblood-Token": admin_token})
     # Inject an event first so the bus has at least one item.
     client.post(
         f"/api/v1/runs/{run_id}/events",
@@ -638,7 +638,7 @@ def test_sse_stream_endpoint_metadata():
         try:
             r = hc.get(
                 f"http://testserver/api/v1/runs/{run_id}/events/stream",
-                headers={"X-Divide-Token": admin_token},
+                headers={"X-Oxblood-Token": admin_token},
             )
         except Exception:
             # If httpx can't reach the test server (we haven't started
@@ -664,7 +664,7 @@ def test_sse_stream_404_for_unknown_run():
         ) as client:
             r = await client.get(
                 "/api/v1/runs/99999/events/stream",
-                headers={"X-Divide-Token": admin_token},
+                headers={"X-Oxblood-Token": admin_token},
                 timeout=5.0,
             )
             assert r.status_code == 404

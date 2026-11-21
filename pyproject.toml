@@ -1,5 +1,5 @@
 [project]
-name = "divide-cyber-drill"
+name = "oxblood-cyber-drill"
 version = "0.1.0"
 description = "OxBlood — Proxmox-backed cyber drill platform"
 readme = "README.md"
@@ -62,5 +62,5 @@ pythonpath = ["apps/api"]
 asyncio_mode = "auto"
 addopts = "-v --tb=short"
 markers = [
-    "live_pg: opt-in tests that require a live PostgreSQL via DIVIDE_TEST_LIVE_PG; skipped by default to keep CI fast and SQLite-only",
+    "live_pg: opt-in tests that require a live PostgreSQL via OXBLOOD_TEST_LIVE_PG; skipped by default to keep CI fast and SQLite-only",
 ]

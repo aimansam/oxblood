@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://divide.local/schemas/scenario.schema.json",
-  "title": "divide Scenario",
+  "$id": "https://oxblood.local/schemas/scenario.schema.json",
+  "title": "oxblood Scenario",
   "description": "Declarative description of a single cyber drill: assets, networks, telemetry wiring, scoring, and win-conditions. Files validate against this schema; CI fails the build if not.",
   "type": "object",
   "additionalProperties": false,
@@ -15,7 +15,7 @@
     "apiVersion": {
       "description": "Schema version this scenario targets. Bump the minor segment when fields change shape.",
       "type": "string",
-      "const": "divide/v1"
+      "const": "oxblood/v1"
     },
     "kind": {
       "description": "Resource type. Always 'Scenario' in this version.",

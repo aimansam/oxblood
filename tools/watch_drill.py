@@ -7,7 +7,7 @@ outcome (succeeded by default), and non-zero otherwise.
 
 Three modes:
   --outcome succeeded|failed|cancelled|started
-      Wait until divide_runs_total{outcome=<outcome>} increases.
+      Wait until oxblood_runs_total{outcome=<outcome>} increases.
       Default: succeeded.
 
   --cancel-after N
@@ -22,7 +22,7 @@ Three modes:
 Auth (L2 2.9): /api/v1/drills/{id}/cancel is now gated on
 ``require_role(ADMIN, LEAD, RED)``. Anonymous calls return 401.
 Pass the token via ``--token`` (highest priority) or
-``DIVIDE_TOKEN`` env var (default). The Prometheus + ``/drills``
+``OXBLOOD_TOKEN`` env var (default). The Prometheus + ``/drills``
 list endpoints remain anonymous, so only the cancel call needs
 the header.
 
@@ -31,8 +31,8 @@ Typical usage:
   python tools/watch_drill.py
 
   # Cancel any drill that starts, after 30s:
-  DIVIDE_TOKEN=$(python tools/issue_token.py --user watch-bot --role lead)
-  python tools/watch_drill.py --cancel-after 30 --token "$DIVIDE_TOKEN"
+  OXBLOOD_TOKEN=$(python tools/issue_token.py --user watch-bot --role lead)
+  python tools/watch_drill.py --cancel-after 30 --token "$OXBLOOD_TOKEN"
 
   # Wait for a specific scenario to succeed:
   python tools/watch_drill.py --scenario first-live-drill
@@ -49,13 +49,13 @@ from pathlib import Path
 import httpx
 
 REPO = Path(__file__).resolve().parents[1]
-DEFAULT_API_BASE = os.environ.get("DIVIDE_API_BASE", "http://localhost:8000")
-DEFAULT_PROM_BASE = os.environ.get("DIVIDE_PROM_BASE", "http://localhost:9090")
-# Default token comes from DIVIDE_TOKEN; --token CLI flag overrides.
-DEFAULT_TOKEN = os.environ.get("DIVIDE_TOKEN")
+DEFAULT_API_BASE = os.environ.get("OXBLOOD_API_BASE", "http://localhost:8000")
+DEFAULT_PROM_BASE = os.environ.get("OXBLOOD_PROM_BASE", "http://localhost:9090")
+# Default token comes from OXBLOOD_TOKEN; --token CLI flag overrides.
+DEFAULT_TOKEN = os.environ.get("OXBLOOD_TOKEN")
 
 
-def _get_counter(prom_base, labels, name="divide_runs_total"):
+def _get_counter(prom_base, labels, name="oxblood_runs_total"):
     """Return current value of a labelled counter from Prometheus."""
     label_str = ",".join(f'{k}="{v}"' for k, v in labels.items())
     expr = f"{name}{{{label_str}}}"
@@ -110,7 +110,7 @@ def _cancel(api_base, run_id, token=None):
     list) are still anonymous, so the token is only attached on the
     single cancel POST.
     """
-    headers = {"X-Divide-Token": token} if token else {}
+    headers = {"X-Oxblood-Token": token} if token else {}
     with httpx.Client(timeout=10.0) as c:
         r = c.post(
             f"{api_base}/api/v1/drills/{run_id}/cancel",
@@ -130,9 +130,9 @@ def main():
         "--token",
         default=DEFAULT_TOKEN,
         help=(
-            "X-Divide-Token for the /drills/{id}/cancel call "
+            "X-Oxblood-Token for the /drills/{id}/cancel call "
             "(role must be admin/lead/red). Falls back to the "
-            "$DIVIDE_TOKEN env var. Read paths don't need a token."
+            "$OXBLOOD_TOKEN env var. Read paths don't need a token."
         ),
     )
     ap.add_argument(
@@ -194,7 +194,7 @@ def main():
         if not args.token:
             print(
                 "WARN: --cancel-after requires an admin/lead/red token; "
-                "set --token or $DIVIDE_TOKEN. The cancel call will "
+                "set --token or $OXBLOOD_TOKEN. The cancel call will "
                 "return 401 without it."
             )
 
@@ -206,7 +206,7 @@ def main():
             current = _get_counter(args.prom_base, {"outcome": args.outcome})
             if current is not None and baseline is not None and current > baseline:
                 print(
-                    f"\nSUCCESS: divide_runs_total{{outcome={args.outcome!r}}} "
+                    f"\nSUCCESS: oxblood_runs_total{{outcome={args.outcome!r}}} "
                     f"moved {baseline} -> {current} after {elapsed:.1f}s"
                 )
                 return 0

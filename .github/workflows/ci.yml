@@ -36,8 +36,8 @@ jobs:
       - name: Pytest (API)
         run: pytest apps/api/tests tests
         env:
-          DIVIDE_DB_URL: sqlite+aiosqlite:///./test.sqlite
-          DIVIDE_REDIS_URL: redis://localhost:6379/0
+          OXBLOOD_DB_URL: sqlite+aiosqlite:///./test.sqlite
+          OXBLOOD_REDIS_URL: redis://localhost:6379/0
 
   web:
     runs-on: ubuntu-latest
@@ -69,7 +69,7 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
     env:
-      DIVIDE_REDIS_URL: redis://localhost:6379/0
+      OXBLOOD_REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -130,9 +130,9 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: divide
-          POSTGRES_PASSWORD: divide
-          POSTGRES_DB: divide_test
+          POSTGRES_USER: oxblood
+          POSTGRES_PASSWORD: oxblood
+          POSTGRES_DB: oxblood_test
         ports:
           - 5432:5432
         options: >-
@@ -152,12 +152,12 @@ jobs:
           pip install -e "apps/api[dev]"
       - name: Apply alembic migrations
         env:
-          DIVIDE_DB_URL: postgresql+asyncpg://divide:divide@localhost:5432/divide_test
+          OXBLOOD_DB_URL: postgresql+asyncpg://oxblood:oxblood@localhost:5432/oxblood_test
         run: |
           cd apps/api
           PYTHONPATH=. alembic upgrade head
       - name: Pytest (live_pg)
         env:
-          DIVIDE_TEST_LIVE_PG: "1"
-          DIVIDE_TEST_LIVE_PG_URL: postgresql+asyncpg://divide:divide@localhost:5432/divide_test
+          OXBLOOD_TEST_LIVE_PG: "1"
+          OXBLOOD_TEST_LIVE_PG_URL: postgresql+asyncpg://oxblood:oxblood@localhost:5432/oxblood_test
         run: pytest -m live_pg apps/api/tests

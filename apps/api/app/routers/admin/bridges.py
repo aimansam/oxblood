@@ -181,7 +181,7 @@ async def get_pve_sdn_status(
         return {
             "reachable": False,
             "zone_present": False,
-            "zone_name": "divide",
+            "zone_name": "oxblood",
             "vnets_present": [],
             "vnets_missing": expected,
             "error": str(exc),

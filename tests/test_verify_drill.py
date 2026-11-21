@@ -149,8 +149,8 @@ def _metric(name: str, value: float, **labels: str) -> dict:
 def test_check_metrics_counter_passes_when_expected_outcome_seen():
     mod = _load_module()
     metrics = {
-        **_metric("divide_runs_total", 3.0, outcome="succeeded", adapter="real"),
-        **_metric("divide_runs_active", 0.0, adapter="real"),
+        **_metric("oxblood_runs_total", 3.0, outcome="succeeded", adapter="real"),
+        **_metric("oxblood_runs_active", 0.0, adapter="real"),
     }
     ok, detail = mod.check_metrics_counter(metrics, expect="succeeded")
     assert ok is True
@@ -168,8 +168,8 @@ def test_check_metrics_counter_fails_when_metric_missing():
 def test_check_metrics_counter_fails_when_active_nonzero():
     mod = _load_module()
     metrics = {
-        **_metric("divide_runs_total", 1.0, outcome="succeeded", adapter="real"),
-        **_metric("divide_runs_active", 2.0, adapter="real"),
+        **_metric("oxblood_runs_total", 1.0, outcome="succeeded", adapter="real"),
+        **_metric("oxblood_runs_active", 2.0, adapter="real"),
     }
     ok, detail = mod.check_metrics_counter(metrics, expect="succeeded")
     assert ok is False
@@ -180,9 +180,9 @@ def test_check_metrics_counter_fails_when_failed_counter_nonzero():
     """The new behavior: failed>0 is a regression signal."""
     mod = _load_module()
     metrics = {
-        **_metric("divide_runs_total", 0.0, outcome="succeeded", adapter="real"),
-        **_metric("divide_runs_total", 2.0, outcome="failed", adapter="real"),
-        **_metric("divide_runs_active", 0.0, adapter="real"),
+        **_metric("oxblood_runs_total", 0.0, outcome="succeeded", adapter="real"),
+        **_metric("oxblood_runs_total", 2.0, outcome="failed", adapter="real"),
+        **_metric("oxblood_runs_active", 0.0, adapter="real"),
     }
     ok, detail = mod.check_metrics_counter(metrics, expect="succeeded")
     assert ok is False
@@ -193,8 +193,8 @@ def test_check_metrics_counter_falls_back_to_all_adapters_when_real_missing():
     """If adapter=real has no samples, sum across all adapters."""
     mod = _load_module()
     metrics = {
-        **_metric("divide_runs_total", 1.0, outcome="succeeded", adapter="mock"),
-        **_metric("divide_runs_active", 0.0, adapter="real"),
+        **_metric("oxblood_runs_total", 1.0, outcome="succeeded", adapter="mock"),
+        **_metric("oxblood_runs_active", 0.0, adapter="real"),
     }
     ok, detail = mod.check_metrics_counter(metrics, expect="succeeded")
     assert ok is True
@@ -205,9 +205,9 @@ def test_check_metrics_counter_ignores_mock_adapter_for_failure_check():
     """Mock adapter failures shouldn't fail the real-drill check."""
     mod = _load_module()
     metrics = {
-        **_metric("divide_runs_total", 5.0, outcome="succeeded", adapter="real"),
-        **_metric("divide_runs_total", 99.0, outcome="failed", adapter="mock"),
-        **_metric("divide_runs_active", 0.0, adapter="real"),
+        **_metric("oxblood_runs_total", 5.0, outcome="succeeded", adapter="real"),
+        **_metric("oxblood_runs_total", 99.0, outcome="failed", adapter="mock"),
+        **_metric("oxblood_runs_active", 0.0, adapter="real"),
     }
     ok, _ = mod.check_metrics_counter(metrics, expect="succeeded")
     assert ok is True
@@ -221,11 +221,11 @@ def test_fetch_metrics_preserves_labels():
     from unittest.mock import MagicMock
 
     sample = (
-        "# HELP divide_runs_total X\n"
-        'divide_runs_total{adapter="real",outcome="succeeded"} 7.0\n'
-        'divide_runs_active{adapter="real"} 0.0\n'
-        'divide_run_duration_seconds_bucket{le="+Inf"} 12.0\n'
-        "divide_runs_total_unlabeled 5.0\n"
+        "# HELP oxblood_runs_total X\n"
+        'oxblood_runs_total{adapter="real",outcome="succeeded"} 7.0\n'
+        'oxblood_runs_active{adapter="real"} 0.0\n'
+        'oxblood_run_duration_seconds_bucket{le="+Inf"} 12.0\n'
+        "oxblood_runs_total_unlabeled 5.0\n"
     )
     client = MagicMock()
     client.get.return_value.text = sample
@@ -233,26 +233,28 @@ def test_fetch_metrics_preserves_labels():
     metrics = mod._fetch_metrics(client)
 
     # Labeled samples carry their labels.
-    assert mod._get_metric(metrics, "divide_runs_total", outcome="succeeded", adapter="real") == 7.0
-    assert mod._get_metric(metrics, "divide_runs_active", adapter="real") == 0.0
+    assert (
+        mod._get_metric(metrics, "oxblood_runs_total", outcome="succeeded", adapter="real") == 7.0
+    )
+    assert mod._get_metric(metrics, "oxblood_runs_active", adapter="real") == 0.0
     # Histogram bucket le=+Inf preserved.
-    assert mod._get_metric(metrics, "divide_run_duration_seconds_bucket", le="+Inf") == 12.0
+    assert mod._get_metric(metrics, "oxblood_run_duration_seconds_bucket", le="+Inf") == 12.0
     # Unlabeled sample has empty label set.
-    assert mod._get_metric(metrics, "divide_runs_total_unlabeled") == 5.0
+    assert mod._get_metric(metrics, "oxblood_runs_total_unlabeled") == 5.0
 
 
 def test_fetch_metrics_skips_unparseable_lines():
     mod = _load_module()
     from unittest.mock import MagicMock
 
-    sample = "divide_runs_total 1.0\ndivide_runs_active not_a_number\ndivide_runs_active 0.0\n"
+    sample = "oxblood_runs_total 1.0\noxblood_runs_active not_a_number\noxblood_runs_active 0.0\n"
     client = MagicMock()
     client.get.return_value.text = sample
     client.get.return_value.raise_for_status = lambda: None
 
     metrics = mod._fetch_metrics(client)
-    assert mod._get_metric(metrics, "divide_runs_total") == 1.0
-    assert mod._get_metric(metrics, "divide_runs_active") == 0.0
+    assert mod._get_metric(metrics, "oxblood_runs_total") == 1.0
+    assert mod._get_metric(metrics, "oxblood_runs_active") == 0.0
 
 
 # ---------- _get_metric / _sum_metric ----------
@@ -261,11 +263,11 @@ def test_fetch_metrics_skips_unparseable_lines():
 def test_get_metric_finds_exact_label_combo():
     mod = _load_module()
     metrics = {
-        **_metric("divide_runs_total", 7.0, outcome="succeeded", adapter="real"),
-        **_metric("divide_runs_total", 0.0, outcome="failed", adapter="real"),
+        **_metric("oxblood_runs_total", 7.0, outcome="succeeded", adapter="real"),
+        **_metric("oxblood_runs_total", 0.0, outcome="failed", adapter="real"),
     }
-    assert mod._get_metric(metrics, "divide_runs_total", outcome="succeeded") == 7.0
-    assert mod._get_metric(metrics, "divide_runs_total", outcome="failed") == 0.0
+    assert mod._get_metric(metrics, "oxblood_runs_total", outcome="succeeded") == 7.0
+    assert mod._get_metric(metrics, "oxblood_runs_total", outcome="failed") == 0.0
 
 
 def test_get_metric_treats_extra_labels_as_match():
@@ -273,26 +275,26 @@ def test_get_metric_treats_extra_labels_as_match():
     even though it also has adapter='real'."""
     mod = _load_module()
     metrics = {
-        **_metric("divide_runs_total", 7.0, outcome="succeeded", adapter="real"),
+        **_metric("oxblood_runs_total", 7.0, outcome="succeeded", adapter="real"),
     }
-    assert mod._get_metric(metrics, "divide_runs_total", outcome="succeeded") == 7.0
+    assert mod._get_metric(metrics, "oxblood_runs_total", outcome="succeeded") == 7.0
 
 
 def test_get_metric_returns_none_when_label_mismatch():
     mod = _load_module()
     metrics = {
-        **_metric("divide_runs_total", 7.0, outcome="succeeded", adapter="real"),
+        **_metric("oxblood_runs_total", 7.0, outcome="succeeded", adapter="real"),
     }
-    assert mod._get_metric(metrics, "divide_runs_total", outcome="cancelled") is None
+    assert mod._get_metric(metrics, "oxblood_runs_total", outcome="cancelled") is None
 
 
 def test_sum_metric_aggregates_across_adapters():
     mod = _load_module()
     metrics = {
-        **_metric("divide_runs_total", 3.0, outcome="succeeded", adapter="real"),
-        **_metric("divide_runs_total", 2.0, outcome="succeeded", adapter="mock"),
+        **_metric("oxblood_runs_total", 3.0, outcome="succeeded", adapter="real"),
+        **_metric("oxblood_runs_total", 2.0, outcome="succeeded", adapter="mock"),
     }
-    assert mod._sum_metric(metrics, "divide_runs_total", outcome="succeeded") == 5.0
+    assert mod._sum_metric(metrics, "oxblood_runs_total", outcome="succeeded") == 5.0
 
 
 # ---------- _parse_labels ----------
@@ -475,14 +477,14 @@ def test_main_returns_zero_for_successful_run(monkeypatch):
         # Synthetic Prometheus exposition matching what the live API
         # would expose after a successful real-PVE run.
         lines = [
-            "# HELP divide_runs_total Number of drill runs by terminal outcome.",
-            "# TYPE divide_runs_total counter",
-            'divide_runs_total{adapter="real",outcome="started"} 1.0',
-            'divide_runs_total{adapter="real",outcome="succeeded"} 1.0',
-            'divide_runs_total{adapter="real",outcome="failed"} 0.0',
-            "# HELP divide_runs_active Drill runs currently in a non-terminal state.",
-            "# TYPE divide_runs_active gauge",
-            'divide_runs_active{adapter="real"} 0.0',
+            "# HELP oxblood_runs_total Number of drill runs by terminal outcome.",
+            "# TYPE oxblood_runs_total counter",
+            'oxblood_runs_total{adapter="real",outcome="started"} 1.0',
+            'oxblood_runs_total{adapter="real",outcome="succeeded"} 1.0',
+            'oxblood_runs_total{adapter="real",outcome="failed"} 0.0',
+            "# HELP oxblood_runs_active Drill runs currently in a non-terminal state.",
+            "# TYPE oxblood_runs_active gauge",
+            'oxblood_runs_active{adapter="real"} 0.0',
         ]
         return httpx.Response(200, text="\n".join(lines) + "\n")
 
@@ -569,9 +571,9 @@ def test_main_returns_one_for_failed_run(monkeypatch):
         return httpx.Response(
             200,
             text=(
-                'divide_runs_total{adapter="real",outcome="started"} 1.0\n'
-                'divide_runs_total{adapter="real",outcome="failed"} 1.0\n'
-                'divide_runs_active{adapter="real"} 0.0\n'
+                'oxblood_runs_total{adapter="real",outcome="started"} 1.0\n'
+                'oxblood_runs_total{adapter="real",outcome="failed"} 1.0\n'
+                'oxblood_runs_active{adapter="real"} 0.0\n'
             ),
         )
 

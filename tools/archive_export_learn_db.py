@@ -1,8 +1,8 @@
 """Export Learn-owned tables from the Drill DB into a fresh Learn DB.
 
 Usage (inside the api container, Drill DB reachable):
-  DIVIDE_DB_URL=postgresql+asyncpg://... \\
-  DIVIDE_LEARN_DB_URL=postgresql+asyncpg://... \\
+  OXBLOOD_DB_URL=postgresql+asyncpg://... \\
+  OXBLOOD_LEARN_DB_URL=postgresql+asyncpg://... \\
     python tools/export_learn_db.py
 
 Copies, in FK-safe order:
@@ -71,10 +71,10 @@ async def main() -> int:
         print("sqlalchemy[asyncio] + asyncpg required", file=sys.stderr)
         return 2
 
-    src = os.environ.get("DIVIDE_DB_URL")
-    dst = os.environ.get("DIVIDE_LEARN_DB_URL")
+    src = os.environ.get("OXBLOOD_DB_URL")
+    dst = os.environ.get("OXBLOOD_LEARN_DB_URL")
     if not src or not dst:
-        print("Set DIVIDE_DB_URL and DIVIDE_LEARN_DB_URL", file=sys.stderr)
+        print("Set OXBLOOD_DB_URL and OXBLOOD_LEARN_DB_URL", file=sys.stderr)
         return 2
 
     parser = argparse.ArgumentParser(description="Export Learn tables to Learn DB")

@@ -53,7 +53,7 @@ from sqlalchemy import create_engine, delete, select
 
 
 def _sync_engine():
-    url = os.environ["DIVIDE_DB_URL"].replace("sqlite+aiosqlite://", "sqlite:///")
+    url = os.environ["OXBLOOD_DB_URL"].replace("sqlite+aiosqlite://", "sqlite:///")
     return create_engine(url)
 
 
@@ -198,7 +198,7 @@ def pve_token(monkeypatch: pytest.MonkeyPatch) -> Iterator[tuple[dict[str, Any],
     import pathlib
 
     examples = pathlib.Path(__file__).resolve().parent / "fixtures" / "scenarios"
-    monkeypatch.setenv("DIVIDE_SCENARIOS_DIR", str(examples))
+    monkeypatch.setenv("OXBLOOD_SCENARIOS_DIR", str(examples))
 
     async def _reseed() -> None:
         from app.core.config import get_settings
@@ -261,7 +261,9 @@ def test_full_day1_wizard_flow(client: TestClient, pve_token: tuple[dict[str, An
     # assertion.
     from sqlalchemy import create_engine
 
-    engine = create_engine(os.environ["DIVIDE_DB_URL"].replace("sqlite+aiosqlite://", "sqlite:///"))
+    engine = create_engine(
+        os.environ["OXBLOOD_DB_URL"].replace("sqlite+aiosqlite://", "sqlite:///")
+    )
     with engine.begin() as conn:
         # Read the YAML and pre-populate the scenarios row.
         import pathlib
@@ -305,7 +307,7 @@ def test_full_day1_wizard_flow(client: TestClient, pve_token: tuple[dict[str, An
         "/api/v1/auth/login",
         json={"sub": "admin", "password": "adminpass1"},
     ).json()["token"]
-    headers = {"X-Divide-Token": admin_tok}
+    headers = {"X-Oxblood-Token": admin_tok}
 
     # Step -1: POST pve-config (probe-before-commit; succeeds against mock).
     r = client.post(

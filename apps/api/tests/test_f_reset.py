@@ -59,7 +59,7 @@ def _sync_session():
     uses. Needed for reading the token column back after the
     ``forgot-password`` POST (the async session fixture is for
     HTTP-handler tests, not arbitrary ORM reads)."""
-    url = os.environ.get("DIVIDE_DB_URL", "sqlite+aiosqlite:///./test.sqlite")
+    url = os.environ.get("OXBLOOD_DB_URL", "sqlite+aiosqlite:///./test.sqlite")
     sync_url = url
     if "+aiosqlite" in url:
         sync_url = url.replace("+aiosqlite", "")
@@ -331,13 +331,13 @@ class TestIssueResetLink:
                 "password": "victimpass1",
                 "role": "red",
             },
-            headers={"X-Divide-Token": admin_tok},
+            headers={"X-Oxblood-Token": admin_tok},
         )
         assert r0.status_code == 201, r0.text
 
         r = client.post(
             "/api/v1/auth/users/victim/issue-reset",
-            headers={"X-Divide-Token": admin_tok},
+            headers={"X-Oxblood-Token": admin_tok},
         )
         assert r.status_code == 200
         body = r.json()
@@ -346,10 +346,10 @@ class TestIssueResetLink:
         assert body["magic_link"].startswith("/#/reset?sub=victim&token=")
         assert body["expires_at"]
 
-    def test_magic_link_respects_divide_portal_path_env(
+    def test_magic_link_respects_oxblood_portal_path_env(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """P12: setting ``DIVIDE_PORTAL_PATH`` to a custom prefix
+        """P12: setting ``OXBLOOD_PORTAL_PATH`` to a custom prefix
         makes the magic_link use that prefix instead of the
         docker-compose default. Reverse-proxied deployments need
         this so the operator can paste the link directly into
@@ -357,7 +357,7 @@ class TestIssueResetLink:
         """
         from app.core.config import get_settings
 
-        monkeypatch.setenv("DIVIDE_PORTAL_PATH", "/my-portal/")
+        monkeypatch.setenv("OXBLOOD_PORTAL_PATH", "/my-portal/")
         get_settings.cache_clear()
         try:
             _bootstrap_admin(client, sub="admin", password="adminpass1")
@@ -370,12 +370,12 @@ class TestIssueResetLink:
                     "password": "victimpass1",
                     "role": "red",
                 },
-                headers={"X-Divide-Token": admin_tok},
+                headers={"X-Oxblood-Token": admin_tok},
             )
             assert r0.status_code == 201, r0.text
             r = client.post(
                 "/api/v1/auth/users/victim/issue-reset",
-                headers={"X-Divide-Token": admin_tok},
+                headers={"X-Oxblood-Token": admin_tok},
             )
             assert r.status_code == 200
             assert r.json()["magic_link"].startswith("/my-portal/#/reset?sub=victim&token=")
@@ -390,12 +390,12 @@ class TestIssueResetLink:
         client.post(
             "/api/v1/auth/users",
             json={"sub": "red1", "password": "redpass1234", "role": "red"},
-            headers={"X-Divide-Token": admin_tok},
+            headers={"X-Oxblood-Token": admin_tok},
         )
         red_tok = _login(client, "red1", "redpass1234")
         r = client.post(
             "/api/v1/auth/users/victim/issue-reset",
-            headers={"X-Divide-Token": red_tok},
+            headers={"X-Oxblood-Token": red_tok},
         )
         assert r.status_code == 403
 
@@ -409,7 +409,7 @@ class TestIssueResetLink:
         admin_tok = _login(client, "admin", "adminpass1")
         r = client.post(
             "/api/v1/auth/users/ghost/issue-reset",
-            headers={"X-Divide-Token": admin_tok},
+            headers={"X-Oxblood-Token": admin_tok},
         )
         assert r.status_code == 404
 
@@ -425,12 +425,12 @@ class TestIssueResetLink:
                 "password": "end2end_old",
                 "role": "red",
             },
-            headers={"X-Divide-Token": admin_tok},
+            headers={"X-Oxblood-Token": admin_tok},
         )
 
         link_resp = client.post(
             "/api/v1/auth/users/end2end/issue-reset",
-            headers={"X-Divide-Token": admin_tok},
+            headers={"X-Oxblood-Token": admin_tok},
         )
         assert link_resp.status_code == 200
         magic_link = link_resp.json()["magic_link"]
@@ -480,12 +480,12 @@ class TestIssueResetLink:
                 "password": "alice_old",
                 "role": "red",
             },
-            headers={"X-Divide-Token": admin_tok},
+            headers={"X-Oxblood-Token": admin_tok},
         )
         # Admin mints a reset for alice.
         link_resp = client.post(
             "/api/v1/auth/users/alice/issue-reset",
-            headers={"X-Divide-Token": admin_tok},
+            headers={"X-Oxblood-Token": admin_tok},
         )
         assert link_resp.status_code == 200
         reset_token = link_resp.json()["reset_token"]
@@ -501,12 +501,12 @@ class TestIssueResetLink:
         assert r.status_code == 204
 
         # Query the audit log via the model's SQLAlchemy mapper.
-        # The conftest sets DIVIDE_DB_URL to a sqlite+aiosqlite URL;
+        # The conftest sets OXBLOOD_DB_URL to a sqlite+aiosqlite URL;
         # we need a plain sync sqlite URL to read with create_engine.
         from app.db import models as db_models  # noqa: F401
         from sqlalchemy import create_engine, select  # noqa: F401
 
-        url = os.environ["DIVIDE_DB_URL"].replace("sqlite+aiosqlite://", "sqlite:///")
+        url = os.environ["OXBLOOD_DB_URL"].replace("sqlite+aiosqlite://", "sqlite:///")
         engine = create_engine(url)
         with engine.connect() as conn:
             # Note: SQLite stores JSON columns as TEXT, so we can't

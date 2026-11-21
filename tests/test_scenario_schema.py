@@ -115,7 +115,7 @@ def test_cli_exits_zero(example_files) -> None:
 def _minimal_valid() -> dict:
     """Smallest legal Scenario (used as a base; mutate then validate)."""
     return {
-        "apiVersion": "divide/v1",
+        "apiVersion": "oxblood/v1",
         "kind": "Scenario",
         "metadata": {
             "name": "minimal-valid",
@@ -161,8 +161,8 @@ def _assert_one_error(validator, data: dict, needle: str) -> None:
 
 def test_wrong_apiversion(validator) -> None:
     bad = _minimal_valid()
-    bad["apiVersion"] = "divide/v2"
-    _assert_one_error(validator, bad, "divide/v1")
+    bad["apiVersion"] = "oxblood/v2"
+    _assert_one_error(validator, bad, "oxblood/v1")
 
 
 def test_missing_required_field(validator) -> None:

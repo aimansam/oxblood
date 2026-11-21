@@ -13,7 +13,7 @@ api:
 providers:
   docker:
     exposedByDefault: false
-    network: divide-net
+    network: oxblood-net
 
 entryPoints:
   web:
@@ -29,7 +29,7 @@ entryPoints:
 certificatesResolvers:
   le:
     acme:
-      email: ${ACME_EMAIL:-admin@divide.local}
+      email: ${ACME_EMAIL:-admin@oxblood.local}
       storage: /letsencrypt/acme.json
       httpChallenge:
         entryPoint: web

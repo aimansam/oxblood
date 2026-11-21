@@ -142,26 +142,26 @@ class TestVpnConfigEndpoint:
         client.post(
             "/api/v1/auth/users",
             json={"sub": sub, "password": pw, "role": "red"},
-            headers={"X-Divide-Token": admin_tok},
+            headers={"X-Oxblood-Token": admin_tok},
         )
         lr = client.post("/api/v1/auth/login", json={"sub": sub, "password": pw})
         return lr.json()["token"]
 
     def test_200_for_auth_user(self, client: TestClient):
         tok = self._setup_admin(client)
-        r = client.get("/api/v1/auth/vpn-config", headers={"X-Divide-Token": tok})
+        r = client.get("/api/v1/auth/vpn-config", headers={"X-Oxblood-Token": tok})
         assert r.status_code == 200
 
     def test_config_has_sections(self, client: TestClient):
         admin_tok = self._setup_admin(client)
         tok = self._create_user(client, admin_tok, "vpn-u1", "pass12345678")
-        d = client.get("/api/v1/auth/vpn-config", headers={"X-Divide-Token": tok}).json()
+        d = client.get("/api/v1/auth/vpn-config", headers={"X-Oxblood-Token": tok}).json()
         assert "[Interface]" in d["config"] and "[Peer]" in d["config"]
 
     def test_stable_on_repeat(self, client: TestClient):
         admin_tok = self._setup_admin(client)
         tok = self._create_user(client, admin_tok, "vpn-u2", "pass12345678")
-        h = {"X-Divide-Token": tok}
+        h = {"X-Oxblood-Token": tok}
         r1 = client.get("/api/v1/auth/vpn-config", headers=h).json()
         r2 = client.get("/api/v1/auth/vpn-config", headers=h).json()
         assert r1["config"] == r2["config"]
@@ -173,12 +173,12 @@ class TestVpnConfigEndpoint:
     def test_filename_has_sub(self, client: TestClient):
         admin_tok = self._setup_admin(client)
         tok = self._create_user(client, admin_tok, "vpn-alice2", "pass12345678")
-        d = client.get("/api/v1/auth/vpn-config", headers={"X-Divide-Token": tok}).json()
+        d = client.get("/api/v1/auth/vpn-config", headers={"X-Oxblood-Token": tok}).json()
         assert "vpn-alice2" in d["filename"] and d["filename"].endswith(".conf")
 
     def test_all_fields_present(self, client: TestClient):
         admin_tok = self._setup_admin(client)
         tok = self._create_user(client, admin_tok, "vpn-bob2", "pass12345678")
-        d = client.get("/api/v1/auth/vpn-config", headers={"X-Divide-Token": tok}).json()
+        d = client.get("/api/v1/auth/vpn-config", headers={"X-Oxblood-Token": tok}).json()
         for f in ("config", "filename", "client_ip", "server_ip", "allowed_ips"):
             assert f in d, f"missing: {f}"

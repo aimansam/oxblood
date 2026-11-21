@@ -177,7 +177,7 @@ async def _seed_scenario() -> int:
             version=1,
             difficulty="beginner",
             duration_min=30,
-            spec={"apiVersion": "divide/v1", "kind": "Scenario", "spec": {"assets": []}},
+            spec={"apiVersion": "oxblood/v1", "kind": "Scenario", "spec": {"assets": []}},
         )
         session.add(s)
         await session.commit()
@@ -189,7 +189,7 @@ def test_admin_creates_exercise_with_teams():
     from app.main import app
 
     token = sign_token(sub="root", role="admin", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
 
     r = client.post(
         "/api/v1/exercises",
@@ -216,7 +216,7 @@ def test_create_exercise_requires_admin_token():
 
     # Non-admin token
     token = sign_token(sub="alice", role="red", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r = client.post(
         "/api/v1/exercises",
         json={
@@ -235,7 +235,7 @@ def test_create_exercise_requires_teams():
     from app.main import app
 
     token = sign_token(sub="root", role="admin", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r = client.post(
         "/api/v1/exercises",
         json={
@@ -255,7 +255,7 @@ def test_create_exercise_422_on_invalid_scenario():
     from app.main import app
 
     token = sign_token(sub="root", role="admin", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r = client.post(
         "/api/v1/exercises",
         json={
@@ -281,7 +281,7 @@ def test_start_exercise_transitions_idle_to_live():
     from app.main import app
 
     token = sign_token(sub="root", role="admin", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
 
     create = client.post(
         "/api/v1/exercises",
@@ -308,7 +308,7 @@ def test_stop_exercise_transitions_live_to_ended():
     from app.main import app
 
     token = sign_token(sub="root", role="admin", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     create = client.post(
         "/api/v1/exercises",
         json={
@@ -334,7 +334,7 @@ def test_idle_to_ended_rejected():
     from app.main import app
 
     token = sign_token(sub="root", role="admin", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     create = client.post(
         "/api/v1/exercises",
         json={
@@ -357,8 +357,8 @@ def test_list_exercises_filters_by_role():
 
     admin_token = sign_token(sub="root", role="admin", ttl_s=300)
     red_token = sign_token(sub="alice", role="red", ttl_s=300)
-    admin = TestClient(app, headers={"X-Divide-Token": admin_token})
-    red = TestClient(app, headers={"X-Divide-Token": red_token})
+    admin = TestClient(app, headers={"X-Oxblood-Token": admin_token})
+    red = TestClient(app, headers={"X-Oxblood-Token": red_token})
     ex = admin.post(
         "/api/v1/exercises",
         json={
@@ -386,7 +386,7 @@ def test_list_exercises_filters_by_role():
     assert any(e["name"] == ex["name"] for e in res["items"])
     # Red (eve) does NOT see it
     eve_token = sign_token(sub="eve", role="red", ttl_s=300)
-    eve = TestClient(app, headers={"X-Divide-Token": eve_token})
+    eve = TestClient(app, headers={"X-Oxblood-Token": eve_token})
     res = eve.get("/api/v1/exercises").json()
     assert not any(e["name"] == ex["name"] for e in res["items"])
 
@@ -395,7 +395,7 @@ def test_get_exercise_404_for_unknown():
     from app.main import app
 
     token = sign_token(sub="root", role="admin", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r = client.get("/api/v1/exercises/99999")
     assert r.status_code == 404
 
@@ -408,8 +408,8 @@ def test_get_exercise_403_for_non_member():
 
     admin_token = sign_token(sub="root", role="admin", ttl_s=300)
     eve_token = sign_token(sub="eve", role="red", ttl_s=300)
-    admin = TestClient(app, headers={"X-Divide-Token": admin_token})
-    eve = TestClient(app, headers={"X-Divide-Token": eve_token})
+    admin = TestClient(app, headers={"X-Oxblood-Token": admin_token})
+    eve = TestClient(app, headers={"X-Oxblood-Token": eve_token})
     ex = admin.post(
         "/api/v1/exercises",
         json={
@@ -430,7 +430,7 @@ def test_leaderboard_returns_team_scores():
     from app.main import app
 
     token = sign_token(sub="root", role="admin", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     ex = client.post(
         "/api/v1/exercises",
         json={
@@ -464,7 +464,7 @@ def test_add_member_409_for_existing_member():
     from app.main import app
 
     admin_token = sign_token(sub="root", role="admin", ttl_s=300)
-    admin = TestClient(app, headers={"X-Divide-Token": admin_token})
+    admin = TestClient(app, headers={"X-Oxblood-Token": admin_token})
     ex = admin.post(
         "/api/v1/exercises",
         json={
@@ -501,7 +501,7 @@ def test_add_member_team_not_in_exercise_404():
     from app.main import app
 
     admin_token = sign_token(sub="root", role="admin", ttl_s=300)
-    admin = TestClient(app, headers={"X-Divide-Token": admin_token})
+    admin = TestClient(app, headers={"X-Oxblood-Token": admin_token})
     ex = admin.post(
         "/api/v1/exercises",
         json={
@@ -529,7 +529,7 @@ def test_archive_exercise_any_state():
     from app.main import app
 
     token = sign_token(sub="root", role="admin", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     ex = client.post(
         "/api/v1/exercises",
         json={
@@ -584,7 +584,7 @@ def test_post_drill_with_exercise_id_creates_runs_with_team():
     # Use the demo scenario as the scenarios source; instantiate
     # it inline.
     spec = {
-        "apiVersion": "divide/v1",
+        "apiVersion": "oxblood/v1",
         "kind": "Scenario",
         "metadata": {
             "name": f"f6-run-{uuid.uuid4().hex[:8]}",
@@ -638,7 +638,7 @@ def test_post_drill_with_exercise_id_creates_runs_with_team():
     from app.main import app
 
     admin_token = sign_token(sub="root", role="admin", ttl_s=300)
-    admin = TestClient(app, headers={"X-Divide-Token": admin_token})
+    admin = TestClient(app, headers={"X-Oxblood-Token": admin_token})
 
     # Create an exercise
     ex = admin.post(
@@ -704,7 +704,7 @@ def test_post_drill_with_unknown_team_404():
                 version=1,
                 difficulty="beginner",
                 duration_min=30,
-                spec={"apiVersion": "divide/v1", "kind": "Scenario", "spec": {"assets": []}},
+                spec={"apiVersion": "oxblood/v1", "kind": "Scenario", "spec": {"assets": []}},
             )
             session.add(scen)
             await session.commit()
@@ -715,7 +715,7 @@ def test_post_drill_with_unknown_team_404():
     from app.main import app
 
     admin_token = sign_token(sub="root", role="admin", ttl_s=300)
-    admin = TestClient(app, headers={"X-Divide-Token": admin_token})
+    admin = TestClient(app, headers={"X-Oxblood-Token": admin_token})
 
     ex = admin.post(
         "/api/v1/exercises",
@@ -751,7 +751,7 @@ def test_post_drill_with_unknown_exercise_404():
                 version=1,
                 difficulty="beginner",
                 duration_min=30,
-                spec={"apiVersion": "divide/v1", "kind": "Scenario", "spec": {"assets": []}},
+                spec={"apiVersion": "oxblood/v1", "kind": "Scenario", "spec": {"assets": []}},
             )
             session.add(scen)
             await session.commit()
@@ -762,7 +762,7 @@ def test_post_drill_with_unknown_exercise_404():
     from app.main import app
 
     admin_token = sign_token(sub="root", role="admin", ttl_s=300)
-    admin = TestClient(app, headers={"X-Divide-Token": admin_token})
+    admin = TestClient(app, headers={"X-Oxblood-Token": admin_token})
 
     r = admin.post(
         "/api/v1/drills",
@@ -789,7 +789,7 @@ def test_post_drill_to_ended_exercise_rejected():
                 version=1,
                 difficulty="beginner",
                 duration_min=30,
-                spec={"apiVersion": "divide/v1", "kind": "Scenario", "spec": {"assets": []}},
+                spec={"apiVersion": "oxblood/v1", "kind": "Scenario", "spec": {"assets": []}},
             )
             session.add(scen)
             await session.commit()
@@ -799,7 +799,7 @@ def test_post_drill_to_ended_exercise_rejected():
     from app.main import app
 
     admin_token = sign_token(sub="root", role="admin", ttl_s=300)
-    admin = TestClient(app, headers={"X-Divide-Token": admin_token})
+    admin = TestClient(app, headers={"X-Oxblood-Token": admin_token})
 
     ex = admin.post(
         "/api/v1/exercises",
@@ -846,7 +846,7 @@ def test_flag_capture_bumps_team_score():
                 difficulty="beginner",
                 duration_min=30,
                 spec={
-                    "apiVersion": "divide/v1",
+                    "apiVersion": "oxblood/v1",
                     "kind": "Scenario",
                     "spec": {
                         "assets": [
@@ -875,8 +875,8 @@ def test_flag_capture_bumps_team_score():
 
     admin_token = sign_token(sub="root", role="admin", ttl_s=300)
     blue_token = sign_token(sub="alice", role="blue", ttl_s=300)
-    admin = TestClient(app, headers={"X-Divide-Token": admin_token})
-    blue = TestClient(app, headers={"X-Divide-Token": blue_token})
+    admin = TestClient(app, headers={"X-Oxblood-Token": admin_token})
+    blue = TestClient(app, headers={"X-Oxblood-Token": blue_token})
 
     ex = admin.post(
         "/api/v1/exercises",
@@ -967,7 +967,7 @@ def test_models_run_has_exercise_relationship():
                 version=1,
                 difficulty="beginner",
                 duration_min=30,
-                spec={"apiVersion": "divide/v1", "kind": "Scenario", "spec": {"assets": []}},
+                spec={"apiVersion": "oxblood/v1", "kind": "Scenario", "spec": {"assets": []}},
             )
             session.add(scen)
             await session.flush()

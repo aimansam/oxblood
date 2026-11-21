@@ -20,8 +20,8 @@ import { ProvisionPlayers } from './ProvisionPlayers';
 import { provisionPhase } from './provision';
 import { useReadiness } from './useReadiness';
 
-const STEPS = ['Catalog', 'Details', 'Format', 'Setup', 'Provision'] as const;
-const LAST_FORM_STEP = 4; // Setup; the Provision step (5) is a progress screen
+const STEPS = ['Catalog', 'Details', 'Format', 'Setup', 'Snapshots', 'Provision'] as const;
+const LAST_FORM_STEP = 5; // Snapshots; the Provision step (6) is a progress screen
 
 interface Props {
   open: boolean;
@@ -56,7 +56,7 @@ export function CreateWizard({ open, initialScenarioId, onOpenChange }: Props) {
   // Provisioning progress: poll until the backend reports a terminal state.
   const status = useQuery<DrillStatus>({
     queryKey: ['drill-status', createdId],
-    enabled: open && step === 5 && createdId !== null && startedAt !== null,
+    enabled: open && step === 6 && createdId !== null && startedAt !== null,
     queryFn: () => drillsApi.status(createdId as number),
     refetchInterval: (q) => (provisionPhase(q.state.data).terminal ? false : 3000),
   });
@@ -126,7 +126,7 @@ export function CreateWizard({ open, initialScenarioId, onOpenChange }: Props) {
         navigate(`/exercises?drill=${id}`);
         return;
       }
-      setStep(5);
+      setStep(6);
       setStartedAt(Date.now());
       const result = await drillsApi.prepare(id);
       if (result.provision_status === 'failed') toast.error('Provisioning failed to start');
@@ -185,7 +185,7 @@ export function CreateWizard({ open, initialScenarioId, onOpenChange }: Props) {
                 return (
                   <li key={label} className="flex-1">
                     <button
-                      disabled={busy || step === 5 || n > Math.max(step, 1) || (n >= 3 && !scenarioId)}
+                      disabled={busy || step === 6 || n > Math.max(step, 1) || (n >= 3 && !scenarioId)}
                       onClick={() => setStep(n)}
                       aria-current={state === 'current' ? 'step' : undefined}
                       className={cn(
@@ -222,7 +222,8 @@ export function CreateWizard({ open, initialScenarioId, onOpenChange }: Props) {
               />
             )}
             {step === 4 && <SetupStep scenario={scenario} readiness={readiness} busy={busy} onBridges={bridges} />}
-            {step === 5 && (
+            {step === 5 && <SnapshotsStep scenarioId={scenarioId} scenario={scenario} />}
+            {step === 6 && (
               <>
                 <ProvisionStep phase={phase} assets={status.data?.provision?.assets ?? []} />
                 {createdId && <ProvisionPlayers drillId={createdId} maxParticipants={Number(rest.maxParticipants) || 10} destroyAccounts={format.destroyAccounts} />}
@@ -232,7 +233,7 @@ export function CreateWizard({ open, initialScenarioId, onOpenChange }: Props) {
 
           <DialogFooter className="justify-between">
             <div>
-              {step > 1 && step < 5 && (
+              {step > 1 && step < 6 && (
                 <Button variant="outline" disabled={busy} onClick={() => setStep((s) => s - 1)}>
                   <ChevronLeft className="h-4 w-4" /> Back
                 </Button>
@@ -249,17 +250,27 @@ export function CreateWizard({ open, initialScenarioId, onOpenChange }: Props) {
                   <Button variant="outline" disabled={busy || readiness.isFetching || !scenarioId} onClick={() => request('schedule')}>
                     Create scheduled
                   </Button>
+                  <Button disabled={busy || !scenarioId} onClick={next}>
+                    Next <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+              {step === 5 && (
+                <>
+                  <Button variant="outline" disabled={busy || readiness.isFetching || !scenarioId} onClick={() => request('schedule')}>
+                    Create scheduled
+                  </Button>
                   <Button disabled={busy || readiness.isFetching || !scenarioId} onClick={() => request('prepare')}>
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Prepare range
                   </Button>
                 </>
               )}
-              {step === 5 && phase.failed && (
+              {step === 6 && phase.failed && (
                 <Button variant="outline" disabled={busy} onClick={retry}>
                   Retry
                 </Button>
               )}
-              {step === 5 && (
+              {step === 6 && (
                 <>
                   <Button
                     variant="outline"
@@ -545,6 +556,87 @@ function SetupStep({
         <Button variant="outline" size="sm" disabled={busy} onClick={() => onBridges(true)}>Dry run bridges</Button>
         <Button variant="secondary" size="sm" disabled={busy} onClick={() => onBridges(false)}>Apply missing bridges</Button>
       </div>
+    </div>
+  );
+}
+
+function SnapshotsStep({ scenarioId, scenario }: { scenarioId: number | null; scenario: Scenario | undefined }) {
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobDone, setJobDone] = useState(false);
+  const [building, setBuilding] = useState(false);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const autoBaseline = Boolean((scenario?.spec as any)?.spec?.provisioning?.auto_baseline);
+
+  const progress = useQuery<Record<string, unknown>>({
+    queryKey: ['baseline-progress', jobId],
+    enabled: jobId !== null && !jobDone,
+    queryFn: () => http.get<Record<string, unknown>>(`/api/v1/admin/progress/baseline/${jobId}`),
+    refetchInterval: (q) => {
+      const st = q.state.data?.status as string | undefined;
+      return st === 'done' || st === 'error' ? false : 2000;
+    },
+  });
+
+  const jobStatus = progress.data?.status as string | undefined;
+  const message = progress.data?.message as string | undefined;
+  const jobStep = progress.data?.step as string | undefined;
+  const failed = jobStatus === 'error';
+
+  useEffect(() => {
+    if (jobStatus === 'done') setJobDone(true);
+  }, [jobStatus]);
+
+  const build = async () => {
+    if (!scenarioId) return;
+    setBuilding(true);
+    try {
+      const res = await http.post<{ job_id: string }>(`/api/v1/admin/build-baselines/${scenarioId}`, {});
+      setJobId(res.job_id);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to start baseline build');
+    } finally {
+      setBuilding(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg border border-border p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="font-medium">Range snapshots</span>
+          {jobDone && <Pill ok={true} label="Built" />}
+          {failed && <Pill ok={false} label="Failed" />}
+          {!jobDone && !failed && jobId && <Pill ok={false} label="Building…" />}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {autoBaseline
+            ? 'This scenario supports fast provisioning. Building PVE snapshots now means future exercises restore in ~2 minutes instead of cloning from scratch (~15 min).'
+            : 'Snapshots are optional. Without them the range clones fresh on every exercise. This scenario does not declare auto_baseline — you can still build snapshots manually.'}
+        </p>
+        {jobId && (
+          <div className="mt-3 space-y-1">
+            <p className={cn('text-sm', failed ? 'text-danger' : 'text-muted-foreground')}>
+              {message ?? (jobDone ? 'Snapshots built successfully.' : 'Building…')}
+            </p>
+            {jobStep && !jobDone && !failed && <p className="text-xs text-muted-foreground">Step: {jobStep}</p>}
+          </div>
+        )}
+      </div>
+      {!jobId && (
+        <Button variant="secondary" size="sm" disabled={building || !scenarioId} onClick={build}>
+          {building ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          Build range snapshots
+        </Button>
+      )}
+      {jobId && !jobDone && !failed && (
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" /> Building snapshots — you can proceed to provision while this runs.
+        </p>
+      )}
+      <p className="text-xs text-muted-foreground">
+        Snapshots are optional. Click <strong>Prepare range</strong> below to provision without them.
+      </p>
     </div>
   );
 }

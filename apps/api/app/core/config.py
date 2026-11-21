@@ -14,7 +14,7 @@ class ProxmoxSettings(BaseSettings):
 
     host: str | None = None
     port: int = 8006
-    user: str = "divide@pve"
+    user: str = "oxblood@pve"
     token_id: str | None = None
     token_secret: SecretStr | None = None
     verify_ssl: bool = True
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        env_prefix="DIVIDE_",
+        env_prefix="OXBLOOD_",
         extra="ignore",
     )
 
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     api_port: int = 8000
 
     # Database (Drill product).
-    db_url: str = "postgresql+asyncpg://divide:divide@postgres:5432/divide"
+    db_url: str = "postgresql+asyncpg://oxblood:oxblood@postgres:5432/oxblood"
     db_echo: bool = False
 
     # Redis
@@ -45,9 +45,9 @@ class Settings(BaseSettings):
 
     # MinIO
     minio_endpoint: str = "minio:9000"
-    minio_access_key: str = "divide"
-    minio_secret_key: SecretStr = SecretStr("dividedividedivide")
-    minio_bucket: str = "divide-artifacts"
+    minio_access_key: str = "oxblood"
+    minio_secret_key: SecretStr = SecretStr("oxbloodoxbloodoxblood")
+    minio_bucket: str = "oxblood-artifacts"
     minio_secure: bool = False
 
     # CORS
@@ -59,16 +59,16 @@ class Settings(BaseSettings):
     # default posture we want — set this list explicitly to open up).
     #
     # Default: a localhost origin for the setup wizard's dev loop. In any
-    # deployment, override with ``DIVIDE_CORS_ALLOW_ORIGINS="https://
+    # deployment, override with ``OXBLOOD_CORS_ALLOW_ORIGINS="https://
     # drill.example.com,https://ops.example.com"``.
     #
     # Implementation note: the model field is ``cors_allow_origins_raw`` so
-    # pydantic-settings doesn't auto-generate ``DIVIDE_CORS_ALLOW_ORIGINS``
+    # pydantic-settings doesn't auto-generate ``OXBLOOD_CORS_ALLOW_ORIGINS``
     # (which would be ambiguous — it would expect a list, not a string). The
     # ``validation_alias`` below pins the friendly env name to this field.
     cors_allow_origins_raw: str = Field(
         default="http://localhost:3000",
-        validation_alias="DIVIDE_CORS_ALLOW_ORIGINS",
+        validation_alias="OXBLOOD_CORS_ALLOW_ORIGINS",
     )
 
     @property
@@ -92,21 +92,15 @@ class Settings(BaseSettings):
     sync_on_startup: bool = True
     extra_scenarios_dirs: list[str] = Field(default_factory=list)
 
-    # HMAC secret for the X-Divide-Token auth. If unset, dev falls
+    # HMAC secret for the X-Oxblood-Token auth. If unset, dev falls
     # back to a derivation of PROXMOX_TOKEN_SECRET (with a warning);
     # prod should always set this explicitly. The fallback is so a
-    # freshly cloned repo can run `divide issue-token` without an
+    # freshly cloned repo can run `oxblood issue-token` without an
     # extra env var.
-    divide_token_secret: SecretStr | None = Field(
+    oxblood_token_secret: SecretStr | None = Field(
         default=None,
-        validation_alias="DIVIDE_TOKEN_SECRET",
+        validation_alias="OXBLOOD_TOKEN_SECRET",
     )
-
-    # Apache Guacamole gateway for players (see app/services/guacamole.py). Both must be set to turn it on;
-    # otherwise players keep using the Proxmox console. The secret is the 128-bit key (32 hex characters)
-    # of Guacamole's JSON authentication extension (JSON_SECRET_KEY on the Guacamole side).
-    guacamole_url: str | None = None
-    guacamole_json_secret: SecretStr | None = None
 
     # Setup wizard portal (vanilla HTML+JS). Mounted at /setup/ by main.py.
     # Defaults to the bundled copy; override for development to point at
@@ -118,7 +112,7 @@ class Settings(BaseSettings):
     # (POST /api/v1/auth/users/{sub}/issue-reset). Default
     # ``/`` (root) since the SPA is served at the origin root;
     # reverse-proxied deployments (subdomain, custom path) override
-    # via DIVIDE_PORTAL_PATH. Trailing slash is required.
+    # via OXBLOOD_PORTAL_PATH. Trailing slash is required.
     portal_path: str = "/"
 
     # Drill lifecycle (L2 2.8) — legacy fallback for runs that do not carry
@@ -135,6 +129,8 @@ class Settings(BaseSettings):
     # ``drill_timeout_min > 0``.
     drill_timeout_enabled: bool = True
     range_host_reserve_mb: int = 2048
+    # Operator override: report a RAM shortfall in the range preflight as a warning instead of blocking.
+    range_skip_memory_check: bool = False
 
     # Q22: orphan janitor. Periodically runs the cleanup logic
     # on Asset rows that the Q17 teardown loop left in
@@ -167,25 +163,25 @@ class Settings(BaseSettings):
 
     # WireGuard VPN settings.
     #
-    # DIVIDE_WG_HOST — the public IP/hostname trainees use in their
+    # OXBLOOD_WG_HOST — the public IP/hostname trainees use in their
     #   [Peer] Endpoint line. Must be reachable from the internet (or
     #   the LAN for internal-only deployments). Defaults to empty which
     #   makes the config say "Endpoint = <your-server-ip>:51820" as a
     #   reminder to set it.
     #
-    # DIVIDE_WG_PEER_SECRET — a random 32+ char string used to
+    # OXBLOOD_WG_PEER_SECRET — a random 32+ char string used to
     #   deterministically derive each user's keypair. Change this to
     #   invalidate all existing peer configs (forces re-download).
     #   Generate with: python3 -c "import secrets; print(secrets.token_hex(32))"
     #
-    # DIVIDE_WG_SUBNET — the VPN address pool. Clients get addresses
+    # OXBLOOD_WG_SUBNET — the VPN address pool. Clients get addresses
     #   from this pool; the server takes .1. Default: 10.13.37.0/24.
     #
-    # DIVIDE_WG_ALLOWED_IPS — what the client routes over VPN. Default
+    # OXBLOOD_WG_ALLOWED_IPS — what the client routes over VPN. Default
     #   routes only the drill subnet (10.10.0.0/16) so trainees keep
     #   normal internet access and only drill VM traffic goes through VPN.
     #
-    # DIVIDE_WG_DNS — DNS server pushed to the client. Default: 1.1.1.1.
+    # OXBLOOD_WG_DNS — DNS server pushed to the client. Default: 1.1.1.1.
     wg_host: str = ""
     wg_peer_secret: SecretStr = SecretStr("change-me-generate-with-secrets-token-hex-32")
     wg_subnet: str = "10.13.37.0/24"

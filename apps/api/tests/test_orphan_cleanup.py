@@ -36,7 +36,7 @@ async def session(engine):
             version=1,
             difficulty="smoke",
             duration_min=5,
-            spec={"apiVersion": "divide/v1", "kind": "Scenario", "spec": {"assets": []}},
+            spec={"apiVersion": "oxblood/v1", "kind": "Scenario", "spec": {"assets": []}},
         )
         s.add(sc)
         await s.commit()
@@ -153,8 +153,8 @@ async def test_pve_unused_scan_skips_snapshot_baselines(session, monkeypatch):
     await session.commit()
     monkeypatch.setattr(
         svc,
-        "_list_pve_divide_vms",
-        lambda: [{"vmid": 9005, "node": "pve", "name": "divide-1-drill_vm", "status": "stopped"}],
+        "_list_pve_oxblood_vms",
+        lambda: [{"vmid": 9005, "node": "pve", "name": "oxblood-1-drill_vm", "status": "stopped"}],
     )
 
     assert await svc.list_pve_unused_vms(session, grace_minutes=0) == []

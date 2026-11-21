@@ -153,7 +153,7 @@ def _set_template(client: ProxmoxAPI, *, node: str, vmid: int) -> None:
 _HINT = (
     "    The drill token needs PVEVMAdmin (or PVEAdmin) at path /v2/vm.\n"
     "    On the PVE host, run:\n"
-    "      pveum acl modify /v2/vm --userid divide@pve@pam --role PVEVMAdmin\n"
+    "      pveum acl modify /v2/vm --userid oxblood@pve@pam --role PVEVMAdmin\n"
     "    (or grant PVEAdmin at / for a broader token).\n"
     "    See README.md §8 §6 for the full procedure."
 )

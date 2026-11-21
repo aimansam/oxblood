@@ -12,7 +12,7 @@ import os
 
 # Portal dir must be set BEFORE app modules import so the StaticFiles
 # mount sees apps/portal/. Matches apps/api/tests/conftest.py.
-os.environ.setdefault("DIVIDE_PORTAL_DIR", "apps/portal")
+os.environ.setdefault("OXBLOOD_PORTAL_DIR", "apps/portal")
 
 import pytest
 from app.main import app  # noqa: E402

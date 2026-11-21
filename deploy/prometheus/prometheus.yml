@@ -11,7 +11,7 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
   external_labels:
-    monitor: "divide-cyber-drill"
+    monitor: "oxblood-cyber-drill"
 
 rule_files:
   - /etc/prometheus/alerts.yml
@@ -22,16 +22,16 @@ alerting:
         - targets: ["alertmanager:9093"]
 
 scrape_configs:
-  - job_name: divide-api
+  - job_name: oxblood-api
     metrics_path: /metrics
     static_configs:
-      # The api service is on the divide-net bridge. Docker's embedded
+      # The api service is on the oxblood-net bridge. Docker's embedded
       # DNS resolves 'api' to its container IP. Don't use 'localhost'
       # — Prometheus runs in its own container.
       - targets:
           - api:8000
         labels:
-          service: divide-api
+          service: oxblood-api
           env: dev
 
   - job_name: prometheus

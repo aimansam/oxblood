@@ -53,7 +53,7 @@ def _valid_scenario(name: str = "demo", **overrides) -> dict:
     valid defaults and let callers override individual leaves.
     """
     body = {
-        "apiVersion": "divide/v1",
+        "apiVersion": "oxblood/v1",
         "kind": "Scenario",
         "metadata": {
             "name": name,
@@ -80,7 +80,7 @@ def _valid_scenario(name: str = "demo", **overrides) -> dict:
                 }
             ],
             "telemetry": {
-                "sinks": [{"type": "minio", "bucket": "divide-runs"}],
+                "sinks": [{"type": "minio", "bucket": "oxblood-runs"}],
             },
             "scoring": {
                 "blue": {"rules": [{"id": "detect_lateral", "weight": 10}], "pass_threshold": 5},
@@ -90,7 +90,7 @@ def _valid_scenario(name: str = "demo", **overrides) -> dict:
                 "red": ["asset.ran_command:whoami on red_attacker"],
                 "blue": ["alert.fired:lateral_movement on corp"],
             },
-            "artifacts": {"sink_to": "minio", "bucket": "divide-runs", "retention_days": 14},
+            "artifacts": {"sink_to": "minio", "bucket": "oxblood-runs", "retention_days": 14},
         },
     }
     body["metadata"].update(overrides.pop("metadata", {}))
@@ -135,7 +135,7 @@ async def test_sync_creates_new_scenario(tmp_path: Path, session: AsyncSession) 
     row = (await session.execute(select(models.Scenario))).scalar_one()
     assert row.name == "demo"
     assert row.archived_at is None
-    assert row.spec["apiVersion"] == "divide/v1"
+    assert row.spec["apiVersion"] == "oxblood/v1"
 
 
 @pytest.mark.asyncio
@@ -317,7 +317,7 @@ def test_find_schema_in_dev_layout() -> None:
 def test_find_schema_with_env_override(tmp_path: Path, monkeypatch) -> None:
     fake = tmp_path / "custom.schema.json"
     fake.write_text('{"type": "object"}')
-    monkeypatch.setenv("DIVIDE_SCENARIO_SCHEMA", str(fake))
+    monkeypatch.setenv("OXBLOOD_SCENARIO_SCHEMA", str(fake))
     from app.services.scenario_sync import _find_schema
 
     assert _find_schema() == fake
@@ -334,7 +334,7 @@ def test_find_schema_falls_back_to_container_layout(tmp_path, monkeypatch) -> No
     schema_in_container_layout = fake_file.parents[2] / "schemas" / "scenario.schema.json"
     schema_in_container_layout.parent.mkdir(parents=True)
     schema_in_container_layout.write_text('{"type": "object"}')
-    monkeypatch.setenv("DIVIDE_SCENARIO_SCHEMA", "/nope.schema.json")
+    monkeypatch.setenv("OXBLOOD_SCENARIO_SCHEMA", "/nope.schema.json")
 
     import app.services.scenario_sync as sync_mod
 

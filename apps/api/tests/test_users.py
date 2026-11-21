@@ -372,7 +372,7 @@ def test_users_list_red_returns_403(client: TestClient, seeded):
     from app.core.auth import sign_token
 
     token = sign_token(sub="red-user", role="red", ttl_s=600)
-    r = client.get("/api/v1/auth/users", headers={"X-Divide-Token": token})
+    r = client.get("/api/v1/auth/users", headers={"X-Oxblood-Token": token})
     assert r.status_code == 403
 
 
@@ -380,7 +380,7 @@ def test_users_list_admin_returns_rows(client: TestClient, seeded):
     from app.core.auth import sign_token
 
     token = sign_token(sub="admin-user", role="admin", ttl_s=600)
-    r = client.get("/api/v1/auth/users", headers={"X-Divide-Token": token})
+    r = client.get("/api/v1/auth/users", headers={"X-Oxblood-Token": token})
     assert r.status_code == 200
     rows = r.json()
     subs = {row["sub"] for row in rows}
@@ -391,7 +391,7 @@ def test_users_list_does_not_leak_password_hash(client: TestClient, seeded):
     from app.core.auth import sign_token
 
     token = sign_token(sub="admin-user", role="admin", ttl_s=600)
-    r = client.get("/api/v1/auth/users", headers={"X-Divide-Token": token})
+    r = client.get("/api/v1/auth/users", headers={"X-Oxblood-Token": token})
     assert r.status_code == 200
     for row in r.json():
         assert "password" not in row
@@ -405,7 +405,7 @@ def test_users_list_disabled_field_is_visible(client: TestClient, seeded):
     from app.core.auth import sign_token
 
     token = sign_token(sub="admin-user", role="admin", ttl_s=600)
-    r = client.get("/api/v1/auth/users", headers={"X-Divide-Token": token})
+    r = client.get("/api/v1/auth/users", headers={"X-Oxblood-Token": token})
     rows = r.json()
     by_sub = {row["sub"]: row for row in rows}
     assert by_sub["ghost"]["disabled"] is True
@@ -425,5 +425,5 @@ def test_logout_requires_no_auth(client: TestClient):
     # Stateless: should work whether you have a token or not.
     r1 = client.post("/api/v1/auth/logout")
     assert r1.status_code == 200
-    r2 = client.post("/api/v1/auth/logout", headers={"X-Divide-Token": "garbage"})
+    r2 = client.post("/api/v1/auth/logout", headers={"X-Oxblood-Token": "garbage"})
     assert r2.status_code == 200

@@ -10,8 +10,8 @@ Checks (each one prints PASS / FAIL with a one-line reason):
   [4] Template `tpl-debian-cloudinit` exists on PVE (or --template)
   [5] Scenario `first-live-drill` in DB (or --scenario)
   [6] /metrics endpoint live
-  [7] Prometheus scraping divide-api
-  [8] Grafana dashboard loaded (UID divide-drill-platform)
+  [7] Prometheus scraping oxblood-api
+  [8] Grafana dashboard loaded (UID oxblood-drill-platform)
 
 Each check is independent -- we run them all so you see every red flag,
 not just the first. The summary at the end tells you what to fix.
@@ -32,11 +32,11 @@ from pathlib import Path
 import httpx
 
 REPO = Path(__file__).resolve().parents[1]
-DEFAULT_API_BASE = os.environ.get("DIVIDE_API_BASE", "http://localhost:8000")
-DEFAULT_PROM_BASE = os.environ.get("DIVIDE_PROM_BASE", "http://localhost:9090")
-DEFAULT_GRAFANA_BASE = os.environ.get("DIVIDE_GRAFANA_BASE", "http://localhost:3000")
+DEFAULT_API_BASE = os.environ.get("OXBLOOD_API_BASE", "http://localhost:8000")
+DEFAULT_PROM_BASE = os.environ.get("OXBLOOD_PROM_BASE", "http://localhost:9090")
+DEFAULT_GRAFANA_BASE = os.environ.get("OXBLOOD_GRAFANA_BASE", "http://localhost:3000")
 GRAFANA_USER = os.environ.get("GRAFANA_ADMIN_USER", "admin")
-GRAFANA_PASS = os.environ.get("GRAFANA_ADMIN_PASSWORD", "divide")
+GRAFANA_PASS = os.environ.get("GRAFANA_ADMIN_PASSWORD", "oxblood")
 
 
 @dataclass
@@ -232,12 +232,12 @@ def check_template_exists(client, name, report):
 DRILL_PRIVS = frozenset({"VM.Allocate", "VM.Clone", "VM.PowerMgmt"})
 
 
-def check_acl_for_writes(client, report, user: str = "divide@pve@pam") -> None:
+def check_acl_for_writes(client, report, user: str = "oxblood@pve@pam") -> None:
     """Confirm the current token has drill-write privileges on /v2/vm (or /).
 
     Implementation note: the previous version of this check called
     ``GET /access/acl`` to read the cluster-wide ACL table and looked for
-    a write-role grant for the divide user. That endpoint requires
+    a write-role grant for the oxblood user. That endpoint requires
     ``Access.Audit``, which is **not** part of ``PVEVMAdmin`` -- so a
     correctly-scoped token (PVEVMAdmin on / with propagate=1) got an
     empty list back and the check failed even though every drill
@@ -267,7 +267,7 @@ def check_acl_for_writes(client, report, user: str = "divide@pve@pam") -> None:
                 False,
                 f"HTTP {r.status_code}: {detail}",
                 "Re-grant on the PVE host: pveum acl modify /v2/vm "
-                "--users divide@pve@pam --roles PVEVMAdmin",
+                "--users oxblood@pve@pam --roles PVEVMAdmin",
             )
             return
         body = r.json()
@@ -314,7 +314,7 @@ def check_acl_for_writes(client, report, user: str = "divide@pve@pam") -> None:
             f"appeared on /, /v2/vm, or /vms."
         )
         fix = (
-            "On PVE host: pveum acl modify divide@pve@pam "
+            "On PVE host: pveum acl modify oxblood@pve@pam "
             "--role PVEVMAdmin --path / --propagate=1 "
             "(adds VM.Allocate + VM.Clone + VM.PowerMgmt across the cluster)."
         )
@@ -327,7 +327,7 @@ def check_acl_for_writes(client, report, user: str = "divide@pve@pam") -> None:
             f"may grant one or two but not all."
         )
         fix = (
-            "On PVE host: pveum acl modify divide@pve@pam --role PVEVMAdmin --path / --propagate=1"
+            "On PVE host: pveum acl modify oxblood@pve@pam --role PVEVMAdmin --path / --propagate=1"
         )
 
     report.add(
@@ -387,19 +387,19 @@ def check_metrics_live(client, report):
             )
             return
         body = r.text
-        families = [line for line in body.splitlines() if line.startswith("# TYPE divide_")]
+        families = [line for line in body.splitlines() if line.startswith("# TYPE oxblood_")]
         if not families:
             report.add(
                 "/metrics live on API",
                 False,
-                "no divide_* metric families in exposition",
+                "no oxblood_* metric families in exposition",
                 "Was the app built with prometheus-client installed?",
             )
         else:
             report.add(
                 "/metrics live on API",
                 True,
-                f"{len(families)} divide_* metric families, {len(body)} bytes total",
+                f"{len(families)} oxblood_* metric families, {len(body)} bytes total",
             )
     except Exception as exc:
         report.add(
@@ -409,13 +409,13 @@ def check_metrics_live(client, report):
         )
 
 
-def check_prometheus_scrape(report, target="divide-api"):
+def check_prometheus_scrape(report, target="oxblood-api"):
     try:
         with httpx.Client(timeout=5.0) as c:
             r = c.get(f"{DEFAULT_PROM_BASE}/api/v1/targets?state=active")
             if r.status_code != 200:
                 report.add(
-                    "Prometheus scraping divide-api",
+                    "Prometheus scraping oxblood-api",
                     False,
                     f"HTTP {r.status_code} from {DEFAULT_PROM_BASE}",
                     f"Is Prometheus up? curl {DEFAULT_PROM_BASE}/-/ready",
@@ -427,14 +427,14 @@ def check_prometheus_scrape(report, target="divide-api"):
                     if t.get("health") == "up":
                         url = t.get("scrapeUrl", "?")
                         report.add(
-                            "Prometheus scraping divide-api",
+                            "Prometheus scraping oxblood-api",
                             True,
                             f"{url} -> up",
                         )
                     else:
                         last_err = (t.get("lastError") or "").strip()
                         report.add(
-                            "Prometheus scraping divide-api",
+                            "Prometheus scraping oxblood-api",
                             False,
                             f"health={t.get('health')!r}, lastError={last_err[:80]}",
                             "Check deploy/prometheus/prometheus.yml -- is api:8000 resolvable "
@@ -442,21 +442,21 @@ def check_prometheus_scrape(report, target="divide-api"):
                         )
                     return
             report.add(
-                "Prometheus scraping divide-api",
+                "Prometheus scraping oxblood-api",
                 False,
                 f"target {target!r} not in active scrape list",
-                "deploy/prometheus/prometheus.yml must declare a job named 'divide-api'",
+                "deploy/prometheus/prometheus.yml must declare a job named 'oxblood-api'",
             )
     except Exception as exc:
         report.add(
-            "Prometheus scraping divide-api",
+            "Prometheus scraping oxblood-api",
             False,
             f"request failed: {exc}",
             "Is Prometheus on :9090? Try: docker compose ps prometheus",
         )
 
 
-def check_grafana_dashboard(report, uid="divide-drill-platform"):
+def check_grafana_dashboard(report, uid="oxblood-drill-platform"):
     try:
         with httpx.Client(timeout=5.0) as c:
             r = c.get(
@@ -476,7 +476,7 @@ def check_grafana_dashboard(report, uid="divide-drill-platform"):
                     f"Grafana dashboard {uid!r} loaded",
                     False,
                     "404 -- not provisioned",
-                    "Is deploy/grafana/provisioning/dashboards/divide.yml mounted into "
+                    "Is deploy/grafana/provisioning/dashboards/oxblood.yml mounted into "
                     "the grafana container?",
                 )
             else:
@@ -520,7 +520,7 @@ def main():
                 "Fix the PROXMOX check first.",
             )
             report.add(
-                "ACL grants PVEVMAdmin on /v2/vm to divide@pve@pam",
+                "ACL grants PVEVMAdmin on /v2/vm to oxblood@pve@pam",
                 False,
                 "skipped (PROXMOX not configured)",
             )

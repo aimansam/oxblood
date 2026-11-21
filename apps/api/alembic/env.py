@@ -1,7 +1,7 @@
 """Alembic environment.
 
 Loads DB URL from the live Settings (so production migrations respect
-DIVIDE_DB_URL), and uses our SQLAlchemy metadata as the autogenerate target.
+OXBLOOD_DB_URL), and uses our SQLAlchemy metadata as the autogenerate target.
 """
 
 from __future__ import annotations

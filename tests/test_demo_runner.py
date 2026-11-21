@@ -68,7 +68,7 @@ def test_demo_script_prints_portal_url():
 
 def test_demo_script_documents_admin_hints():
     src = _read(DEMO_SH)
-    assert "DIVIDE_BOOTSTRAP_ADMIN" in src, (
+    assert "OXBLOOD_BOOTSTRAP_ADMIN" in src, (
         "demo.sh must mention the bootstrap admin env vars so "
         "operators who set them see the sign-in hint"
     )

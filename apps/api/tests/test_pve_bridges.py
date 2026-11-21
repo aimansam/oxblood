@@ -190,7 +190,7 @@ class TestAdminBridgeEndpoints:
         ).json()["token"]
         r = client.get(
             "/api/v1/admin/expected-bridges",
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
         )
         assert r.status_code == 200
         body = r.json()
@@ -216,7 +216,7 @@ class TestAdminBridgeEndpoints:
         # with a wizard-actionable error.
         r = client.post(
             "/api/v1/admin/pve-setup-bridges",
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
             json={"dry_run": True},
         )
         # Either 502 (no PVE creds in env) or 200 (env-var-driven stack
@@ -286,7 +286,7 @@ class TestAdminBridgeEndpoints:
         ).json()["token"]
         r = client.post(
             "/api/v1/admin/pve-setup-bridges",
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
             json={"dry_run": True},
         )
         assert r.status_code == 200
@@ -307,7 +307,7 @@ class TestAdminBridgeEndpoints:
         ).json()["token"]
         r = client.get(
             "/api/v1/admin/pve-bridge-status?node=pve",
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
         )
         assert r.status_code == 200
         body = r.json()

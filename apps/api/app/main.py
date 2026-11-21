@@ -49,7 +49,7 @@ log = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging(settings.log_level)
-    log.info("divide_api.start", version=__version__, env=settings.env)
+    log.info("oxblood_api.start", version=__version__, env=settings.env)
 
     if settings.sync_on_startup:
         # F3-prep: bootstrap admin from env vars. Idempotent — only
@@ -80,35 +80,35 @@ async def lifespan(app: FastAPI):
                             )
                             await boot_session.commit()
                             log.info(
-                                "divide_api.bootstrap_admin.created",
+                                "oxblood_api.bootstrap_admin.created",
                                 sub=admin_sub,
                             )
                         except DuplicateSubError:
                             await boot_session.rollback()
                             log.info(
-                                "divide_api.bootstrap_admin.race",
+                                "oxblood_api.bootstrap_admin.race",
                                 sub=admin_sub,
                             )
                         except UserStoreError as exc:
                             await boot_session.rollback()
                             log.error(
-                                "divide_api.bootstrap_admin.failed",
+                                "oxblood_api.bootstrap_admin.failed",
                                 sub=admin_sub,
                                 error=str(exc),
                             )
                     else:
                         log.info(
-                            "divide_api.bootstrap_admin.skipped_exists",
+                            "oxblood_api.bootstrap_admin.skipped_exists",
                             sub=admin_sub,
                         )
             else:
-                log.info("divide_api.bootstrap_admin.skipped_no_env")
+                log.info("oxblood_api.bootstrap_admin.skipped_no_env")
                 # Q2 fix: warn loudly if no users exist and the operator
                 # has not configured the bootstrap env vars. Without this
                 # warning, a fresh install will silently come up with
                 # zero users, the wizard will hang at the login screen,
                 # and the operator has no signal that they need to set
-                # DIVIDE_BOOTSTRAP_ADMIN_SUB + DIVIDE_BOOTSTRAP_ADMIN_PASSWORD.
+                # OXBLOOD_BOOTSTRAP_ADMIN_SUB + OXBLOOD_BOOTSTRAP_ADMIN_PASSWORD.
                 try:
                     from sqlalchemy import func, select
 
@@ -121,10 +121,10 @@ async def lifespan(app: FastAPI):
                         ).scalar_one()
                     if user_count == 0:
                         log.warning(
-                            "divide_api.bootstrap_admin.missing_admin",
+                            "oxblood_api.bootstrap_admin.missing_admin",
                             hint=(
-                                "No users exist and DIVIDE_BOOTSTRAP_ADMIN_SUB "
-                                "/ DIVIDE_BOOTSTRAP_ADMIN_PASSWORD are not set. "
+                                "No users exist and OXBLOOD_BOOTSTRAP_ADMIN_SUB "
+                                "/ OXBLOOD_BOOTSTRAP_ADMIN_PASSWORD are not set. "
                                 "The wizard will render but no one can sign in. "
                                 "Set both env vars in deploy/.env and restart the "
                                 "API container to bootstrap the first admin."
@@ -132,11 +132,11 @@ async def lifespan(app: FastAPI):
                         )
                 except Exception as exc:  # pragma: no cover - best-effort
                     log.warning(
-                        "divide_api.bootstrap_admin.missing_admin_check_failed",
+                        "oxblood_api.bootstrap_admin.missing_admin_check_failed",
                         error=str(exc),
                     )
         except Exception as exc:  # pragma: no cover - best-effort
-            log.error("divide_api.bootstrap_admin.crashed", error=str(exc))
+            log.error("oxblood_api.bootstrap_admin.crashed", error=str(exc))
 
         try:
             from app.db.session import get_sessionmaker
@@ -149,7 +149,7 @@ async def lifespan(app: FastAPI):
             async with sm() as session:
                 report = await sync_files(session, paths)
                 log.info(
-                    "divide_api.scenario_sync",
+                    "oxblood_api.scenario_sync",
                     created=len(report.created),
                     updated=len(report.updated),
                     unchanged=len(report.unchanged),
@@ -158,7 +158,7 @@ async def lifespan(app: FastAPI):
                 )
                 if report.skipped:
                     log.warning(
-                        "divide_api.scenario_sync.skipped",
+                        "oxblood_api.scenario_sync.skipped",
                         skipped=[
                             {"path": str(s.source_path), "error": s.error} for s in report.skipped
                         ],
@@ -166,7 +166,7 @@ async def lifespan(app: FastAPI):
                 # Expose the report for /readyz / health.
                 app.state.last_sync = report
         except Exception as exc:  # pragma: no cover - best-effort
-            log.error("divide_api.scenario_sync.failed", error=str(exc))
+            log.error("oxblood_api.scenario_sync.failed", error=str(exc))
             app.state.last_sync = None
 
     # Day-1 web setup: hydrate the in-memory PVE config overlay from
@@ -181,9 +181,9 @@ async def lifespan(app: FastAPI):
         from app.services.proxmox import hydrate_proxmox_from_db
 
         await hydrate_proxmox_from_db()
-        log.info("divide_api.pve_overlay.hydrated")
+        log.info("oxblood_api.pve_overlay.hydrated")
     except Exception as exc:  # pragma: no cover - best-effort
-        log.warning("divide_api.pve_overlay.hydrate_failed", error=str(exc))
+        log.warning("oxblood_api.pve_overlay.hydrate_failed", error=str(exc))
 
     # Q22: orphan janitor background task. Off by default
     # (orphan_janitor_enabled=False). When on, periodically calls
@@ -200,7 +200,7 @@ async def lifespan(app: FastAPI):
             interval = settings.orphan_janitor_interval_min * 60
             grace = settings.orphan_janitor_grace_minutes
             log.info(
-                "divide_api.orphan_janitor.started",
+                "oxblood_api.orphan_janitor.started",
                 interval_min=settings.orphan_janitor_interval_min,
                 grace_minutes=grace,
             )
@@ -215,7 +215,7 @@ async def lifespan(app: FastAPI):
                         )
                     if result.destroyed or result.failed:
                         log.info(
-                            "divide_api.orphan_janitor.tick",
+                            "oxblood_api.orphan_janitor.tick",
                             scanned=result.scanned,
                             destroyed=result.destroyed,
                             failed=len(result.failed),
@@ -223,7 +223,7 @@ async def lifespan(app: FastAPI):
                 except asyncio.CancelledError:
                     raise
                 except Exception as exc:  # noqa: BLE001
-                    log.warning("divide_api.orphan_janitor.error", error=str(exc))
+                    log.warning("oxblood_api.orphan_janitor.error", error=str(exc))
                 await asyncio.sleep(interval)
 
         janitor_task = asyncio.create_task(_janitor_loop())
@@ -240,11 +240,11 @@ async def lifespan(app: FastAPI):
             rescheduled = await Runner.recover_watchdogs(recovery_session)
             if rescheduled > 0:
                 log.info(
-                    "divide_api.watchdog_recovery.completed",
+                    "oxblood_api.watchdog_recovery.completed",
                     rescheduled=rescheduled,
                 )
     except Exception as exc:  # pragma: no cover - best-effort
-        log.warning("divide_api.watchdog_recovery.failed", error=str(exc))
+        log.warning("oxblood_api.watchdog_recovery.failed", error=str(exc))
 
     pve_sync_task = None
     pve_sync_interval_sec = getattr(settings, "pve_sync_interval_sec", 30) or 30
@@ -264,7 +264,7 @@ async def lifespan(app: FastAPI):
 
             sm = get_sessionmaker()
             log.info(
-                "divide_api.oxblood_timeout.started",
+                "oxblood_api.oxblood_timeout.started",
                 interval_sec=oxblood_timeout_interval_sec,
             )
             while True:
@@ -334,13 +334,13 @@ async def lifespan(app: FastAPI):
                             await session.commit()
                     if timed_out:
                         log.info(
-                            "divide_api.oxblood_timeout.tick",
+                            "oxblood_api.oxblood_timeout.tick",
                             timed_out=[d.id for d in timed_out],
                         )
                 except asyncio.CancelledError:
                     raise
                 except Exception as exc:  # noqa: BLE001
-                    log.warning("divide_api.oxblood_timeout.error", error=str(exc))
+                    log.warning("oxblood_api.oxblood_timeout.error", error=str(exc))
                 await asyncio.sleep(oxblood_timeout_interval_sec)
 
         oxblood_timeout_task = asyncio.create_task(_oxblood_timeout_loop())
@@ -360,7 +360,7 @@ async def lifespan(app: FastAPI):
 
             sm = get_sessionmaker()
             log.info(
-                "divide_api.pve_sync.started",
+                "oxblood_api.pve_sync.started",
                 interval_sec=pve_sync_interval_sec,
             )
 
@@ -447,13 +447,13 @@ async def lifespan(app: FastAPI):
                                                 await session.flush()
 
                                                 log.warning(
-                                                    "divide_api.pve_sync.run_failed run_id=%s reason=vm_deleted",
+                                                    "oxblood_api.pve_sync.run_failed run_id=%s reason=vm_deleted",
                                                     run.id,
                                                 )
 
                                 except Exception as exc:  # noqa: BLE001
                                     log.debug(
-                                        "divide_api.pve_sync.asset_sync_failed run_id=%s asset_id=%s error=%s",
+                                        "oxblood_api.pve_sync.asset_sync_failed run_id=%s asset_id=%s error=%s",
                                         run.id,
                                         asset.id,
                                         str(exc),
@@ -464,7 +464,7 @@ async def lifespan(app: FastAPI):
                 except asyncio.CancelledError:
                     raise
                 except Exception as exc:  # noqa: BLE001
-                    log.warning("divide_api.pve_sync.error", error=str(exc))
+                    log.warning("oxblood_api.pve_sync.error", error=str(exc))
 
                 await asyncio.sleep(pve_sync_interval_sec)
 
@@ -481,7 +481,7 @@ async def lifespan(app: FastAPI):
             await janitor_task
         except (asyncio.CancelledError, Exception):  # noqa: BLE001
             pass
-        log.info("divide_api.orphan_janitor.stopped")
+        log.info("oxblood_api.orphan_janitor.stopped")
 
     # Cancel the PVE sync task (if running) on shutdown.
     if pve_sync_task is not None:
@@ -490,7 +490,7 @@ async def lifespan(app: FastAPI):
             await pve_sync_task
         except (asyncio.CancelledError, Exception):  # noqa: BLE001
             pass
-        log.info("divide_api.pve_sync.stopped")
+        log.info("oxblood_api.pve_sync.stopped")
 
     if oxblood_timeout_task is not None:
         oxblood_timeout_task.cancel()
@@ -498,7 +498,7 @@ async def lifespan(app: FastAPI):
             await oxblood_timeout_task
         except (asyncio.CancelledError, Exception):  # noqa: BLE001
             pass
-        log.info("divide_api.oxblood_timeout.stopped")
+        log.info("oxblood_api.oxblood_timeout.stopped")
 
     # R1: tear down the RedisEventBus bridge thread + redis pool.
     # InProcessEventBus has nothing to close. The factory caches
@@ -510,9 +510,9 @@ async def lifespan(app: FastAPI):
         if hasattr(bus, "close"):
             bus.close()
     except Exception as exc:  # pragma: no cover - best-effort
-        log.warning("divide_api.event_bus.close_failed", error=str(exc))
+        log.warning("oxblood_api.event_bus.close_failed", error=str(exc))
 
-    log.info("divide_api.stop")
+    log.info("oxblood_api.stop")
 
 
 def create_app() -> FastAPI:
@@ -541,7 +541,7 @@ def create_app() -> FastAPI:
         # the catch-all for things like SQLAlchemyError, asyncio
         # errors, or unanticipated runtime exceptions.
         log.exception(
-            "divide_api.unhandled_exception",
+            "oxblood_api.unhandled_exception",
             path=str(request.url.path),
             method=request.method,
         )
@@ -568,7 +568,7 @@ def create_app() -> FastAPI:
         # catches in Q14 too, but defence in depth).
         msg = str(exc.orig) if getattr(exc, "orig", None) else str(exc)
         log.warning(
-            "divide_api.integrity_error",
+            "oxblood_api.integrity_error",
             path=str(request.url.path),
             detail=msg[:300],
         )

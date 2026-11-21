@@ -53,7 +53,7 @@ def client():
 def _headers_for(role):
     if role is None:
         return {}
-    return {"X-Divide-Token": sign_token("test-user", role.value, 3600)}
+    return {"X-Oxblood-Token": sign_token("test-user", role.value, 3600)}
 
 
 class _Cell(NamedTuple):

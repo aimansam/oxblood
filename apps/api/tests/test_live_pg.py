@@ -2,7 +2,7 @@
 
 These tests verify the marker plumbing works:
   * live_pg-marked tests are SKIPPED by default (SQLite mode).
-  * live_pg-marked tests RUN when DIVIDE_TEST_LIVE_PG is set.
+  * live_pg-marked tests RUN when OXBLOOD_TEST_LIVE_PG is set.
 
 The real value of `live_pg` is in existing tests that *only* make sense
 against real Postgres (e.g. enum case-sensitivity, JSONB operators). New
@@ -45,7 +45,7 @@ def test_postgres_enum_types_match_model_declarations() -> None:
       * exercise_status     (the one 0006 forgot)
 
     Run with:
-        DIVIDE_TEST_LIVE_PG=1 pytest -m live_pg apps/api/tests/test_live_pg.py
+        OXBLOOD_TEST_LIVE_PG=1 pytest -m live_pg apps/api/tests/test_live_pg.py
 
     The test reads the DB URL directly from the env var set by the
     conftest fixture (rather than importing the helper) so it cannot
@@ -58,9 +58,9 @@ def test_postgres_enum_types_match_model_declarations() -> None:
     import sqlalchemy as sa
     from sqlalchemy.ext.asyncio import create_async_engine
 
-    url = os.environ.get("DIVIDE_TEST_LIVE_PG_URL") or os.environ.get("DIVIDE_TEST_LIVE_PG")
+    url = os.environ.get("OXBLOOD_TEST_LIVE_PG_URL") or os.environ.get("OXBLOOD_TEST_LIVE_PG")
     assert url and url != "1" and url != "true" and url != "yes", (
-        "Set DIVIDE_TEST_LIVE_PG_URL (not just DIVIDE_TEST_LIVE_PG=1) "
+        "Set OXBLOOD_TEST_LIVE_PG_URL (not just OXBLOOD_TEST_LIVE_PG=1) "
         "to a full postgresql+asyncpg:// URL."
     )
 
@@ -94,14 +94,14 @@ def test_postgres_enum_types_match_model_declarations() -> None:
 
 
 def test_live_pg_helper_resolves_truthy_env(monkeypatch):
-    """`_live_pg_url()` returns the URL when DIVIDE_TEST_LIVE_PG is set."""
+    """`_live_pg_url()` returns the URL when OXBLOOD_TEST_LIVE_PG is set."""
     import importlib.util
 
-    monkeypatch.setenv("DIVIDE_TEST_LIVE_PG", "1")
-    monkeypatch.setenv("DIVIDE_TEST_LIVE_PG_URL", "postgresql+asyncpg://u:p@h:5432/db")
+    monkeypatch.setenv("OXBLOOD_TEST_LIVE_PG", "1")
+    monkeypatch.setenv("OXBLOOD_TEST_LIVE_PG_URL", "postgresql+asyncpg://u:p@h:5432/db")
 
     spec = importlib.util.spec_from_file_location(
-        "_divide_conftest",
+        "_oxblood_conftest",
         "apps/api/tests/conftest.py",
     )
     assert spec and spec.loader
@@ -114,11 +114,11 @@ def test_live_pg_helper_resolves_truthy_env(monkeypatch):
 def test_live_pg_helper_returns_none_when_unset(monkeypatch):
     import importlib.util
 
-    monkeypatch.delenv("DIVIDE_TEST_LIVE_PG", raising=False)
-    monkeypatch.delenv("DIVIDE_TEST_LIVE_PG_URL", raising=False)
+    monkeypatch.delenv("OXBLOOD_TEST_LIVE_PG", raising=False)
+    monkeypatch.delenv("OXBLOOD_TEST_LIVE_PG_URL", raising=False)
 
     spec = importlib.util.spec_from_file_location(
-        "_divide_conftest",
+        "_oxblood_conftest",
         "apps/api/tests/conftest.py",
     )
     assert spec and spec.loader

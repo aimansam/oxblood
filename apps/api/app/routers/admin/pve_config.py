@@ -60,9 +60,9 @@ class PveConfigPayload(BaseModel):
 
     host: str = Field(..., min_length=1, max_length=255, description="e.g. https://192.168.0.10")
     port: int = Field(default=8006, ge=1, le=65535)
-    user: str = Field(..., min_length=1, max_length=255, description="e.g. divide@pve@pam")
+    user: str = Field(..., min_length=1, max_length=255, description="e.g. oxblood@pve@pam")
     token_id: str = Field(
-        ..., min_length=1, max_length=255, description="e.g. divide@pve@pam!drill-token"
+        ..., min_length=1, max_length=255, description="e.g. oxblood@pve@pam!drill-token"
     )
     token_secret: str = Field(..., min_length=1, max_length=255)
     verify_ssl: bool = Field(

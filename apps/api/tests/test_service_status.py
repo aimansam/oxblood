@@ -59,7 +59,7 @@ async def test_get_service_status_returns_expected_shape():
 def test_wg_env_summary_reports_unset(monkeypatch):
     """When WG_HOST is empty, summary reports not-ready."""
     monkeypatch.delenv("WG_HOST", raising=False)
-    monkeypatch.delenv("DIVIDE_WG_PEER_SECRET", raising=False)
+    monkeypatch.delenv("OXBLOOD_WG_PEER_SECRET", raising=False)
     summary = svc._wg_env_summary()
     assert summary["wg_host"] is None
     assert summary["peer_secret_set"] is False
@@ -69,7 +69,7 @@ def test_wg_env_summary_reports_unset(monkeypatch):
 def test_wg_env_summary_reports_set(monkeypatch):
     """When both env vars are present, summary is ready."""
     monkeypatch.setenv("WG_HOST", "203.0.113.42")
-    monkeypatch.setenv("DIVIDE_WG_PEER_SECRET", "deadbeef" * 4)
+    monkeypatch.setenv("OXBLOOD_WG_PEER_SECRET", "deadbeef" * 4)
     summary = svc._wg_env_summary()
     assert summary["wg_host"] == "203.0.113.42"
     assert summary["peer_secret_set"] is True

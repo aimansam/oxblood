@@ -12,7 +12,7 @@ export default async function globalSetup() {
   const login = await api.post('/api/v1/auth/login', { data: ADMIN });
   const { token } = await login.json();
   // 409 means the player already exists from an earlier run.
-  const red = await api.post('/api/v1/auth/users', { headers: { 'X-Divide-Token': token }, data: { ...RED, role: 'red' } });
+  const red = await api.post('/api/v1/auth/users', { headers: { 'X-Oxblood-Token': token }, data: { ...RED, role: 'red' } });
   if (!red.ok() && red.status() !== 409) throw new Error(`red user failed: ${red.status()}`);
   await api.dispose();
 }

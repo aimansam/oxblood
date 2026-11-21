@@ -1,4 +1,4 @@
-name: divide-cyber-drill
+name: oxblood-cyber-drill
 
 # Architecture: Flask portal (port 80) serves the React UI at /app/ + proxies /api/* to FastAPI (internal port 8000)
 # Single entry point for users: http://localhost
@@ -10,8 +10,8 @@ services:
       # Repository root, so the image can build apps/web (React UI) as well as the portal.
       context: ..
       dockerfile: apps/portal/Dockerfile
-    image: divide/portal:dev
-    container_name: divide-portal
+    image: oxblood/portal:dev
+    container_name: oxblood-portal
     restart: unless-stopped
     ports:
       - "5000:80"
@@ -20,7 +20,7 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    networks: [divide-net]
+    networks: [oxblood-net]
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:80/healthz"]
       interval: 15s
@@ -33,45 +33,43 @@ services:
     build:
       context: ..
       dockerfile: apps/api/Dockerfile
-    image: divide/api:dev
-    container_name: divide-api
+    image: oxblood/api:dev
+    container_name: oxblood-api
     restart: unless-stopped
     expose:
       - "8000"
     environment:
-      DIVIDE_ENV: ${DIVIDE_ENV:-dev}
-      DIVIDE_LOG_LEVEL: ${DIVIDE_LOG_LEVEL:-INFO}
-      DIVIDE_RANGE_HOST_RESERVE_MB: ${DIVIDE_RANGE_HOST_RESERVE_MB:-2048}
-      # Players open their workstation through Guacamole when both are set; empty keeps the Proxmox console.
-      DIVIDE_GUACAMOLE_URL: ${DIVIDE_GUACAMOLE_URL:-}
-      DIVIDE_GUACAMOLE_JSON_SECRET: ${DIVIDE_GUACAMOLE_JSON_SECRET:-}
-      DIVIDE_DB_URL: postgresql+asyncpg://divide:${POSTGRES_PASSWORD:-divide}@postgres:5432/divide
-      DIVIDE_REDIS_URL: redis://redis:6379/0
+      OXBLOOD_ENV: ${OXBLOOD_ENV:-dev}
+      OXBLOOD_LOG_LEVEL: ${OXBLOOD_LOG_LEVEL:-INFO}
+      OXBLOOD_RANGE_HOST_RESERVE_MB: ${OXBLOOD_RANGE_HOST_RESERVE_MB:-2048}
+      OXBLOOD_RANGE_SKIP_MEMORY_CHECK: ${OXBLOOD_RANGE_SKIP_MEMORY_CHECK:-false}
+      OXBLOOD_DB_URL: postgresql+asyncpg://oxblood:${POSTGRES_PASSWORD:-oxblood}@postgres:5432/oxblood
+      OXBLOOD_REDIS_URL: redis://redis:6379/0
       # R1: opt into the Redis-backed event bus. With multiple
       # uvicorn workers this is the only way to deliver SSE events
       # across workers. Single-worker deployments can leave this
-      # unset (DIVIDE_EVENT_BUS=memory).
-      DIVIDE_EVENT_BUS: ${DIVIDE_EVENT_BUS:-memory}
-      DIVIDE_MINIO_ENDPOINT: minio:9000
-      DIVIDE_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-divide}
-      DIVIDE_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-dividedividedivide}
-      DIVIDE_MINIO_BUCKET: ${MINIO_BUCKET:-divide-artifacts}
+      # unset (OXBLOOD_EVENT_BUS=memory).
+      OXBLOOD_EVENT_BUS: ${OXBLOOD_EVENT_BUS:-memory}
+      OXBLOOD_MINIO_ENDPOINT: minio:9000
+      OXBLOOD_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-oxblood}
+      OXBLOOD_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-oxbloodoxbloodoxblood}
+      OXBLOOD_MINIO_BUCKET: ${MINIO_BUCKET:-oxblood-artifacts}
       # Scenario catalog. The repo's examples/ is mounted read-only so the
       # API can sync them into the DB on startup.
-      DIVIDE_SCENARIOS_DIR: ${DIVIDE_SCENARIOS_DIR:-/workdir/examples/scenarios}
-      DIVIDE_SYNC_ON_STARTUP: ${DIVIDE_SYNC_ON_STARTUP:-true}
+      OXBLOOD_SCENARIOS_DIR: ${OXBLOOD_SCENARIOS_DIR:-/workdir/examples/scenarios}
+      OXBLOOD_SYNC_ON_STARTUP: ${OXBLOOD_SYNC_ON_STARTUP:-true}
       # F3-prep credential login. See README.md §8 for the operator
       # guide. Set BOTH to bootstrap the first admin user on API
       # startup; empty defaults mean no auto-admin. Remove both vars
       # from the env after the first admin exists.
-      DIVIDE_BOOTSTRAP_ADMIN_SUB: ${DIVIDE_BOOTSTRAP_ADMIN_SUB:-}
-      DIVIDE_BOOTSTRAP_ADMIN_PASSWORD: ${DIVIDE_BOOTSTRAP_ADMIN_PASSWORD:-}
+      OXBLOOD_BOOTSTRAP_ADMIN_SUB: ${OXBLOOD_BOOTSTRAP_ADMIN_SUB:-}
+      OXBLOOD_BOOTSTRAP_ADMIN_PASSWORD: ${OXBLOOD_BOOTSTRAP_ADMIN_PASSWORD:-}
       # Token TTL for /api/v1/auth/login (default 8h).
-      DIVIDE_LOGIN_TOKEN_TTL_S: ${DIVIDE_LOGIN_TOKEN_TTL_S:-28800}
-      DIVIDE_TOKEN_SECRET: ${DIVIDE_TOKEN_SECRET:-}
+      OXBLOOD_LOGIN_TOKEN_TTL_S: ${OXBLOOD_LOGIN_TOKEN_TTL_S:-28800}
+      OXBLOOD_TOKEN_SECRET: ${OXBLOOD_TOKEN_SECRET:-}
       PROXMOX_HOST: ${PROXMOX_HOST:-}
       PROXMOX_PORT: ${PROXMOX_PORT:-8006}
-      PROXMOX_USER: ${PROXMOX_USER:-divide@pve}
+      PROXMOX_USER: ${PROXMOX_USER:-oxblood@pve}
       PROXMOX_TOKEN_ID: ${PROXMOX_TOKEN_ID:-}
       PROXMOX_TOKEN_SECRET: ${PROXMOX_TOKEN_SECRET:-}
       PROXMOX_VERIFY_SSL: ${PROXMOX_VERIFY_SSL:-true}
@@ -80,9 +78,9 @@ services:
       # deployments where stale VMs accumulate faster than humans
       # notice. See apps/api/app/core/config.py for full
       # semantics.
-      DIVIDE_ORPHAN_JANITOR_ENABLED: ${DIVIDE_ORPHAN_JANITOR_ENABLED:-false}
-      DIVIDE_ORPHAN_JANITOR_INTERVAL_MIN: ${DIVIDE_ORPHAN_JANITOR_INTERVAL_MIN:-30}
-      DIVIDE_ORPHAN_JANITOR_GRACE_MINUTES: ${DIVIDE_ORPHAN_JANITOR_GRACE_MINUTES:-5}
+      OXBLOOD_ORPHAN_JANITOR_ENABLED: ${OXBLOOD_ORPHAN_JANITOR_ENABLED:-false}
+      OXBLOOD_ORPHAN_JANITOR_INTERVAL_MIN: ${OXBLOOD_ORPHAN_JANITOR_INTERVAL_MIN:-30}
+      OXBLOOD_ORPHAN_JANITOR_GRACE_MINUTES: ${OXBLOOD_ORPHAN_JANITOR_GRACE_MINUTES:-5}
     depends_on:
       postgres:
         condition: service_healthy
@@ -90,11 +88,11 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
-    networks: [divide-net]
+    networks: [oxblood-net]
     volumes:
       # Repo root mounted read-only so the api container can read scenario
       # YAMLs from /workdir/examples/scenarios at startup.
-      - ${DIVIDE_REPO_ROOT:-..}:/workdir:ro
+      - ${OXBLOOD_REPO_ROOT:-..}:/workdir:ro
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
       interval: 15s
@@ -104,29 +102,29 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: divide-postgres
+    container_name: oxblood-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: divide
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-divide}
-      POSTGRES_DB: divide
+      POSTGRES_USER: oxblood
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oxblood}
+      POSTGRES_DB: oxblood
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    networks: [divide-net]
+    networks: [oxblood-net]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U divide -d divide"]
+      test: ["CMD-SHELL", "pg_isready -U oxblood -d oxblood"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: divide-redis
+    container_name: oxblood-redis
     restart: unless-stopped
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     volumes:
       - redis-data:/data
-    networks: [divide-net]
+    networks: [oxblood-net]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -135,17 +133,17 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: divide-minio
+    container_name: oxblood-minio
     restart: unless-stopped
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-divide}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-dividedividedivide}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-oxblood}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-oxbloodoxbloodoxblood}
     volumes:
       - minio-data:/data
     ports:
       - "127.0.0.1:9001:9001"
-    networks: [divide-net]
+    networks: [oxblood-net]
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
       interval: 15s
@@ -153,31 +151,31 @@ services:
       retries: 5
 
   minio-init:
-    image: minio/mc:latest
-    container_name: divide-minio-init
+    image: minio/minio:latest
+    container_name: oxblood-minio-init
     depends_on:
       minio:
         condition: service_healthy
-    networks: [divide-net]
+    networks: [oxblood-net]
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-divide} ${MINIO_ROOT_PASSWORD:-dividedividedivide} &&
-      mc mb -p local/${MINIO_BUCKET:-divide-artifacts} || true &&
-      mc anonymous set none local/${MINIO_BUCKET:-divide-artifacts} &&
-      echo 'MinIO bucket ${MINIO_BUCKET:-divide-artifacts} ready'
+      /usr/bin/mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-oxblood} ${MINIO_ROOT_PASSWORD:-oxbloodoxbloodoxblood} &&
+      /usr/bin/mc mb -p local/${MINIO_BUCKET:-oxblood-artifacts} || true &&
+      /usr/bin/mc anonymous set none local/${MINIO_BUCKET:-oxblood-artifacts} &&
+      echo 'MinIO bucket ${MINIO_BUCKET:-oxblood-artifacts} ready'
       "
     restart: "no"
 
   traefik:
     image: traefik:v3.1
-    container_name: divide-traefik
+    container_name: oxblood-traefik
     restart: unless-stopped
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=divide-net"
+      - "--providers.docker.network=oxblood-net"
       - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.le.acme.email=${ACME_EMAIL:-admin@divide.local}"
+      - "--certificatesresolvers.le.acme.email=${ACME_EMAIL:-admin@oxblood.local}"
       - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=websecure"
       - "--certificatesresolvers.le.acme.httpchallenge=true"
@@ -190,7 +188,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-letsencrypt:/letsencrypt
-    networks: [divide-net]
+    networks: [oxblood-net]
 
   # --- observability -----------------------------------------------------
   #
@@ -200,11 +198,11 @@ services:
   #
   # Both are exposed on localhost only (same dev pattern as the
   # MinIO console on :9001). In production, hide them behind the
-  # divide-net bridge + put an authenticating reverse proxy in front.
+  # oxblood-net bridge + put an authenticating reverse proxy in front.
 
   prometheus:
     image: prom/prometheus:v2.55.1
-    container_name: divide-prometheus
+    container_name: oxblood-prometheus
     restart: unless-stopped
     ports:
       - "127.0.0.1:9090:9090"
@@ -222,7 +220,7 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    networks: [divide-net]
+    networks: [oxblood-net]
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/ready"]
       interval: 15s
@@ -231,14 +229,14 @@ services:
 
   alertmanager:
     image: prom/alertmanager:v0.27.0
-    container_name: divide-alertmanager
+    container_name: oxblood-alertmanager
     restart: unless-stopped
     ports:
       - "127.0.0.1:9093:9093"
     volumes:
       - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager-data:/alertmanager
-    networks: [divide-net]
+    networks: [oxblood-net]
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9093/-/ready"]
       interval: 15s
@@ -247,13 +245,13 @@ services:
 
   grafana:
     image: grafana/grafana:11.3.0
-    container_name: divide-grafana
+    container_name: oxblood-grafana
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-divide}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-oxblood}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_INSTALL_PLUGINS: ""
@@ -266,7 +264,7 @@ services:
     depends_on:
       prometheus:
         condition: service_healthy
-    networks: [divide-net]
+    networks: [oxblood-net]
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
       interval: 15s
@@ -283,6 +281,6 @@ volumes:
   grafana-data:
 
 networks:
-  divide-net:
-    name: divide-net
+  oxblood-net:
+    name: oxblood-net
     driver: bridge

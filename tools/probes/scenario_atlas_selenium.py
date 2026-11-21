@@ -1,8 +1,8 @@
 """Read-only Selenium regression check against a running portal.
 
-Requires Selenium/Chrome, DIVIDE_UI_TEST_TOKEN (operator token), and optionally
-DIVIDE_UI_TEST_URL (default http://127.0.0.1:5000). No drill is launched.
-Screenshots are saved under DIVIDE_UI_TEST_ARTIFACTS (default /tmp/atlas-check).
+Requires Selenium/Chrome, OXBLOOD_UI_TEST_TOKEN (operator token), and optionally
+OXBLOOD_UI_TEST_URL (default http://127.0.0.1:5000). No drill is launched.
+Screenshots are saved under OXBLOOD_UI_TEST_ARTIFACTS (default /tmp/atlas-check).
 """
 
 import os
@@ -16,9 +16,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 def main():
-    token = os.environ["DIVIDE_UI_TEST_TOKEN"]
-    url = os.environ.get("DIVIDE_UI_TEST_URL", "http://127.0.0.1:5000").rstrip("/")
-    artifacts = Path(os.environ.get("DIVIDE_UI_TEST_ARTIFACTS", "/tmp/atlas-check"))
+    token = os.environ["OXBLOOD_UI_TEST_TOKEN"]
+    url = os.environ.get("OXBLOOD_UI_TEST_URL", "http://127.0.0.1:5000").rstrip("/")
+    artifacts = Path(os.environ.get("OXBLOOD_UI_TEST_ARTIFACTS", "/tmp/atlas-check"))
     artifacts.mkdir(parents=True, exist_ok=True)
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
@@ -84,7 +84,7 @@ def main():
     try:
         viewport(1616, 900)
         driver.get(url + "/login")
-        driver.execute_script("localStorage.setItem('divide_token',arguments[0])", token)
+        driver.execute_script("localStorage.setItem('oxblood_token',arguments[0])", token)
         driver.get(url + "/drill/")
         wait.until(lambda d: d.execute_script("return !!window.app && !!app.user"))
         settle()

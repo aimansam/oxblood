@@ -44,7 +44,7 @@ def seed_one_run():
                 duration_min=5,
                 tags=[],
                 spec={
-                    "apiVersion": "divide/v1",
+                    "apiVersion": "oxblood/v1",
                     "kind": "Scenario",
                     "metadata": {
                         "name": name,

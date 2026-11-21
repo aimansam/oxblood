@@ -9,7 +9,7 @@ import { getToken, setToken } from './token';
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' };
   const token = getToken();
-  if (token) headers['X-Divide-Token'] = token;
+  if (token) headers['X-Oxblood-Token'] = token;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   const response = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
   const text = await response.text();

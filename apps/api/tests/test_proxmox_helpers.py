@@ -175,7 +175,7 @@ def test_list_virtual_machines_returns_live_guests_and_excludes_templates():
         resources=[
             {
                 "vmid": 101,
-                "name": "divide-red",
+                "name": "oxblood-red",
                 "node": "pve",
                 "status": "running",
                 "type": "qemu",
@@ -301,8 +301,8 @@ def _configure_pve_overlay() -> None:
         {
             "host": "https://pve.test",
             "port": 8006,
-            "user": "divide@pve",
-            "token_id": "divide@pve!drill-token",
+            "user": "oxblood@pve",
+            "token_id": "oxblood@pve!drill-token",
             "token_secret": "secret-uuid",
             "verify_ssl": False,
             "node": "pve",

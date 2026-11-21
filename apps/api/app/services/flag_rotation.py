@@ -27,7 +27,7 @@ from app.services import matches as match_svc
 
 log = logging.getLogger("app.services.flag_rotation")
 
-FLAG_DIR = "/opt/divide/flags"
+FLAG_DIR = "/opt/oxblood/flags"
 _SAFE_NAME = re.compile(r"[^A-Za-z0-9_.-]")
 
 

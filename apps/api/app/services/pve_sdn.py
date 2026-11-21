@@ -53,7 +53,7 @@ log = structlog.get_logger()
 
 # --- constants ------------------------------------------------------------
 
-DEFAULT_ZONE: str = "divide"
+DEFAULT_ZONE: str = "oxblood"
 
 PROPAGATE_TIMEOUT_S: float = 15.0
 PROBE_INTERVAL_S: float = 1.0
@@ -65,16 +65,16 @@ PROBE_INTERVAL_S: float = 1.0
 #: Lets ``list_node_ifaces`` distinguish OxBlood bridges from operator-
 #: maintained ones without an SDN zone to anchor on. The value stays
 #: "div:ide" so bridges created before the rename are still recognised.
-DIVIDE_COMMENT_TAG: str = "div:ide"
+OXBLOOD_COMMENT_TAG: str = "div:ide"
 
 
-def _divide_comment(scenario: str, network: str) -> str:
+def _oxblood_comment(scenario: str, network: str) -> str:
     """Render the comments string for a direct-created bridge.
 
     Format is stable so a future operator can grep
     ``/nodes/{n}/network`` output to see who owns the bridge.
     """
-    return f"{DIVIDE_COMMENT_TAG}: {scenario}/{network}"
+    return f"{OXBLOOD_COMMENT_TAG}: {scenario}/{network}"
 
 
 def _iface_is_active(iface: dict[str, Any]) -> bool:
@@ -305,8 +305,8 @@ async def _request(
             else:
                 path = f"/{path}"
             hint = (
-                f"pveum role add DivideNetAdmin -privs Sys.Modify\n"
-                f"pveum aclmod {auth.user} -role DivideNetAdmin -path {path}"
+                f"pveum role add OxbloodNetAdmin -privs Sys.Modify\n"
+                f"pveum aclmod {auth.user} -role OxbloodNetAdmin -path {path}"
             )
         elif "sdn.allocate" in msg_lower or "/sdn" in url:
             role = "SDN.Allocate"
@@ -554,7 +554,7 @@ async def create_bridge_direct(auth: SdnAuth, *, spec) -> None:
         "iface": spec.name,
         "type": "bridge",
         "autostart": 1,
-        "comments": _divide_comment(spec.scenario, spec.network),
+        "comments": _oxblood_comment(spec.scenario, spec.network),
         "address": spec.gateway_ip,
         "netmask": _prefix_to_netmask(prefix),
     }
@@ -580,7 +580,7 @@ async def apply_sdn_plan(
     """Drive the PVE SDN controller to realize the plan on the cluster.
 
     Steps:
-      1. Idempotently create the ``divide`` Simple zone.
+      1. Idempotently create the ``oxblood`` Simple zone.
       2. For each bridge in the plan, create a VNet named after it.
       3. Poll ``/nodes/{node}/network`` until every expected bridge
          appears (or ``PROPAGATE_TIMEOUT_S`` elapses).
@@ -876,7 +876,7 @@ __all__ = [
     "PROPAGATE_TIMEOUT_S",
     "PROBE_INTERVAL_S",
     "BRIDGE_START",
-    "DIVIDE_COMMENT_TAG",
+    "OXBLOOD_COMMENT_TAG",
     "SdnAuth",
     "SdnError",
     "SdnPermissionError",

@@ -27,7 +27,7 @@ from typing import Any
 import httpx
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
-DEFAULT_API_BASE = os.environ.get("DIVIDE_API_BASE", "http://localhost:8000")
+DEFAULT_API_BASE = os.environ.get("OXBLOOD_API_BASE", "http://localhost:8000")
 
 
 # ---------- colour helpers (no external dep) ----------
@@ -96,11 +96,11 @@ def _fetch_audit(client: httpx.Client, run_id: int) -> list[dict[str, Any]]:
 
 
 def _fetch_metrics(client: httpx.Client) -> dict[tuple[str, frozenset], float]:
-    """Return {(name, frozenset(label_items)): value} for every divide_*
+    """Return {(name, frozenset(label_items)): value} for every oxblood_*
     counter/gauge/histogram sample.
 
     Labels are preserved so callers can query specific label combinations
-    (e.g. ``divide_runs_total{outcome="succeeded"}``) instead of collapsing
+    (e.g. ``oxblood_runs_total{outcome="succeeded"}``) instead of collapsing
     every label combo into one bucket. Histogram ``_bucket`` lines carry
     an ``le=...`` label which is also preserved.
 
@@ -110,10 +110,10 @@ def _fetch_metrics(client: httpx.Client) -> dict[tuple[str, frozenset], float]:
     r.raise_for_status()
     out: dict[tuple[str, frozenset], float] = {}
     # Match: name{labels} value  OR  name value
-    labeled_re = re.compile(r"^(divide_[a-zA-Z0-9_]+)\{([^}]*)\}\s+([0-9eE+\-.]+)\s*$")
-    unlabeled_re = re.compile(r"^(divide_[a-zA-Z0-9_]+)\s+([0-9eE+\-.]+)\s*$")
+    labeled_re = re.compile(r"^(oxblood_[a-zA-Z0-9_]+)\{([^}]*)\}\s+([0-9eE+\-.]+)\s*$")
+    unlabeled_re = re.compile(r"^(oxblood_[a-zA-Z0-9_]+)\s+([0-9eE+\-.]+)\s*$")
     for line in r.text.splitlines():
-        if not line.startswith("divide_") or line.startswith("#"):
+        if not line.startswith("oxblood_") or line.startswith("#"):
             continue
         m = labeled_re.match(line)
         if m:
@@ -290,12 +290,12 @@ def check_metrics_counter(
     """Label-aware metric check.
 
     Asserts:
-      * ``divide_runs_total{outcome=<expect>, adapter="real"}`` is > 0
+      * ``oxblood_runs_total{outcome=<expect>, adapter="real"}`` is > 0
         (a real drill hit this outcome since the API started).
-      * ``divide_runs_total{outcome="failed", adapter="real"}`` is 0
+      * ``oxblood_runs_total{outcome="failed", adapter="real"}`` is 0
         (no real drill failed since the API started -- if any did,
         we'd want to investigate).
-      * ``divide_runs_active{adapter="real"}`` is 0 (no in-flight runs
+      * ``oxblood_runs_active{adapter="real"}`` is 0 (no in-flight runs
         hanging after live_drill returned).
 
     We scope to ``adapter="real"`` because that's what production
@@ -303,38 +303,38 @@ def check_metrics_counter(
     """
     real = {"adapter": "real"}
     # Specific outcome should be > 0.
-    outcome_value = _get_metric(metrics, "divide_runs_total", outcome=expect, **real)
+    outcome_value = _get_metric(metrics, "oxblood_runs_total", outcome=expect, **real)
     if outcome_value is None:
         # No samples with this outcome ever — could be a brand-new
         # process or the zero-init pre-fill. Look across all adapters.
-        all_outcome = _sum_metric(metrics, "divide_runs_total", outcome=expect)
+        all_outcome = _sum_metric(metrics, "oxblood_runs_total", outcome=expect)
         if all_outcome == 0:
             return False, (
-                f"divide_runs_total{{outcome={expect!r}}} is 0 (or "
+                f"oxblood_runs_total{{outcome={expect!r}}} is 0 (or "
                 f"absent) -- no drill reached the {expect!r} state since "
                 f"the API started"
             )
         outcome_value = all_outcome
 
     # Failed should be 0 (no regressions).
-    failed_value = _get_metric(metrics, "divide_runs_total", outcome="failed", **real) or 0.0
+    failed_value = _get_metric(metrics, "oxblood_runs_total", outcome="failed", **real) or 0.0
     # Active should be 0 (no in-flight).
-    active = _get_metric(metrics, "divide_runs_active", **real) or 0.0
+    active = _get_metric(metrics, "oxblood_runs_active", **real) or 0.0
 
     if failed_value > 0:
         return False, (
-            f'divide_runs_total{{outcome="failed", adapter="real"}}='
+            f'oxblood_runs_total{{outcome="failed", adapter="real"}}='
             f"{failed_value} -- {int(failed_value)} drill(s) failed since "
             f"the API started. Investigate the runs table."
         )
     if active > 0:
         return False, (
-            f'divide_runs_active{{adapter="real"}}={active} -- a drill '
+            f'oxblood_runs_active{{adapter="real"}}={active} -- a drill '
             f"is still in-flight; live_drill should have waited"
         )
     return True, (
-        f'divide_runs_total{{outcome={expect!r}, adapter="real"}}='
-        f"{outcome_value}, divide_runs_active=0, failed=0"
+        f'oxblood_runs_total{{outcome={expect!r}, adapter="real"}}='
+        f"{outcome_value}, oxblood_runs_active=0, failed=0"
     )
 
 

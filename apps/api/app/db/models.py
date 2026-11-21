@@ -437,11 +437,11 @@ class User(Base, TimestampMixin):
       * ``last_login_at`` is operational telemetry, not audit, and
         belongs on the user record.
 
-    Bootstrap: on API startup, if ``DIVIDE_BOOTSTRAP_ADMIN_SUB`` +
-    ``DIVIDE_BOOTSTRAP_ADMIN_PASSWORD`` env vars are set AND no
+    Bootstrap: on API startup, if ``OXBLOOD_BOOTSTRAP_ADMIN_SUB`` +
+    ``OXBLOOD_BOOTSTRAP_ADMIN_PASSWORD`` env vars are set AND no
     admin exists, the user is created. The env-var path is the
     only way to seed the first admin without a manual
-    ``divide create-user`` invocation. Subsequent admins are
+    ``oxblood create-user`` invocation. Subsequent admins are
     added through ``POST /api/v1/admin/users`` (future L3 work) or
     via the bootstrap-env-var override by removing the first
     admin and re-bootstrapping.
@@ -486,7 +486,7 @@ class User(Base, TimestampMixin):
     )
     # WireGuard peer ID — UUID assigned on first VPN config request.
     # Stable across logins; used as seed to derive the peer keypair
-    # deterministically from DIVIDE_WG_PEER_SECRET. NULL until the
+    # deterministically from OXBLOOD_WG_PEER_SECRET. NULL until the
     # user fetches their config for the first time.
     wg_peer_id: Mapped[str | None] = mapped_column(String(36), nullable=True, unique=True)
     # F-reset-ux: one-time password-reset token. NULL when no reset

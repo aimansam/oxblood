@@ -1,4 +1,4 @@
-apiVersion: divide/v1
+apiVersion: oxblood/v1
 kind: Scenario
 metadata:
   name: first-live-drill
@@ -10,7 +10,7 @@ metadata:
     - smoke
     - first-live-drill
   authors:
-    - handle: divide-team
+    - handle: oxblood-team
       name: OxBlood core
 
 spec:
@@ -39,11 +39,11 @@ spec:
   telemetry:
     sinks:
       - type: minio
-        bucket: divide-artifacts
+        bucket: oxblood-artifacts
 
   artifacts:
     sink_to: minio
-    bucket: divide-artifacts
+    bucket: oxblood-artifacts
     retention_days: 7
 
   win_conditions:

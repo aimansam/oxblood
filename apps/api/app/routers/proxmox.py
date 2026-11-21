@@ -157,14 +157,14 @@ async def list_proxmox_templates(
 async def list_proxmox_acl(
     user: str | None = Query(
         default=None,
-        description="Filter by ugid (e.g. 'divide@pve@pam'). Default: all entries.",
+        description="Filter by ugid (e.g. 'oxblood@pve@pam'). Default: all entries.",
     ),
 ) -> dict[str, Any]:
     """Return the full ACL table. Each entry has path/ugid/roleid/type/propagate.
 
     Use this to verify write-permission grants before running a drill.
     The runner needs at least PVEVMAdmin on /v2/vm (or PVEAdmin on /
-    with propagate=1) for the divide user.
+    with propagate=1) for the oxblood user.
     """
     if not _is_configured():
         raise HTTPException(status_code=503, detail="Proxmox not configured")

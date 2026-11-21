@@ -18,7 +18,7 @@ Why a separate module:
 This module does NOT add new privileges to the API token. The operator
 must grant ``PVEDatastoreAdmin`` (a built-in PVE role that covers
 ``Datastore.Allocate``, ``Datastore.AllocateSpace``, and
-``Datastore.Audit``) on ``/storage`` to the divide token before these
+``Datastore.Audit``) on ``/storage`` to the oxblood token before these
 endpoints will succeed; ``probe_pve()`` is the canonical way to detect
 that gap.
 """
@@ -50,7 +50,7 @@ from app.services.proxmox import (
 # Constants
 # ---------------------------------------------------------------------------
 
-#: Privileges the divide token needs to actually run a drill. Matches the
+#: Privileges the oxblood token needs to actually run a drill. Matches the
 #: set checked by tools/preflight.py -- kept in sync manually; the
 #: structural test in tests/test_admin.py enforces alignment.
 DRILL_PRIVS: frozenset[str] = frozenset({"VM.Allocate", "VM.Clone", "VM.PowerMgmt"})
@@ -64,7 +64,7 @@ SETUP_PRIVS: frozenset[str] = frozenset(
 
 #: Redis key prefix for setup progress. Each upload/template job gets a
 #: unique suffix (job_id) and is stored as a hash under this prefix.
-PROGRESS_KEY_PREFIX = "divide:setup:"
+PROGRESS_KEY_PREFIX = "oxblood:setup:"
 
 # ---------------------------------------------------------------------------
 # Data shapes
@@ -73,7 +73,7 @@ PROGRESS_KEY_PREFIX = "divide:setup:"
 
 @dataclass
 class PveProbeResult:
-    """One-shot snapshot of the PVE connection from the divide token.
+    """One-shot snapshot of the PVE connection from the oxblood token.
 
     Returned by :func:`probe_pve` and serialized by the admin router.
     """
@@ -208,7 +208,7 @@ def _settings_for_probe() -> tuple[str, str, str, str]:
 @dataclass
 class UploadProgress:
     """Snapshot of an in-flight upload. Stored in Redis under
-    ``divide:setup:upload:<job_id>``."""
+    ``oxblood:setup:upload:<job_id>``."""
 
     job_id: str
     filename: str
@@ -353,7 +353,7 @@ async def upload_qcow2(
 @dataclass
 class TemplateProgress:
     """Status of a create-template job. Stored under
-    ``divide:setup:template:<job_id>``."""
+    ``oxblood:setup:template:<job_id>``."""
 
     job_id: str
     template_name: str
@@ -528,7 +528,7 @@ def _import_disk(vmid: int, node: str, source_volid: str, target_storage: str) -
 def _configure_vm(vmid: int, node: str, *, name: str) -> None:
     """Set VM name + tags."""
     client = get_proxmox_client()
-    client.nodes(node).qemu(vmid).config.post(name=name, tags="divide-template")
+    client.nodes(node).qemu(vmid).config.post(name=name, tags="oxblood-template")
 
 
 def _set_template_flag_sync(vmid: int, node: str) -> None:
@@ -597,7 +597,7 @@ async def list_in_progress() -> list[dict[str, Any]]:
 
     client = get_redis()
     out: list[dict[str, Any]] = []
-    for kind in ("upload", "template"):
+    for kind in ("upload", "template", "baseline"):
         async for key in client.scan_iter(f"{PROGRESS_KEY_PREFIX}{kind}:*"):
             raw = await client.hgetall(key)
             decoded: dict[str, Any] = {}

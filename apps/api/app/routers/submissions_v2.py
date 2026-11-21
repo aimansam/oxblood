@@ -167,7 +167,7 @@ def score_history_to_dict(sh) -> dict:
 @router.post("/submissions")
 async def post_submission(
     data: FlagSubmissionCreate,
-    user_id: int = Query(..., description="User ID (0 = resolve from X-Divide-Token sub)"),
+    user_id: int = Query(..., description="User ID (0 = resolve from X-Oxblood-Token sub)"),
     session: AsyncSession = Depends(get_session),
     token=Depends(current_token),
 ):
@@ -185,7 +185,7 @@ async def post_submission(
         if not user_id:
             sub = token.sub if token else None
             if not sub:
-                raise ValueError("Authentication required (missing X-Divide-Token)")
+                raise ValueError("Authentication required (missing X-Oxblood-Token)")
             existing = await session.execute(select(_DrillUser).where(_DrillUser.sub == sub))
             user = existing.scalar_one_or_none()
             if user is None:

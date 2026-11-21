@@ -8,7 +8,7 @@ a red-team VM can reach the hypervisor, i.e. the range is not isolated.
 
 Run it while a range is up (after "Prepare range", or with `range_dry_run.py --keep`):
 
-    export DIVIDE_ADMIN_PASSWORD=...  PROXMOX_TOKEN_ID='user@pam!name'  PROXMOX_TOKEN_SECRET=...
+    export OXBLOOD_ADMIN_PASSWORD=...  PROXMOX_TOKEN_ID='user@pam!name'  PROXMOX_TOKEN_SECRET=...
     python tools/isolation_check.py --pve-host 192.168.1.10
     python tools/isolation_check.py --pve-host 192.168.1.10 --from 'kali|red' \
         --block 192.168.1.10:8006 --block 192.168.1.1:80 --block 192.168.1.20:5432
@@ -27,7 +27,7 @@ import sys
 import time
 from dataclasses import dataclass
 
-DEFAULT_API_BASE = os.environ.get("DIVIDE_API_BASE", "http://localhost:8000")
+DEFAULT_API_BASE = os.environ.get("OXBLOOD_API_BASE", "http://localhost:8000")
 OPEN, CLOSED = "OPEN", "CLOSED"
 
 
@@ -174,18 +174,18 @@ def main(argv: list[str] | None = None) -> int:
 
     token_id = os.environ.get("PROXMOX_TOKEN_ID")
     secret = os.environ.get("PROXMOX_TOKEN_SECRET")
-    password = os.environ.get("DIVIDE_ADMIN_PASSWORD")
+    password = os.environ.get("OXBLOOD_ADMIN_PASSWORD")
     if not (token_id and secret and password):
-        sys.exit("Set PROXMOX_TOKEN_ID, PROXMOX_TOKEN_SECRET and DIVIDE_ADMIN_PASSWORD.")
+        sys.exit("Set PROXMOX_TOKEN_ID, PROXMOX_TOKEN_SECRET and OXBLOOD_ADMIN_PASSWORD.")
 
     targets = args.block or [(args.pve_host, 8006), (args.pve_host, 22)]
     with httpx.Client(base_url=args.api, timeout=60) as client:
         login = client.post(
             "/api/v1/auth/login",
-            json={"sub": os.environ.get("DIVIDE_ADMIN_SUB", "admin"), "password": password},
+            json={"sub": os.environ.get("OXBLOOD_ADMIN_SUB", "admin"), "password": password},
         )
         login.raise_for_status()
-        client.headers["X-Divide-Token"] = login.json()["token"]
+        client.headers["X-Oxblood-Token"] = login.json()["token"]
         inventory = client.get("/api/v1/admin/pve-guests", params={"drill_only": "true"})
         inventory.raise_for_status()
         guests = select_guests(inventory.json().get("items", []), args.pattern)

@@ -1,16 +1,16 @@
-name: divide-cyber-drill-prod
+name: oxblood-cyber-drill-prod
 
 # F12.3: production-grade deployment for OxBlood.
 #
 # Key differences from deploy/docker-compose.yml:
 #
 #   * Multi-worker uvicorn (4 workers). R1 requires Redis pub/sub
-#     for SSE cross-worker fan-out -- DIVIDE_EVENT_BUS=redis is
+#     for SSE cross-worker fan-out -- OXBLOOD_EVENT_BUS=redis is
 #     the default here (the dev compose defaults to memory).
 #   * Traefik fronts the API with Let's Encrypt TLS. Public
 #     ingress on :443. The api service is no longer published
 #     on a host port.
-#   * JSON logging (DIVIDE_LOG_LEVEL=INFO + structlog formatter)
+#   * JSON logging (OXBLOOD_LOG_LEVEL=INFO + structlog formatter)
 #     so logs ship cleanly to Loki / Elasticsearch / CloudWatch.
 #   * Resource limits on every service (CPU + memory).
 #   * Authentik in production mode (instead of dev quickstart).
@@ -30,49 +30,49 @@ name: divide-cyber-drill-prod
 #
 #   POSTGRES_PASSWORD        -- strong random 32+ chars
 #   MINIO_ROOT_PASSWORD      -- strong random 32+ chars
-#   DIVIDE_TOKEN_SECRET      -- strong random 32+ chars (HMAC)
+#   OXBLOOD_TOKEN_SECRET      -- strong random 32+ chars (HMAC)
 #   PROXMOX_TOKEN_SECRET     -- PVE API token secret
 #   PROXMOX_HOST             -- pve.example.com (LAN)
-#   PROXMOX_TOKEN_ID         -- divide@pve!div-api
+#   PROXMOX_TOKEN_ID         -- oxblood@pve!div-api
 #   AUTHENTIK_BOOTSTRAP_PASSWORD  -- admin password (change after first login)
-#   DIVIDE_BOOTSTRAP_ADMIN_SUB    -- first admin username
-#   DIVIDE_BOOTSTRAP_ADMIN_PASSWORD  -- first admin password
+#   OXBLOOD_BOOTSTRAP_ADMIN_SUB    -- first admin username
+#   OXBLOOD_BOOTSTRAP_ADMIN_PASSWORD  -- first admin password
 #   ACME_EMAIL               -- for Let's Encrypt registration
-#   PUBLIC_HOSTNAME          -- e.g. divide.example.com
+#   PUBLIC_HOSTNAME          -- e.g. oxblood.example.com
 
 services:
   api:
-    image: divide/api:${DIVIDE_API_TAG:-latest}
-    container_name: divide-api
+    image: oxblood/api:${OXBLOOD_API_TAG:-latest}
+    container_name: oxblood-api
     restart: always
     # No host port -- Traefik fronts the public ingress.
     expose:
       - "8000"
     environment:
-      DIVIDE_ENV: production
-      DIVIDE_LOG_LEVEL: ${DIVIDE_LOG_LEVEL:-INFO}
-      DIVIDE_DB_URL: postgresql+asyncpg://divide:${POSTGRES_PASSWORD}@postgres:5432/divide
-      DIVIDE_REDIS_URL: redis://redis:6379/0
+      OXBLOOD_ENV: production
+      OXBLOOD_LOG_LEVEL: ${OXBLOOD_LOG_LEVEL:-INFO}
+      OXBLOOD_DB_URL: postgresql+asyncpg://oxblood:${POSTGRES_PASSWORD}@postgres:5432/oxblood
+      OXBLOOD_REDIS_URL: redis://redis:6379/0
       # R1: SSE across workers requires the Redis-backed bus.
       # Overriding the default in the dev compose.
-      DIVIDE_EVENT_BUS: redis
-      DIVIDE_MINIO_ENDPOINT: minio:9000
-      DIVIDE_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
-      DIVIDE_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-      DIVIDE_MINIO_BUCKET: ${MINIO_BUCKET:-divide-artifacts}
-      # Scenarios are baked into the image; no DIVIDE_SCENARIOS_DIR.
+      OXBLOOD_EVENT_BUS: redis
+      OXBLOOD_MINIO_ENDPOINT: minio:9000
+      OXBLOOD_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      OXBLOOD_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      OXBLOOD_MINIO_BUCKET: ${MINIO_BUCKET:-oxblood-artifacts}
+      # Scenarios are baked into the image; no OXBLOOD_SCENARIOS_DIR.
       # Sync still runs on startup so any DB-side edits get rolled in.
-      DIVIDE_SYNC_ON_STARTUP: "true"
+      OXBLOOD_SYNC_ON_STARTUP: "true"
       # First admin from the env (idempotent).
-      DIVIDE_BOOTSTRAP_ADMIN_SUB: ${DIVIDE_BOOTSTRAP_ADMIN_SUB}
-      DIVIDE_BOOTSTRAP_ADMIN_PASSWORD: ${DIVIDE_BOOTSTRAP_ADMIN_PASSWORD}
-      DIVIDE_LOGIN_TOKEN_TTL_S: ${DIVIDE_LOGIN_TOKEN_TTL_S:-28800}
+      OXBLOOD_BOOTSTRAP_ADMIN_SUB: ${OXBLOOD_BOOTSTRAP_ADMIN_SUB}
+      OXBLOOD_BOOTSTRAP_ADMIN_PASSWORD: ${OXBLOOD_BOOTSTRAP_ADMIN_PASSWORD}
+      OXBLOOD_LOGIN_TOKEN_TTL_S: ${OXBLOOD_LOGIN_TOKEN_TTL_S:-28800}
       # HMAC token secret -- explicit (no env-var fallback).
-      DIVIDE_TOKEN_SECRET: ${DIVIDE_TOKEN_SECRET}
+      OXBLOOD_TOKEN_SECRET: ${OXBLOOD_TOKEN_SECRET}
       # Proxmox.
       PROXMOX_HOST: ${PROXMOX_HOST}
       PROXMOX_PORT: ${PROXMOX_PORT:-8006}
-      PROXMOX_USER: ${PROXMOX_USER:-divide@pve}
+      PROXMOX_USER: ${PROXMOX_USER:-oxblood@pve}
       PROXMOX_TOKEN_ID: ${PROXMOX_TOKEN_ID}
       PROXMOX_TOKEN_SECRET: ${PROXMOX_TOKEN_SECRET}
       PROXMOX_VERIFY_SSL: ${PROXMOX_VERIFY_SSL:-true}
@@ -104,7 +104,7 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    networks: [divide-net]
+    networks: [oxblood-net]
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=2).read()"]
       interval: 10s
@@ -127,17 +127,17 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: divide-postgres
+    container_name: oxblood-postgres
     restart: always
     environment:
-      POSTGRES_DB: divide
-      POSTGRES_USER: divide
+      POSTGRES_DB: oxblood
+      POSTGRES_USER: oxblood
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    networks: [divide-net]
+    networks: [oxblood-net]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U divide -d divide"]
+      test: ["CMD-SHELL", "pg_isready -U oxblood -d oxblood"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -149,7 +149,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: divide-redis
+    container_name: oxblood-redis
     restart: always
     command:
       # Production: enable AOF for durability (R1's pub/sub
@@ -161,7 +161,7 @@ services:
       - "everysec"
     volumes:
       - redis-data:/data
-    networks: [divide-net]
+    networks: [oxblood-net]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -175,7 +175,7 @@ services:
 
   minio:
     image: minio/minio:RELEASE.2024-08-29T01-40-52Z
-    container_name: divide-minio
+    container_name: oxblood-minio
     restart: always
     command: server /data --console-address ":9001"
     environment:
@@ -183,7 +183,7 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
       - minio-data:/data
-    networks: [divide-net]
+    networks: [oxblood-net]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -199,7 +199,7 @@ services:
   # Public hostname is ${PUBLIC_HOSTNAME}; ACME email is ${ACME_EMAIL}.
   traefik:
     image: traefik:v3.1
-    container_name: divide-traefik
+    container_name: oxblood-traefik
     restart: always
     ports:
       - "443:443"
@@ -216,7 +216,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-letsencrypt:/letsencrypt
-    networks: [divide-net]
+    networks: [oxblood-net]
     deploy:
       resources:
         limits:
@@ -236,7 +236,7 @@ services:
       - "traefik.http.routers.api.tls.certresolver=letsencrypt"
       - "traefik.http.routers.api.service=api"
       - "traefik.http.services.api.loadbalancer.server.port=8000"
-      - "traefik.docker.network=divide-net"
+      - "traefik.docker.network=oxblood-net"
 
       # Force HTTPS: 301 redirect from HTTP -> HTTPS for the same host.
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
@@ -251,7 +251,7 @@ services:
   # commands. See https://docs.goauthentik.io/docs/install-config/install/docker-compose
   authentik-server:
     image: ghcr.io/goauthentik/server:2024.8
-    container_name: divide-authentik-server
+    container_name: oxblood-authentik-server
     restart: always
     environment:
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
@@ -265,7 +265,7 @@ services:
     volumes:
       - authentik-media:/media
       - authentik-templates:/templates
-    networks: [divide-net]
+    networks: [oxblood-net]
     depends_on:
       authentik-postgres:
         condition: service_healthy
@@ -277,7 +277,7 @@ services:
 
   authentik-worker:
     image: ghcr.io/goauthentik/server:2024.8
-    container_name: divide-authentik-worker
+    container_name: oxblood-authentik-worker
     restart: always
     command: worker
     environment:
@@ -289,7 +289,7 @@ services:
     volumes:
       - authentik-media:/media
       - authentik-templates:/templates
-    networks: [divide-net]
+    networks: [oxblood-net]
     depends_on:
       authentik-postgres:
         condition: service_healthy
@@ -303,7 +303,7 @@ services:
 
   authentik-postgres:
     image: postgres:16-alpine
-    container_name: divide-authentik-postgres
+    container_name: oxblood-authentik-postgres
     restart: always
     environment:
       POSTGRES_DB: authentik
@@ -311,7 +311,7 @@ services:
       POSTGRES_PASSWORD: ${AUTHENTIK_POSTGRESQL_PASSWORD}
     volumes:
       - authentik-postgres-data:/var/lib/postgresql/data
-    networks: [divide-net]
+    networks: [oxblood-net]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U authentik -d authentik"]
       interval: 10s
@@ -328,5 +328,5 @@ volumes:
   authentik-postgres-data:
 
 networks:
-  divide-net:
+  oxblood-net:
     driver: bridge

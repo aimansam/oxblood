@@ -1,7 +1,7 @@
 """Admin/setup endpoints for the PVE setup wizard.
 
 Exposed at ``/api/v1/admin/*``. All routes in this module require an
-``X-Divide-Token`` header carrying a token whose role is in the
+``X-Oxblood-Token`` header carrying a token whose role is in the
 ``admin`` allow-list (see :class:`app.core.auth.Role` and
 :func:`app.core.auth.require_role`). The gate is registered at the
 router level so it's applied uniformly to every endpoint here,

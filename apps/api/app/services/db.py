@@ -10,7 +10,7 @@ _engine: AsyncEngine | None = None
 
 
 def get_engine() -> AsyncEngine:
-    """Drill product engine (DIVIDE_DB_URL)."""
+    """Drill product engine (OXBLOOD_DB_URL)."""
     global _engine
     if _engine is None:
         _engine = create_async_engine(settings.db_url, echo=settings.db_echo, future=True)

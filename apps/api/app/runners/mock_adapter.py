@@ -221,11 +221,11 @@ class MockProxmoxAdapter(ProxmoxAdapter):
         self.bridges_removed.append(bridge)
         self._bridges.discard(bridge)
 
-    async def get_sdn_bridges(self, zone: str = "divide") -> list[str]:
+    async def get_sdn_bridges(self, zone: str = "oxblood") -> list[str]:
         """Return mock SDN bridges for testing."""
         return sorted(self._bridges)
 
-    async def create_sdn_vnet(self, bridge: str, zone: str = "divide") -> None:
+    async def create_sdn_vnet(self, bridge: str, zone: str = "oxblood") -> None:
         """Mock: track SDN VNet creation."""
         if not hasattr(self, "sdn_vnets"):
             self.sdn_vnets: list[str] = []

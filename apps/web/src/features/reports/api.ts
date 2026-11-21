@@ -30,7 +30,7 @@ export const useReport = (id: number | null) =>
       const drillId = report.drill_id ?? null;
       const [debrief, board] = drillId
         ? await Promise.all([
-            fetch(`/api/v1/drills/${drillId}/debrief.md`, { headers: { 'X-Divide-Token': localStorage.getItem('divide_token') ?? '' } })
+            fetch(`/api/v1/drills/${drillId}/debrief.md`, { headers: { 'X-Oxblood-Token': localStorage.getItem('oxblood_token') ?? '' } })
               .then((r) => (r.ok ? r.text() : ''))
               .catch(() => ''),
             http.get<{ leaderboard?: { user_id: number; total_points: number }[] }>(`/api/v2/leaderboard/drill/${drillId}`).catch(() => ({ leaderboard: [] })),

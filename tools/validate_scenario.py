@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate one or more Scenario YAML files against the divide/v1 schema.
+"""Validate one or more Scenario YAML files against the oxblood/v1 schema.
 
 Usage:
     python tools/validate_scenario.py <scenario.yaml> [<more.yaml> ...]

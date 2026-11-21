@@ -7,7 +7,7 @@ runner reads from the DB. The sync keeps the two in agreement.
 Lifecycle
 ---------
 1. ``collect_yaml_files`` walks one or more directories and returns
-   the YAML files that look like divide scenarios.
+   the YAML files that look like oxblood scenarios.
 2. ``sync_files`` validates each against the schema, then upserts a
    Scenario row keyed by ``metadata.name``. Re-running on an unchanged
    YAML is a no-op (the row is updated in place with no schema bump).
@@ -54,13 +54,13 @@ def _find_schema() -> Path:
     """Locate ``schemas/scenario.schema.json`` for both dev and container.
 
     Resolution order:
-      1. ``DIVIDE_SCENARIO_SCHEMA`` env var (explicit override)
+      1. ``OXBLOOD_SCENARIO_SCHEMA`` env var (explicit override)
       2. ``schemas/scenario.schema.json`` (container layout,
          2 parents up from this file)
       3. ``<repo_root>/schemas/scenario.schema.json`` (dev layout,
          4 parents up from this file)
     """
-    env_path = os.environ.get("DIVIDE_SCENARIO_SCHEMA")
+    env_path = os.environ.get("OXBLOOD_SCENARIO_SCHEMA")
     if env_path:
         p = Path(env_path)
         if p.is_file():

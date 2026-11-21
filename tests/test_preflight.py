@@ -78,7 +78,7 @@ def _scenarios_ok(r):
 def _metrics(r):
     return httpx.Response(
         200,
-        text="# HELP divide_runs_total x\n# TYPE divide_runs_total counter\n",
+        text="# HELP oxblood_runs_total x\n# TYPE oxblood_runs_total counter\n",
     )
 
 
@@ -89,7 +89,7 @@ def _prom_targets_up(r):
             "data": {
                 "activeTargets": [
                     {
-                        "labels": {"job": "divide-api"},
+                        "labels": {"job": "oxblood-api"},
                         "scrapeUrl": "http://api:8000/metrics",
                         "health": "up",
                         "lastError": "",
@@ -157,7 +157,7 @@ def test_all_checks_pass_when_everything_is_up(monkeypatch):
         "http://localhost:8000/api/v1/scenarios": _scenarios_ok,
         "http://localhost:8000/metrics": _metrics,
         "http://localhost:9090/api/v1/targets": _prom_targets_up,
-        "http://localhost:3000/api/dashboards/uid/divide-drill-platform": _grafana_ok,
+        "http://localhost:3000/api/dashboards/uid/oxblood-drill-platform": _grafana_ok,
     }
     assert _run_with_handlers(handlers, monkeypatch) == 0
 
@@ -177,7 +177,7 @@ def test_template_missing_prints_actionable_hint(monkeypatch, capsys):
         "http://localhost:8000/api/v1/scenarios": _scenarios_ok,
         "http://localhost:8000/metrics": _metrics,
         "http://localhost:9090/api/v1/targets": _prom_targets_up,
-        "http://localhost:3000/api/dashboards/uid/divide-drill-platform": _grafana_ok,
+        "http://localhost:3000/api/dashboards/uid/oxblood-drill-platform": _grafana_ok,
     }
     rc = _run_with_handlers(handlers, monkeypatch)
     out = capsys.readouterr().out
@@ -201,7 +201,7 @@ def test_promox_not_configured_skips_pve_checks(monkeypatch, capsys):
         "http://localhost:9090/api/v1/targets": lambda r: httpx.Response(
             200, json={"data": {"activeTargets": []}}
         ),
-        "http://localhost:3000/api/dashboards/uid/divide-drill-platform": _grafana_ok,
+        "http://localhost:3000/api/dashboards/uid/oxblood-drill-platform": _grafana_ok,
     }
     rc = _run_with_handlers(handlers, monkeypatch)
     out = capsys.readouterr().out
@@ -228,7 +228,7 @@ def test_prometheus_target_down_prints_error(monkeypatch, capsys):
                 "data": {
                     "activeTargets": [
                         {
-                            "labels": {"job": "divide-api"},
+                            "labels": {"job": "oxblood-api"},
                             "scrapeUrl": "http://api:8000/metrics",
                             "health": "down",
                             "lastError": "connection refused",
@@ -237,12 +237,12 @@ def test_prometheus_target_down_prints_error(monkeypatch, capsys):
                 }
             },
         ),
-        "http://localhost:3000/api/dashboards/uid/divide-drill-platform": _grafana_ok,
+        "http://localhost:3000/api/dashboards/uid/oxblood-drill-platform": _grafana_ok,
     }
     rc = _run_with_handlers(handlers, monkeypatch)
     out = capsys.readouterr().out
     assert rc == 1
-    assert "Prometheus scraping divide-api" in out
+    assert "Prometheus scraping oxblood-api" in out
     assert "down" in out
 
 
@@ -260,7 +260,7 @@ def test_custom_scenario_and_template_args(monkeypatch):
         "http://localhost:9090/api/v1/targets": lambda r: httpx.Response(
             200, json={"data": {"activeTargets": []}}
         ),
-        "http://localhost:3000/api/dashboards/uid/divide-drill-platform": _grafana_ok,
+        "http://localhost:3000/api/dashboards/uid/oxblood-drill-platform": _grafana_ok,
     }
     rc = _run_with_handlers(
         handlers,
@@ -296,7 +296,7 @@ def _acl_handlers(perms_response=None, perms_status=200, **kwargs):
         "http://localhost:8000/api/v1/scenarios": _scenarios_ok,
         "http://localhost:8000/metrics": _metrics,
         "http://localhost:9090/api/v1/targets": _prom_targets_up,
-        "http://localhost:3000/api/dashboards/uid/divide-drill-platform": _grafana_ok,
+        "http://localhost:3000/api/dashboards/uid/oxblood-drill-platform": _grafana_ok,
     }
     base.update(kwargs)
     return base

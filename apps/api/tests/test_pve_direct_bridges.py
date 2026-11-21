@@ -53,9 +53,9 @@ from app.services.pve_sdn import (
 def _make_auth(
     *,
     base_url: str = "https://192.168.0.10:8006",
-    token_id: str = "divide@pve@pam!drill-token",
+    token_id: str = "oxblood@pve@pam!drill-token",
     token_secret: str = "secret-uuid",
-    user: str = "divide@pve@pam",
+    user: str = "oxblood@pve@pam",
     node: str = "pve",
 ) -> SdnAuth:
     return SdnAuth(
@@ -224,15 +224,15 @@ class TestDirectPlanPermissionDenied:
         _patch_httpx(monkeypatch, httpx.MockTransport(handler))
 
         with pytest.raises(SdnPermissionError) as exc_info:
-            _run(apply_direct_plan(_three_bridge_plan(), auth=_make_auth(user="divide@pve@pam")))
+            _run(apply_direct_plan(_three_bridge_plan(), auth=_make_auth(user="oxblood@pve@pam")))
 
         err = exc_info.value
         assert err.required_role == "Sys.Modify"
         assert "Sys.Modify" in err.pveum_hint
         # The hint must include the custom-role creation snippet
         # so the operator can grant the privilege in one shot.
-        assert "pveum role add DivideNetAdmin" in err.pveum_hint
-        assert "pveum aclmod divide@pve@pam" in err.pveum_hint
+        assert "pveum role add OxbloodNetAdmin" in err.pveum_hint
+        assert "pveum aclmod oxblood@pve@pam" in err.pveum_hint
         assert "-privs Sys.Modify" in err.pveum_hint
 
 

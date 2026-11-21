@@ -7,10 +7,10 @@ because state lives in Redis, not in any single Python process.
 Schema
 ------
 
-  * **Channel:** ``divide:events:global`` -- every published event
+  * **Channel:** ``oxblood:events:global`` -- every published event
     hits this Redis pub/sub channel. Every worker subscribed to
     RedisEventBus receives a copy.
-  * **Ring buffer:** Redis LIST ``divide:events:buffer`` -- capped
+  * **Ring buffer:** Redis LIST ``oxblood:events:buffer`` -- capped
     at 1024 entries via ``LTRIM`` after every ``LPUSH``. Replaces
     the in-process ``deque(maxlen=1024)``.
 
@@ -55,8 +55,8 @@ import redis as redis_sync
 _log = logging.getLogger(__name__)
 
 
-_CHANNEL = "divide:events:global"
-_BUFFER_KEY = "divide:events:buffer"
+_CHANNEL = "oxblood:events:global"
+_BUFFER_KEY = "oxblood:events:buffer"
 _RING_SIZE = 1024
 _SUBSCRIBE_QUEUE_MAX = 256
 

@@ -13,7 +13,7 @@ test('a player sees only their mission screen and cannot reach operator pages', 
 
 test('an enrolled player sees the waiting state for a scheduled exercise', async ({ page, request }) => {
   const token = await adminToken(request);
-  const headers = { 'X-Divide-Token': token };
+  const headers = { 'X-Oxblood-Token': token };
   const users = await (await request.get('/api/v1/auth/users', { headers })).json();
   const rows = Array.isArray(users) ? users : (users.items ?? users.users);
   const player = rows.find((u: { sub: string }) => u.sub === RED.sub);

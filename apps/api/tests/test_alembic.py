@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 ALEMBIC_INI = ROOT / "alembic.ini"
 ENV = dict(os.environ)
-ENV["DIVIDE_DB_URL"] = "sqlite:///:memory:"  # Alembic uses sync driver
+ENV["OXBLOOD_DB_URL"] = "sqlite:///:memory:"  # Alembic uses sync driver
 ENV["PYTHONPATH"] = str(ROOT) + os.pathsep + ENV.get("PYTHONPATH", "")
 
 
@@ -36,7 +36,7 @@ def test_alembic_upgrade_creates_all_tables(tmp_path) -> None:
     # Override DB to a file (in-memory doesn't work across subprocess).
     db_path = tmp_path / "test.sqlite"
     env = dict(ENV)
-    env["DIVIDE_DB_URL"] = f"sqlite:///{db_path}"
+    env["OXBLOOD_DB_URL"] = f"sqlite:///{db_path}"
     r = subprocess.run(
         [sys.executable, "-m", "alembic", "--config", str(ALEMBIC_INI), "upgrade", "head"],
         capture_output=True,
@@ -72,7 +72,7 @@ def test_alembic_upgrade_creates_drill_and_v1_flag_tables(tmp_path) -> None:
 
     db_path = tmp_path / "test.sqlite"
     env = dict(ENV)
-    env["DIVIDE_DB_URL"] = f"sqlite:///{db_path}"
+    env["OXBLOOD_DB_URL"] = f"sqlite:///{db_path}"
     r = subprocess.run(
         [sys.executable, "-m", "alembic", "--config", str(ALEMBIC_INI), "upgrade", "head"],
         capture_output=True,
@@ -103,7 +103,7 @@ def test_alembic_upgrade_creates_drill_and_v1_flag_tables(tmp_path) -> None:
 def test_alembic_current_reports_head(tmp_path) -> None:
     db_path = tmp_path / "test.sqlite"
     env = dict(ENV)
-    env["DIVIDE_DB_URL"] = f"sqlite:///{db_path}"
+    env["OXBLOOD_DB_URL"] = f"sqlite:///{db_path}"
     subprocess.run(
         [sys.executable, "-m", "alembic", "--config", str(ALEMBIC_INI), "upgrade", "head"],
         capture_output=True,
@@ -126,7 +126,7 @@ def test_alembic_current_reports_head(tmp_path) -> None:
 def test_alembic_downgrade_removes_all_tables(tmp_path) -> None:
     db_path = tmp_path / "test.sqlite"
     env = dict(ENV)
-    env["DIVIDE_DB_URL"] = f"sqlite:///{db_path}"
+    env["OXBLOOD_DB_URL"] = f"sqlite:///{db_path}"
     subprocess.run(
         [sys.executable, "-m", "alembic", "--config", str(ALEMBIC_INI), "upgrade", "head"],
         capture_output=True,
@@ -161,7 +161,7 @@ def test_alembic_round_trip(tmp_path) -> None:
     """upgrade -> downgrade -> upgrade should be a no-op and end at head."""
     db_path = tmp_path / "test.sqlite"
     env = dict(ENV)
-    env["DIVIDE_DB_URL"] = f"sqlite:///{db_path}"
+    env["OXBLOOD_DB_URL"] = f"sqlite:///{db_path}"
     for cmd in (["upgrade", "head"], ["downgrade", "base"], ["upgrade", "head"]):
         r = subprocess.run(
             [sys.executable, "-m", "alembic", "--config", str(ALEMBIC_INI), *cmd],
@@ -185,7 +185,7 @@ def test_alembic_round_trip(tmp_path) -> None:
 def test_alembic_indexes_present(tmp_path) -> None:
     db_path = tmp_path / "test.sqlite"
     env = dict(ENV)
-    env["DIVIDE_DB_URL"] = f"sqlite:///{db_path}"
+    env["OXBLOOD_DB_URL"] = f"sqlite:///{db_path}"
     subprocess.run(
         [sys.executable, "-m", "alembic", "--config", str(ALEMBIC_INI), "upgrade", "head"],
         capture_output=True,

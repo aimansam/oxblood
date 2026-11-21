@@ -35,7 +35,7 @@ test('a referee runs a two-team round and the scoreboard follows', async ({ page
   // --- player: scores once, not twice
   const token = await playerToken(request, reds);
   const submit = async () =>
-    (await request.post('/api/v2/submissions?user_id=0', { headers: { 'X-Divide-Token': token }, data: { drill_id: drill, lab_flag_id: 0, flag_value: RED_FLAG, hints_used: 0 } })).json();
+    (await request.post('/api/v2/submissions?user_id=0', { headers: { 'X-Oxblood-Token': token }, data: { drill_id: drill, lab_flag_id: 0, flag_value: RED_FLAG, hints_used: 0 } })).json();
   const first = await submit();
   expect(first.is_correct).toBe(true);
   expect(first.first_blood).toBe(true);
@@ -58,9 +58,9 @@ test('a referee runs a two-team round and the scoreboard follows', async ({ page
   await expect(total).toHaveText(String(first.points_earned + first.first_blood_bonus - 20));
 
   // --- freeze: late points are hidden from players, visible to the referee
-  const headers = { 'X-Divide-Token': await adminToken(request) };
+  const headers = { 'X-Oxblood-Token': await adminToken(request) };
   await request.put(`/api/v2/drills/${drill}/rounds/1/freeze`, { headers, data: { freeze_at: new Date(Date.now() - 60_000).toISOString() } });
-  const player = await (await request.get(`/api/v2/drills/${drill}/scoreboard`, { headers: { 'X-Divide-Token': token } })).json();
+  const player = await (await request.get(`/api/v2/drills/${drill}/scoreboard`, { headers: { 'X-Oxblood-Token': token } })).json();
   const referee = await (await request.get(`/api/v2/drills/${drill}/scoreboard`, { headers })).json();
   expect(player.frozen).toBe(true);
   expect(referee.frozen).toBe(false);
@@ -74,7 +74,7 @@ test('a player sees their team, side and the standings on the mission screen', a
   const blue = await createPlayer(request, 'blue');
   await enroll(request, drill, red.id, 'red');
   await enroll(request, drill, blue.id, 'blue');
-  const headers = { 'X-Divide-Token': await adminToken(request) };
+  const headers = { 'X-Oxblood-Token': await adminToken(request) };
   const teams = (await (await request.post(`/api/v2/drills/${drill}/teams`, { headers, data: { count: 2 } })).json()).teams;
   await request.put(`/api/v2/drills/${drill}/teams/${teams[0].id}/members/${red.id}`, { headers });
   await request.put(`/api/v2/drills/${drill}/teams/${teams[1].id}/members/${blue.id}`, { headers });
@@ -88,6 +88,6 @@ test('a player sees their team, side and the standings on the mission screen', a
 
   // The other side's flags do not score for a team on the wrong side.
   const blueToken = await playerToken(request, blue);
-  const wrong = await (await request.post('/api/v2/submissions?user_id=0', { headers: { 'X-Divide-Token': blueToken }, data: { drill_id: drill, lab_flag_id: 0, flag_value: RED_FLAG, hints_used: 0 } })).json();
+  const wrong = await (await request.post('/api/v2/submissions?user_id=0', { headers: { 'X-Oxblood-Token': blueToken }, data: { drill_id: drill, lab_flag_id: 0, flag_value: RED_FLAG, hints_used: 0 } })).json();
   expect(wrong.is_correct).toBe(false);
 });

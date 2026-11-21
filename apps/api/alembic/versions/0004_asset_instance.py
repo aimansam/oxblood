@@ -47,7 +47,7 @@ def upgrade() -> None:
     The new constraint is non-unique; multiple clones per declared
     asset are now allowed. We *do not* add a different unique
     constraint — the runner generates sufficiently unique names
-    (``divide-<run>-<role>_<N>``).
+    (``oxblood-<run>-<role>_<N>``).
     """
     bind = op.get_bind()
     inspector = sa.inspect(bind)

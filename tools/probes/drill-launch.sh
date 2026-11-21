@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-TOKEN=$(docker exec divide-api python3 -c "
+TOKEN=$(docker exec oxblood-api python3 -c "
 import sys; sys.path.insert(0, '/app')
 from app.core import auth
 print(auth.sign_token('admin', 'admin', 3600))
 ")
 API="http://localhost:8000"
-H_AUTH="X-Divide-Token: $TOKEN"
+H_AUTH="X-Oxblood-Token: $TOKEN"
 
 echo "############## Section 6: Drill flow ##############"
 echo ""

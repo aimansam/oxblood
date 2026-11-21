@@ -21,7 +21,7 @@ NAMING_CONVENTION: dict[str, str] = {
 
 
 class Base(DeclarativeBase):
-    """Declarative base for all divide models."""
+    """Declarative base for all oxblood models."""
 
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 

@@ -5,4 +5,4 @@ Requires=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/DATA/Storage/docker/divide-cyber-drill/scripts/backup_db.sh
+ExecStart=/DATA/Storage/docker/oxblood-cyber-drill/scripts/backup_db.sh

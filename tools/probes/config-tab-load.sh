@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Probe all portal endpoints + cross-reference with PVE ground truth.
-TOKEN=$(docker exec divide-api python3 -c "
+TOKEN=$(docker exec oxblood-api python3 -c "
 import sys; sys.path.insert(0, '/app')
 from app.core import auth
 print(auth.sign_token('admin', 'admin', 3600))
 ")
 HOST="https://192.168.0.10:8006"
-PVE_TOK="divide@pve@pam!drill-token=4ea3414f-d3a4-47b5-a2ed-19018f416cc0"
+PVE_TOK="oxblood@pve@pam!drill-token=4ea3414f-d3a4-47b5-a2ed-19018f416cc0"
 API="http://localhost:8000"
-H_AUTH="X-Divide-Token: $TOKEN"
+H_AUTH="X-Oxblood-Token: $TOKEN"
 H_PVE="Authorization: PVEAPIToken=$PVE_TOK"
 
 run() {

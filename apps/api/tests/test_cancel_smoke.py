@@ -73,7 +73,7 @@ def _scenario(name: str = "cancel-smoke", assets=("vm_a",)) -> models.Scenario:
         difficulty="beginner",
         duration_min=30,
         spec={
-            "apiVersion": "divide/v1",
+            "apiVersion": "oxblood/v1",
             "kind": "Scenario",
             "spec": {
                 "assets": asset_specs,
@@ -301,8 +301,8 @@ def test_watch_drill_cancel_after_path_triggers_cancel_endpoint(monkeypatch) -> 
     assert cancel_calls, "watch_drill never POSTed /drills/99/cancel"
 
 
-def test_watch_drill_cancel_sends_divide_token_header(monkeypatch) -> None:
-    """When ``--token`` (or $DIVIDE_TOKEN) is set, watch_drill must
+def test_watch_drill_cancel_sends_oxblood_token_header(monkeypatch) -> None:
+    """When ``--token`` (or $OXBLOOD_TOKEN) is set, watch_drill must
     forward it on the cancel POST. Read paths stay anonymous.
 
     Without this, a real run against the gated endpoint would 401
@@ -314,7 +314,7 @@ def test_watch_drill_cancel_sends_divide_token_header(monkeypatch) -> None:
     state = {"poll_count": 0}
 
     def cancel(req: httpx.Request) -> httpx.Response:
-        captured["auth_header"] = req.headers.get("X-Divide-Token", "")
+        captured["auth_header"] = req.headers.get("X-Oxblood-Token", "")
         return httpx.Response(
             200,
             json={
@@ -445,9 +445,9 @@ def test_watch_drill_warns_when_cancel_after_without_token(monkeypatch, capsys) 
     sys.modules["watch_drill"] = mod
     spec.loader.exec_module(mod)
 
-    # No --token, no $DIVIDE_TOKEN. The warn must still fire because
+    # No --token, no $OXBLOOD_TOKEN. The warn must still fire because
     # --cancel-after is set.
-    monkeypatch.delenv("DIVIDE_TOKEN", raising=False)
+    monkeypatch.delenv("OXBLOOD_TOKEN", raising=False)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -467,7 +467,7 @@ def test_watch_drill_warns_when_cancel_after_without_token(monkeypatch, capsys) 
     mod.main()
     out = capsys.readouterr().out
     assert "WARN" in out
-    assert "DIVIDE_TOKEN" in out or "--token" in out
+    assert "OXBLOOD_TOKEN" in out or "--token" in out
 
 
 # ---------- 404 / 409 paths (drive watch_drill's error messages) ----------

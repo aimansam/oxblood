@@ -2,7 +2,7 @@
 """Issue a OxBlood token for a user.
 
 Tokens are HMAC-SHA256-signed compact JWS-ish strings. They go in the
-``X-Divide-Token`` request header on API calls that need a known
+``X-Oxblood-Token`` request header on API calls that need a known
 caller identity (rate limiting, audit attribution, RBAC).
 
 Usage:
@@ -15,7 +15,7 @@ enum values: ``admin``, ``lead``, ``red``, ``blue``, ``observer``.
 Anything else is rejected at the CLI (L2 2.9).
 
 The token is signed with the same secret the API uses to verify
-tokens (resolved from ``DIVIDE_TOKEN_SECRET`` or derived from
+tokens (resolved from ``OXBLOOD_TOKEN_SECRET`` or derived from
 ``PROXMOX_TOKEN_SECRET``). The CLI prints the token to stdout so the
 caller can copy it. There's no separate ``--write-to-file`` flag; the
 output is a single line and trivially ``> token.txt`` --able.
@@ -25,7 +25,7 @@ Why a script and not an HTTP endpoint:
     about to start the API for the first time). An HTTP endpoint
     would be self-referential.
   * The CLI is testable without a stack.
-  * A future ``divide`` console can wrap this script.
+  * A future ``oxblood`` console can wrap this script.
 
 What this does NOT do:
   * Persist tokens. They're stateless HMACs; the API verifies on every
@@ -85,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
     from app.core.auth import Role
 
     ap = argparse.ArgumentParser(
-        description="Issue a OxBlood X-Divide-Token for a user.",
+        description="Issue a OxBlood X-Oxblood-Token for a user.",
     )
     ap.add_argument(
         "--user",
@@ -112,7 +112,7 @@ def main(argv: list[str] | None = None) -> int:
 
     ttl_s = _parse_ttl(args.ttl)
     token = sign_token(sub=args.user, role=args.role, ttl_s=ttl_s)
-    # Single-line output so callers can do `divide issue-token --user x > x.token`.
+    # Single-line output so callers can do `oxblood issue-token --user x > x.token`.
     print(token)
     return 0
 

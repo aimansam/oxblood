@@ -4,10 +4,10 @@
 Usage:
     python tools/sync_scenarios.py [DIR_OR_FILE]...
 
-Defaults to ``DIVIDE_SCENARIOS_DIR`` from env, or
+Defaults to ``OXBLOOD_SCENARIOS_DIR`` from env, or
 ``./examples/scenarios/`` if not set.
 
-The tool runs ``alembic upgrade head`` against ``DIVIDE_DB_URL`` first,
+The tool runs ``alembic upgrade head`` against ``OXBLOOD_DB_URL`` first,
 so a fresh Postgres / SQLite is usable out of the box.
 
 Exit codes:
@@ -34,9 +34,9 @@ from app.services.scenario_sync import SyncReport, sync_files  # noqa: E402
 
 def _ensure_schema() -> None:
     """Run alembic upgrade head so the scenarios table exists."""
-    db_url = os.environ.get("DIVIDE_DB_URL")
+    db_url = os.environ.get("OXBLOOD_DB_URL")
     if not db_url:
-        print("error: DIVIDE_DB_URL is required", file=sys.stderr)
+        print("error: OXBLOOD_DB_URL is required", file=sys.stderr)
         sys.exit(2)
     # Strip async driver so alembic uses a sync engine.
     sync_url = db_url.replace("+asyncpg", "").replace("+aiosqlite", "")
@@ -49,7 +49,7 @@ def _ensure_schema() -> None:
         [sys.executable, "-m", "alembic", "--config", str(alembic_ini), "upgrade", "head"],
         capture_output=True,
         text=True,
-        env={**os.environ, "DIVIDE_DB_URL": sync_url, "PYTHONPATH": str(api_dir)},
+        env={**os.environ, "OXBLOOD_DB_URL": sync_url, "PYTHONPATH": str(api_dir)},
         cwd=ROOT,
     )
     if r.returncode != 0:
@@ -72,7 +72,7 @@ def main(argv: list[str] | None = None) -> int:
         "inputs",
         nargs="*",
         type=Path,
-        help="Scenario YAML files or directories (default: $DIVIDE_SCENARIOS_DIR or ./examples/scenarios).",
+        help="Scenario YAML files or directories (default: $OXBLOOD_SCENARIOS_DIR or ./examples/scenarios).",
     )
     parser.add_argument(
         "--no-archive",
@@ -91,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.inputs:
         paths = list(args.inputs)
     else:
-        env_dir = os.environ.get("DIVIDE_SCENARIOS_DIR")
+        env_dir = os.environ.get("OXBLOOD_SCENARIOS_DIR")
         if env_dir:
             paths = [Path(env_dir)]
         else:

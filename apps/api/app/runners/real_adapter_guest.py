@@ -35,7 +35,7 @@ class GuestSeedMixin(_AdapterCore):
         files = seed.files or {}
         commands = seed.runcmd or []
         payload["description"] = (
-            f"divide seeded role={seed.role}; "
+            f"oxblood seeded role={seed.role}; "
             f"files={len(files)}; commands={len(commands)}; "
             "seed=guest-agent"
         )
@@ -266,7 +266,7 @@ class GuestSeedMixin(_AdapterCore):
             ]
             input_data = None
         else:
-            script_parts = ["set -eu", "mkdir -p /opt/divide/flags"]
+            script_parts = ["set -eu", "mkdir -p /opt/oxblood/flags"]
             for path, content in sorted(files.items()):
                 encoded = base64.b64encode(content.encode("utf-8")).decode("ascii")
                 encoded_path = base64.b64encode(path.encode("utf-8")).decode("ascii")
@@ -416,7 +416,7 @@ class GuestSeedMixin(_AdapterCore):
                 "if (-not $ready) { throw 'DNS/NTDS did not become ready within 180 seconds' }",
                 "if (-not (Test-Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NTDS\\Parameters')) { throw 'NTDS registry marker is missing' }",
                 f"if ('{controller}' -eq 'primary' -and -not (Test-Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NTDS')) {{ throw 'primary controller service marker is missing' }}",
-                "Write-Output 'DIVIDE_WINDOWS_READY'",
+                "Write-Output 'OXBLOOD_WINDOWS_READY'",
             ]
         )
         encoded = base64.b64encode(script.encode("utf-16le")).decode("ascii")
@@ -488,7 +488,7 @@ class GuestSeedMixin(_AdapterCore):
         # AD role installation and the first rename/reboot can take several
         # minutes before Windows starts QGA again. Keep the VM alive while it
         # completes instead of tearing down a valid but slow guest.
-        deadline = asyncio.get_running_loop().time() + 600
+        deadline = asyncio.get_running_loop().time() + 900
         attempts = 0
         while True:
 

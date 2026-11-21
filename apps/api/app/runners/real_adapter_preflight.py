@@ -137,10 +137,16 @@ class PreflightMixin(_AdapterCore):
             checks.append(
                 {
                     "id": "memory",
-                    "ready": available >= memory_required and bool(memory.get("total")),
+                    "ready": settings.range_skip_memory_check
+                    or (available >= memory_required and bool(memory.get("total"))),
                     "required_bytes": memory_required,
                     "available_bytes": available if memory.get("total") else None,
                     "detail": (
+                        "Memory check bypassed (OXBLOOD_RANGE_SKIP_MEMORY_CHECK). "
+                        if settings.range_skip_memory_check
+                        else ""
+                    )
+                    + (
                         f"Range needs {memory_required / 1024**3:.1f} GiB RAM; {available / 1024**3:.1f} GiB available after existing guests and host reserve. Free capacity before retrying if insufficient."
                         if memory.get("total")
                         else f"Range needs {memory_required / 1024**3:.1f} GiB RAM; available host capacity could not be verified."

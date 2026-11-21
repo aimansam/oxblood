@@ -58,7 +58,7 @@ def login(client, sub, password):
 
 
 def header(token):
-    return {"X-Divide-Token": token}
+    return {"X-Oxblood-Token": token}
 
 
 def test_a_generated_password_signs_in_to_a_token_that_can_only_change_it(world):

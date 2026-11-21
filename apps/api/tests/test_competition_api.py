@@ -68,7 +68,7 @@ def api(tmp_path):
 
 
 def tok(sub, role):
-    return {"X-Divide-Token": sign_token(sub, role, 3600)}
+    return {"X-Oxblood-Token": sign_token(sub, role, 3600)}
 
 
 # Tokens are signed when used: another test may change the signing key after import.

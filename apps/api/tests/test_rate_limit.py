@@ -222,7 +222,7 @@ def test_redis_unreachable_fails_open(monkeypatch, set_limit):
     Fail-open is the safety posture for this control-plane gate — we'd
     rather let a few extra drill starts through than refuse a legitimate
     request because Redis went down. Operators wanting fail-closed set
-    ``DIVIDE_RATE_LIMIT_FAIL_CLOSED=true`` and get a 503 instead.
+    ``OXBLOOD_RATE_LIMIT_FAIL_CLOSED=true`` and get a 503 instead.
     """
     import app.services.cache as cache_module
     from app.services.rate_limit import check_drill_start_limit as rl

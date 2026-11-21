@@ -114,7 +114,7 @@ def test_admin_toggles_enabled_user_to_disabled(client):
 
     r = client.post(
         "/api/v1/auth/users/red-1/toggle-disabled",
-        headers={"X-Divide-Token": _admin_token("admin-1")},
+        headers={"X-Oxblood-Token": _admin_token("admin-1")},
     )
     assert r.status_code == 200
     body = r.json()
@@ -130,7 +130,7 @@ def test_admin_toggles_disabled_user_to_enabled(client):
 
     r = client.post(
         "/api/v1/auth/users/red-1/toggle-disabled",
-        headers={"X-Divide-Token": _admin_token("admin-1")},
+        headers={"X-Oxblood-Token": _admin_token("admin-1")},
     )
     assert r.status_code == 200
     body = r.json()
@@ -144,7 +144,7 @@ def test_admin_toggles_returns_no_password_hash(client):
 
     r = client.post(
         "/api/v1/auth/users/red-1/toggle-disabled",
-        headers={"X-Divide-Token": _admin_token("admin-1")},
+        headers={"X-Oxblood-Token": _admin_token("admin-1")},
     )
     body = r.json()
     assert "password_hash" not in body
@@ -158,7 +158,7 @@ def test_toggle_unknown_user_returns_404(client):
     _run_async(_seed_user("admin-1", role="admin"))
     r = client.post(
         "/api/v1/auth/users/never-existed/toggle-disabled",
-        headers={"X-Divide-Token": _admin_token("admin-1")},
+        headers={"X-Oxblood-Token": _admin_token("admin-1")},
     )
     assert r.status_code == 404
     assert "never-existed" in r.text
@@ -175,7 +175,7 @@ def test_toggle_red_cannot_returns_403(client):
     _run_async(_seed_user("red-1", role="red"))
     r = client.post(
         "/api/v1/auth/users/red-1/toggle-disabled",
-        headers={"X-Divide-Token": _red_token("red-1")},
+        headers={"X-Oxblood-Token": _red_token("red-1")},
     )
     assert r.status_code == 403
 
@@ -185,7 +185,7 @@ def test_toggle_blue_cannot_returns_403(client):
     _run_async(_seed_user("blue-1", role="blue"))
     r = client.post(
         "/api/v1/auth/users/blue-1/toggle-disabled",
-        headers={"X-Divide-Token": _blue_token("blue-1")},
+        headers={"X-Oxblood-Token": _blue_token("blue-1")},
     )
     assert r.status_code == 403
 
@@ -196,7 +196,7 @@ def test_toggle_lead_cannot_returns_403(client):
     _run_async(_seed_user("lead-1", role="lead"))
     r = client.post(
         "/api/v1/auth/users/lead-1/toggle-disabled",
-        headers={"X-Divide-Token": _lead_token("lead-1")},
+        headers={"X-Oxblood-Token": _lead_token("lead-1")},
     )
     assert r.status_code == 403
 
@@ -219,7 +219,7 @@ def test_disabled_user_cannot_login_after_toggle(client):
     # Admin disables the user.
     r2 = client.post(
         "/api/v1/auth/users/red-1/toggle-disabled",
-        headers={"X-Divide-Token": _admin_token("admin-1")},
+        headers={"X-Oxblood-Token": _admin_token("admin-1")},
     )
     assert r2.status_code == 200
     assert r2.json()["disabled"] is True
@@ -244,13 +244,13 @@ def test_admin_can_re_enable_user_via_second_toggle(client):
     # First toggle -> enabled.
     r1 = client.post(
         "/api/v1/auth/users/red-1/toggle-disabled",
-        headers={"X-Divide-Token": _admin_token("admin-1")},
+        headers={"X-Oxblood-Token": _admin_token("admin-1")},
     )
     assert r1.json()["disabled"] is False
 
     # Second toggle -> disabled again.
     r2 = client.post(
         "/api/v1/auth/users/red-1/toggle-disabled",
-        headers={"X-Divide-Token": _admin_token("admin-1")},
+        headers={"X-Oxblood-Token": _admin_token("admin-1")},
     )
     assert r2.json()["disabled"] is True

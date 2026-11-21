@@ -50,8 +50,8 @@ class StdoutSink:
     name = "stdout"
 
     async def send(self, event: dict[str, Any]) -> None:
-        logging.getLogger("divide.telemetry.stdout").info(
-            "divide.telemetry.event %s", json.dumps(event, default=str)
+        logging.getLogger("oxblood.telemetry.stdout").info(
+            "oxblood.telemetry.event %s", json.dumps(event, default=str)
         )
 
 
@@ -87,7 +87,7 @@ async def dispatch(sinks: list[TelemetrySink], event: dict[str, Any]) -> list[Si
             results.append(SinkResult(sink=sink.name, ok=True))
         except Exception as exc:  # noqa: BLE001 — best-effort by design
             logging.getLogger(__name__).warning(
-                "divide.telemetry.sink_failed sink=%s err=%s",
+                "oxblood.telemetry.sink_failed sink=%s err=%s",
                 sink.name,
                 exc,
             )
@@ -126,11 +126,11 @@ def build_sinks_from_spec(spec: dict | None) -> list[TelemetrySink]:
                 sinks.append(sink)
         elif kind == "misp":
             logging.getLogger(__name__).info(
-                "divide.telemetry.sink_deferred type=%s reason=L3_scope",
+                "oxblood.telemetry.sink_deferred type=%s reason=L3_scope",
                 kind,
             )
         else:
-            logging.getLogger(__name__).warning("divide.telemetry.unknown_sink type=%r", kind)
+            logging.getLogger(__name__).warning("oxblood.telemetry.unknown_sink type=%r", kind)
     return sinks
 
 
@@ -141,7 +141,7 @@ def _build_minio_sink(
     try:
         from minio import Minio  # type: ignore[import-not-found]
     except ImportError:
-        logging.getLogger(__name__).info("divide.telemetry.minio_skip reason=minio_not_installed")
+        logging.getLogger(__name__).info("oxblood.telemetry.minio_skip reason=minio_not_installed")
         return None
 
     from app.core.config import settings

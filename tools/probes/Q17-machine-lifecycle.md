@@ -3,7 +3,7 @@
 ## Context
 After Q14/Q15/Q16 the launch flow works end-to-end: drill creates
 a VM, reaches RUNNING state, and the portal reports success. The
-probes left 8 `divide-*` VMs on PVE with no clear plan for cleanup.
+probes left 8 `oxblood-*` VMs on PVE with no clear plan for cleanup.
 
 This report catalogues **6 lifecycle bugs** found by reading the
 runner code + probing the live endpoints. **Bug #1 is the root
@@ -17,8 +17,8 @@ cause** -- fixing the others largely fall out of it.
 $ curl -X POST /api/v1/drills {"scenario_id": 1}
 {"run_id": 7, "status": "succeeded", ...}
 
-$ pvesh list cluster-resources --type vm | grep divide-
-divide-7-drillvm (vmid=112) -- status: stopped, NEVER DELETED
+$ pvesh list cluster-resources --type vm | grep oxblood-
+oxblood-7-drillvm (vmid=112) -- status: stopped, NEVER DELETED
 ```
 
 **Code path** (`apps/api/app/runners/runner.py` lines 376-385):
@@ -44,7 +44,7 @@ all 8 leftover VMs from the Q14 verification work.
 ```bash
 $ # Run cleanup manually the way the API does:
 $ curl -X DELETE /pve/api2/json/nodes/pve/qemu/112?purge=1&skiplock=1 \
-    -H "Authorization: PVEAPIToken=divide@pve@pam!drill-token=..."
+    -H "Authorization: PVEAPIToken=oxblood@pve@pam!drill-token=..."
 {"data":null,"message":"Parameter verification failed.",
  "errors":{"skiplock":"Only root may use this option."}}
 ```
@@ -59,13 +59,13 @@ self._get_client().nodes(node).qemu(vmid).delete(
 ```
 
 **`skiplock=1` requires the `root@pam` superuser** on PVE 9. With
-our `DivideDrill` custom role (no `Sys.Modify` privileges over VM
+our `OxbloodDrill` custom role (no `Sys.Modify` privileges over VM
 locks), this call always rejects. Every destroy attempt from the
 runner fails and the asset ends up in `orphaned` state.
 
 **The fix is one line:** drop `skiplock=1`. The current delete
 with `purge=1` alone works fine and the operation in our tests
-returned `UPID:pve:...:qmdestroy:NNN:divide@pve@pam!drill-token:`
+returned `UPID:pve:...:qmdestroy:NNN:oxblood@pve@pam!drill-token:`
 -- the VM was actually destroyed (verified: cleanup reduced 8
 leftover VMs to 1).
 
@@ -105,7 +105,7 @@ correctly threads the actor through. Cosmetic for now, but makes
 
 ```
 Total VMs on PVE: 16
-divide-prefixed: 8 (vmids 108,109,110,111,112,113,114,9100)
+oxblood-prefixed: 8 (vmids 108,109,110,111,112,113,114,9100)
 
 DB runs (all status=succeeded):
   run 5 → asset 1 (vmid=110) never cleaned up
@@ -145,17 +145,17 @@ Audit for run 7:
 
 Done by hand during this investigation: `DELETE /pve/api2/json/
 nodes/pve/qemu/<vmid>?purge=1` (without `skiplock`) succeeds for
-all of them. Going from 8 divide-* VMs to 1 (9100 is template-
+all of them. Going from 8 oxblood-* VMs to 1 (9100 is template-
 flagged, intentional). Live evidence:
 
 ```
 $ for vmid in 108 109 110 111 112 113 114; do
     curl -X DELETE /pve/api2/json/nodes/pve/qemu/$vmid?purge=1
   done
-{"data":"UPID:pve:...:qmdestroy:$vmid:divide@pve@pam!drill-token:"}
+{"data":"UPID:pve:...:qmdestroy:$vmid:oxblood@pve@pam!drill-token:"}
 
-$ pvesh list cluster-resources --type vm | grep divide-
-divide-1-drillvm (vmid=9100)   ← template, kept
+$ pvesh list cluster-resources --type vm | grep oxblood-
+oxblood-1-drillvm (vmid=9100)   ← template, kept
 ```
 
 No emergency: investigate thoroughly before committing fixes so

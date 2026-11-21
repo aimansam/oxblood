@@ -119,7 +119,7 @@ async def _seed_single_team_run() -> tuple[int, int]:
             duration_min=5,
             tags=[],
             spec={
-                "apiVersion": "divide/v1",
+                "apiVersion": "oxblood/v1",
                 "kind": "Scenario",
                 "metadata": {"name": name, "title": "F9 Single-Team", "version": 1},
                 "spec": {
@@ -161,7 +161,7 @@ async def _seed_multi_team_run() -> tuple[int, int, int]:
             duration_min=5,
             tags=[],
             spec={
-                "apiVersion": "divide/v1",
+                "apiVersion": "oxblood/v1",
                 "kind": "Scenario",
                 "metadata": {"name": name, "title": "F9 Multi-Team", "version": 1},
                 "spec": {
@@ -201,7 +201,7 @@ def test_get_drill_returns_null_exercise_id_for_single_team(client):
 
     r = client.get(
         f"/api/v1/drills/{run_id}",
-        headers={"X-Divide-Token": _admin_token()},
+        headers={"X-Oxblood-Token": _admin_token()},
     )
     assert r.status_code == 200
     body = r.json()
@@ -220,7 +220,7 @@ def test_get_drill_returns_exercise_id_for_multi_team(client):
 
     r = client.get(
         f"/api/v1/drills/{run_id}",
-        headers={"X-Divide-Token": _admin_token()},
+        headers={"X-Oxblood-Token": _admin_token()},
     )
     assert r.status_code == 200
     body = r.json()
@@ -233,7 +233,7 @@ def test_get_drill_exercise_id_is_idempotent(client):
     """Repeated GETs return the same exercise_id (no caching surprises)."""
     run_id, _scenario_id, exercise_id = _run_async(_seed_multi_team_run())
 
-    headers = {"X-Divide-Token": _admin_token()}
+    headers = {"X-Oxblood-Token": _admin_token()}
     r1 = client.get(f"/api/v1/drills/{run_id}", headers=headers)
     r2 = client.get(f"/api/v1/drills/{run_id}", headers=headers)
     assert r1.status_code == r2.status_code == 200
@@ -244,7 +244,7 @@ def test_get_drill_unknown_run_returns_404(client):
     """Regression: 404 still works; the new field didn't break the path."""
     r = client.get(
         "/api/v1/drills/9999999",
-        headers={"X-Divide-Token": _admin_token()},
+        headers={"X-Oxblood-Token": _admin_token()},
     )
     assert r.status_code == 404
 

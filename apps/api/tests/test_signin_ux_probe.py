@@ -34,7 +34,7 @@ class TestSetupProbeEmpty:
         assert data == {"needs_setup": True}
 
     def test_no_auth_header_required(self, client: TestClient) -> None:
-        """Public endpoint — must not require X-Divide-Token."""
+        """Public endpoint — must not require X-Oxblood-Token."""
         resp = client.get(
             "/api/v1/auth/setup",
             headers={},  # explicitly no token

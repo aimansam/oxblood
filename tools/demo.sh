@@ -25,7 +25,7 @@
 
 set -euo pipefail
 
-API="${DIVIDE_API:-http://localhost:8000}"
+API="${OXBLOOD_API:-http://localhost:8000}"
 OPEN_BROWSER=0
 ADMIN_SUB=""
 ADMIN_PW=""
@@ -118,7 +118,7 @@ if [[ -n "${ADMIN_SUB}" && -n "${ADMIN_PW}" ]]; then
 else
   echo
   bold "Sign-in"
-  echo "    If you bootstrapped an admin (DIVIDE_BOOTSTRAP_ADMIN_SUB +"
+  echo "    If you bootstrapped an admin (OXBLOOD_BOOTSTRAP_ADMIN_SUB +"
   echo "    _PASSWORD), sign in at ${PORTAL_URL} with that sub + password."
   echo
   echo "    Otherwise paste a token via the setup wizard at ${SETUP_URL}"
@@ -240,30 +240,30 @@ if [[ "${RECORD}" == "1" ]]; then
           echo
           echo '```bash'
           echo "$ curl -fsS ${API}/api/v1/drills \\"
-          echo "    -H 'X-Divide-Token: <token>'"
+          echo "    -H 'X-Oxblood-Token: <token>'"
           echo '```'
           echo
           echo '```json'
           curl -fsS --max-time 5 "${API}/api/v1/drills" \
-            -H "X-Divide-Token: ${TOKEN}" | _jq | head -40 || true
+            -H "X-Oxblood-Token: ${TOKEN}" | _jq | head -40 || true
           echo "..."
           echo '```'
           echo
           echo "## 5. Pull the latest run's JSON report (F2.12)"
           echo
           FIRST_RUN=$(curl -fsS --max-time 5 "${API}/api/v1/drills" \
-            -H "X-Divide-Token: ${TOKEN}" | python3 -c "import sys, json; d=json.loads(sys.stdin.read()); print(d['items'][0]['run_id'] if d.get('items') else '')" 2>/dev/null || echo "")
+            -H "X-Oxblood-Token: ${TOKEN}" | python3 -c "import sys, json; d=json.loads(sys.stdin.read()); print(d['items'][0]['run_id'] if d.get('items') else '')" 2>/dev/null || echo "")
           if [[ -n "${FIRST_RUN}" ]]; then
             echo "Latest run id: \`${FIRST_RUN}\`"
             echo
             echo '```bash'
             echo "$ curl -fsS ${API}/api/v1/drills/${FIRST_RUN}/report \\"
-            echo "    -H 'X-Divide-Token: <token>'"
+            echo "    -H 'X-Oxblood-Token: <token>'"
             echo '```'
             echo
             echo '```json'
             curl -fsS --max-time 5 "${API}/api/v1/drills/${FIRST_RUN}/report" \
-              -H "X-Divide-Token: ${TOKEN}" | _jq | head -60 || true
+              -H "X-Oxblood-Token: ${TOKEN}" | _jq | head -60 || true
             echo "..."
             echo '```'
             echo
@@ -271,12 +271,12 @@ if [[ "${RECORD}" == "1" ]]; then
             echo
             echo '```bash'
             echo "$ curl -fsS ${API}/api/v1/drills/${FIRST_RUN}/debrief.md \\"
-            echo "    -H 'X-Divide-Token: <token>'"
+            echo "    -H 'X-Oxblood-Token: <token>'"
             echo '```'
             echo
             echo '```markdown'
             curl -fsS --max-time 5 "${API}/api/v1/drills/${FIRST_RUN}/debrief.md" \
-              -H "X-Divide-Token: ${TOKEN}" | head -50 || true
+              -H "X-Oxblood-Token: ${TOKEN}" | head -50 || true
             echo "..."
             echo '```'
           else

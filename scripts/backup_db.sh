@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 # Nightly Postgres backup for the OxBlood stack.
 #
-# Dumps the `divide` database from the running postgres container into a
+# Dumps the `oxblood` database from the running postgres container into a
 # gzip file outside the repo, verifies it, and prunes old copies.
 #
 #   BACKUP_DIR      where dumps go            (default /DATA/Backups/oxblood)
 #   KEEP_DAYS       how long to keep them     (default 14)
-#   PG_CONTAINER    postgres container name   (default divide-postgres)
-#   PG_USER / PG_DB                           (default divide / divide)
+#   PG_CONTAINER    postgres container name   (default oxblood-postgres)
+#   PG_USER / PG_DB                           (default oxblood / oxblood)
 #
-# Restore:  gunzip -c <file> | docker exec -i divide-postgres psql -U divide -d divide
+# Restore:  gunzip -c <file> | docker exec -i oxblood-postgres psql -U oxblood -d oxblood
 set -euo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-/DATA/Backups/oxblood}"
 KEEP_DAYS="${KEEP_DAYS:-14}"
-PG_CONTAINER="${PG_CONTAINER:-divide-postgres}"
-PG_USER="${PG_USER:-divide}"
-PG_DB="${PG_DB:-divide}"
+PG_CONTAINER="${PG_CONTAINER:-oxblood-postgres}"
+PG_USER="${PG_USER:-oxblood}"
+PG_DB="${PG_DB:-oxblood}"
 
 log() { printf '%s backup_db: %s\n' "$(date -u +%FT%TZ)" "$*"; }
 

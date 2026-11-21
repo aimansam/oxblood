@@ -68,7 +68,7 @@ async def whoami(
 ) -> dict:
     """Decoded + verified token payload, plus ``ttl_remaining_s``.
 
-    Anonymous (no ``X-Divide-Token`` header or invalid token) ->
+    Anonymous (no ``X-Oxblood-Token`` header or invalid token) ->
     ``HTTP 401`` from :func:`require_token`. Same shape as the rest
     of the authenticated API surface.
     """

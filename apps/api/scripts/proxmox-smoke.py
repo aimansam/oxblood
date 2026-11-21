@@ -19,7 +19,7 @@ def main() -> int:
     host = os.environ.get("PROXMOX_HOST")
     token_id = os.environ.get("PROXMOX_TOKEN_ID")
     token_secret = os.environ.get("PROXMOX_TOKEN_SECRET")
-    user = os.environ.get("PROXMOX_USER", "divide@pve")
+    user = os.environ.get("PROXMOX_USER", "oxblood@pve")
     port = int(os.environ.get("PROXMOX_PORT", "8006"))
     verify_ssl = os.environ.get("PROXMOX_VERIFY_SSL", "true").lower() in ("1", "true, true")
 

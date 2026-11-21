@@ -165,8 +165,8 @@ class TestPveConfigService:
                     db,
                     host="https://192.168.0.10",
                     port=8006,
-                    user="divide@pve@pam",
-                    token_id="divide@pve@pam!drill-token",
+                    user="oxblood@pve@pam",
+                    token_id="oxblood@pve@pam!drill-token",
                     token_secret="abc-123",
                     verify_ssl=False,
                     node="pve",
@@ -350,7 +350,7 @@ class TestPveConfigEndpoints:
         tok = _bootstrap_admin_and_token(client)
         r = client.get(
             "/api/v1/admin/pve-config",
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
         )
         assert r.status_code == 200
         body = r.json()
@@ -373,7 +373,7 @@ class TestPveConfigEndpoints:
                 "token_id": "u!t",
                 "token_secret": "s",
             },
-            headers={"X-Divide-Token": non_admin},
+            headers={"X-Oxblood-Token": non_admin},
         )
         assert r.status_code == 403
 
@@ -383,7 +383,7 @@ class TestPveConfigEndpoints:
         r = client.post(
             "/api/v1/admin/pve-config",
             json={"host": "", "user": "u", "token_id": "u!t", "token_secret": "s"},
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
         )
         assert r.status_code == 422
 
@@ -401,12 +401,12 @@ class TestPveConfigEndpoints:
             "/api/v1/admin/pve-config",
             json={
                 "host": "https://192.168.0.10",
-                "user": "divide@pve@pam",
-                "token_id": "divide@pve@pam!drill-token",
+                "user": "oxblood@pve@pam",
+                "token_id": "oxblood@pve@pam!drill-token",
                 "token_secret": "bad-secret",
                 "verify_ssl": False,
             },
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
         )
         assert r.status_code == 502
         assert "401" in r.json()["detail"]
@@ -437,21 +437,21 @@ class TestPveConfigEndpoints:
             "/api/v1/admin/pve-config",
             json={
                 "host": "https://192.168.0.10",
-                "user": "divide@pve@pam",
-                "token_id": "divide@pve@pam!drill-token",
+                "user": "oxblood@pve@pam",
+                "token_id": "oxblood@pve@pam!drill-token",
                 "token_secret": "good-secret",
                 "verify_ssl": False,
                 "node": "pve",
                 "clone_storage": "fast-zfs",
             },
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
         )
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["source"] == "db"
         assert body["token_secret"] == "***"
         assert body["host"] == "https://192.168.0.10"
-        assert body["user"] == "divide@pve@pam"
+        assert body["user"] == "oxblood@pve@pam"
         assert body["node"] == "pve"
         assert body["clone_storage"] == "fast-zfs"
         assert body["seed_snippet_storage"] == "local"
@@ -494,7 +494,7 @@ class TestPveConfigEndpoints:
                 "clone_storage": "local",
                 "seed_snippet_storage": "local",
             },
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
         )
         assert r.status_code == 400
         assert "must allow 'images'" in r.json()["detail"]
@@ -519,11 +519,11 @@ class TestPveConfigEndpoints:
                 "token_secret": "s",
                 "verify_ssl": False,
             },
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
         )
         r = client.get(
             "/api/v1/admin/pve-config",
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
         )
         body = r.json()
         assert body["source"] == "db"
@@ -548,13 +548,13 @@ class TestPveConfigEndpoints:
                 "token_id": "u!t",
                 "token_secret": "s",
             },
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
         )
         assert rpost.status_code == 200, rpost.text
         assert _overlay() is not None
         r = client.delete(
             "/api/v1/admin/pve-config",
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
         )
         assert r.status_code == 200
         assert r.json()["deleted"] is True
@@ -562,7 +562,7 @@ class TestPveConfigEndpoints:
         # GET now reports env source
         r2 = client.get(
             "/api/v1/admin/pve-config",
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
         )
         assert r2.json()["source"] == "env"
 
@@ -570,7 +570,7 @@ class TestPveConfigEndpoints:
         tok = _bootstrap_admin_and_token(client)
         r = client.delete(
             "/api/v1/admin/pve-config",
-            headers={"X-Divide-Token": tok},
+            headers={"X-Oxblood-Token": tok},
         )
         assert r.status_code == 200
         assert r.json()["deleted"] is False
@@ -593,7 +593,7 @@ class TestHydrateProxmoxFromDb:
                     host="pve-hydrate.test",
                     port=8006,
                     user="root@pam",
-                    token_id="divide",
+                    token_id="oxblood",
                     token_secret="s3cret",
                     verify_ssl=False,
                     node="pve",

@@ -18,7 +18,7 @@ mkdir -p "$BACKUP_PATH"
 
 # 1. Database backup
 echo "1. Backing up database..."
-docker compose -f /DATA/Storage/docker/divide-cyber-drill/deploy/docker-compose.yml exec -T postgres pg_dump -U divide divide > "$BACKUP_PATH/database.sql"
+docker compose -f /DATA/Storage/docker/divide-cyber-drill/deploy/docker-compose.yml exec -T postgres pg_dump -U oxblood oxblood > "$BACKUP_PATH/database.sql"
 echo "   ✓ Database backed up to $BACKUP_PATH/database.sql"
 
 # 2. Portal code backup
@@ -34,16 +34,16 @@ echo "   ✓ API routers backed up"
 # 4. Export current drills
 echo "4. Exporting current drills..."
 # Credentials come from the environment; do not hard-code them in this script.
-: "${DIVIDE_ADMIN_PASSWORD:?set DIVIDE_ADMIN_PASSWORD (and optionally DIVIDE_ADMIN_SUB)}"
+: "${OXBLOOD_ADMIN_PASSWORD:?set OXBLOOD_ADMIN_PASSWORD (and optionally OXBLOOD_ADMIN_SUB)}"
 TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d "{\"sub\":\"${DIVIDE_ADMIN_SUB:-admin}\",\"password\":\"${DIVIDE_ADMIN_PASSWORD}\"}" | python3 -c "import sys, json; print(json.load(sys.stdin)['token'])")
-curl -s http://localhost:8000/api/v2/drills -H "X-Divide-Token: $TOKEN" > "$BACKUP_PATH/drills.json"
+  -d "{\"sub\":\"${OXBLOOD_ADMIN_SUB:-admin}\",\"password\":\"${OXBLOOD_ADMIN_PASSWORD}\"}" | python3 -c "import sys, json; print(json.load(sys.stdin)['token'])")
+curl -s http://localhost:8000/api/v2/drills -H "X-Oxblood-Token: $TOKEN" > "$BACKUP_PATH/drills.json"
 echo "   ✓ Drills exported"
 
 # 5. Export current users
 echo "5. Exporting current users..."
-curl -s http://localhost:8000/api/v1/auth/users -H "X-Divide-Token: $TOKEN" > "$BACKUP_PATH/users.json" 2>/dev/null || echo "   ⚠ Users export skipped (endpoint may not exist)"
+curl -s http://localhost:8000/api/v1/auth/users -H "X-Oxblood-Token: $TOKEN" > "$BACKUP_PATH/users.json" 2>/dev/null || echo "   ⚠ Users export skipped (endpoint may not exist)"
 
 echo ""
 echo "============================================"

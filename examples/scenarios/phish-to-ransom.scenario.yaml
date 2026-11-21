@@ -1,61 +1,84 @@
-apiVersion: divide/v1
+apiVersion: oxblood/v1
 kind: Scenario
 metadata:
   name: phish-to-ransom
   title: "Phishing to Ransomware"
-  organization: "Pusat Kesihatan Seri Melur"
+  organization: "Hospital Pantai Damai"
   summary: "Red follows a phishing-to-ransomware simulation while Blue detects the foothold and contains affected endpoints."
-  version: 2
+  version: 3
   difficulty: intermediate
   duration_min: 90
   tags:
     - ransomware
     - active-directory
     - phishing
-  authors:
-    - handle: divide-team
-      name: OxBlood core
 
 spec:
   attack_path:
     - asset: victim_workstation
-      goal: "Gain a phishing foothold"
+      goal: "Phishing foothold via planted victim credentials"
     - asset: dc_server
-      goal: "Escalate privilege and perform DCSync"
-    - asset: victim_workstation
-      goal: "Simulate ransomware on two endpoints"
+      goal: "Escalate to Domain Admin via over-privileged service account"
+    - asset: file_server
+      goal: "Deploy ransomware simulation on two endpoints"
   play_guide:
     red:
-      - "Use the exercise phishing email to gain a foothold on a designated workstation."
-      - "Follow the identity objective toward Domain Admin access and the simulated DCSync."
-      - "Run the scenario's ransomware simulation on two designated endpoints only."
+      - "RDP into a PC workstation (dc02_vlan) as j.smith / Welcome2024!; find credentials.txt on the desktop."
+      - "WinRM into DC01 (10.30.40.10:5985) with svc_domain / DomainSvc@2024! and read the DCSync flag."
+      - "From DC01, WinRM into FILE01 and a second PC; run the ransom simulation and collect the final flag."
     blue:
-      - "Inspect the phishing email and endpoint alerts to identify the first affected user."
-      - "Correlate unusual identity activity with the DCSync objective."
-      - "Isolate affected endpoints and preserve PCAP and endpoint evidence."
-  vulnerabilities: []
+      - "Open Wazuh on BLUE01; find the first RDP logon to dc02_vlan from 10.30.10.x and submit blue-foothold-detected."
+      - "Look for WinRM to DC01 from a non-DC source (dc02_vlan); submit blue-dcsync-detected with source IP."
+      - "Block dc02_vlan endpoints or log ransom-note creation on FILE01; submit blue-contained with evidence."
+  vulnerabilities:
+    - asset: victim_workstation
+      issue: "Local account j.smith uses a guessable password; domain creds stored in plaintext on the desktop."
+      detail: >
+        tpl-win11-enterprise is seeded with local user j.smith / Welcome2024! added to Remote Desktop
+        Users. C:\Users\j.smith\Desktop\credentials.txt contains the domain service account
+        (svc_domain / DomainSvc@2024!) — simulating a phishing document that exposed domain credentials.
+        RDP is enabled; any host on red_vlan (routed to dc02_vlan on 3389) can authenticate directly.
+    - asset: dc_server
+      issue: "Service account svc_domain is a Domain Admin member with WinRM enabled on port 5985."
+      detail: >
+        tpl-win2022-ad-tools is promoted as the oxblood.lab domain controller. svc_domain@oxblood.lab
+        (DomainSvc@2024!) is added to both Domain Admins and Remote Management Users. This over-
+        privileged service account lets an attacker WinRM in from any dc02_vlan host and perform a
+        DCSync-equivalent operation. Sysmon and Wazuh log the inbound WinRM session.
+    - asset: file_server
+      issue: "Windows Server member reachable via WinRM from dc01_vlan with domain admin credentials."
+      detail: >
+        tpl-win2022-member is a domain member server on dc02_vlan. With domain admin credentials an
+        attacker can WinRM in and execute commands — including dropping a ransom note — on this machine
+        and other endpoints. The flag is accessible after WinRM access is established.
+
+  provisioning:
+    mode: linked_clone
+    linked_clone_reserve_mb: 1024
+    auto_baseline: true
+
   objectives:
     red:
-      - "Compromise at least one domain user via the phishing email."
-      - "Escalate to Domain Admin and perform a DCSync."
-      - "Deploy ransomware on two endpoints in the corp VLAN."
+      - "Compromise at least one victim workstation via the planted phishing credential."
+      - "Escalate to Domain Admin using the credential found on the workstation."
+      - "Deploy the ransomware simulation on two endpoints and collect the final flag."
     blue:
-      - "Detect the malicious attachment within 10 minutes of receipt."
-      - "Isolate compromised endpoints before encryption spreads."
-      - "Preserve forensic artifacts (PCAPs, EDR alerts) for review."
+      - "Identify the initial RDP source from red_vlan to dc02_vlan within 10 minutes."
+      - "Detect WinRM or unusual AD replication from a non-DC source."
+      - "Block or isolate affected endpoints before the ransom simulation reaches FILE01."
+      - "Submit all three detection flags with supporting log evidence."
 
   assets:
     - role: red_attacker
       vm_name: RED01
       kind: vm
       template: tpl-kali-gui-xrdp
-      count: 1
       networks: [red_vlan]
+      exposed: true
       resources:
         cores: 4
         ram_mb: 8192
-      exposed: true
-      user_data: cloud-init/red.yaml
+        disk_gb: 32
 
     - role: router_fw
       vm_name: FW01
@@ -66,7 +89,7 @@ spec:
       resources:
         cores: 2
         ram_mb: 2048
-
+        disk_gb: 16
 
     - role: victim_workstation
       vm_name: PC
@@ -77,26 +100,116 @@ spec:
       resources:
         cores: 2
         ram_mb: 4096
+        disk_gb: 60
+      windows_setup:
+        phases:
+          - name: configure-workstation
+            timeout_seconds: 300
+            commands:
+              - "$ErrorActionPreference = 'SilentlyContinue'"
+              - "Set-ItemProperty -Path 'HKLM:\\System\\CurrentControlSet\\Control\\Terminal Server' -Name fDenyTSConnections -Value 0"
+              - "Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'"
+              - "$pw = ConvertTo-SecureString 'Welcome2024!' -AsPlainText -Force"
+              - "if (-not (Get-LocalUser -Name 'j.smith' -ErrorAction SilentlyContinue)) { New-LocalUser -Name 'j.smith' -Password $pw -FullName 'John Smith' -PasswordNeverExpires $true }"
+              - "Add-LocalGroupMember -Group 'Remote Desktop Users' -Member 'j.smith'"
+              - "New-Item -Path 'C:\\Users\\j.smith\\Desktop' -ItemType Directory -Force | Out-Null"
+              - "Set-Content -Path 'C:\\Users\\j.smith\\Desktop\\credentials.txt' -Value \"Domain: oxblood.lab`r`nUser: svc_domain`r`nPassword: DomainSvc@2024!\""
 
     - role: dc_server
       vm_name: DC01
       kind: vm
       template: tpl-win2022-ad-tools
-      count: 1
       networks: [dc01_vlan]
       resources:
         cores: 2
         ram_mb: 6144
+        disk_gb: 60
+      windows_setup:
+        verify:
+          ip: 10.30.40.10
+          domain: oxblood.lab
+          controller: primary
+        phases:
+          - name: configure-dc01
+            timeout_seconds: 600
+            reboot: true
+            commands:
+              - "$ErrorActionPreference = 'Stop'"
+              - "pnputil.exe /scan-devices *> $null"
+              - "Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Disabled' } | Enable-NetAdapter -Confirm:$false -ErrorAction SilentlyContinue"
+              - "$nicAddress = $null"
+              - "for ($attempt = 0; $attempt -lt 60 -and -not $nicAddress; $attempt++) { $nicAddress = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.InterfaceIndex -gt 1 -and $_.IPAddress -notlike '127.*' } | Sort-Object InterfaceIndex | Select-Object -First 1; if (-not $nicAddress) { Start-Sleep -Seconds 5 } }"
+              - "if (-not $nicAddress) { throw 'No usable IPv4 interface found' }"
+              - "$ifIndex = [int]$nicAddress.InterfaceIndex"
+              - "$targetIp = '10.30.40.10'"
+              - "$current = Get-NetIPAddress -InterfaceIndex $ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue"
+              - "if (-not ($current | Where-Object IPAddress -eq $targetIp)) { Set-NetIPInterface -InterfaceIndex $ifIndex -Dhcp Disabled -ErrorAction SilentlyContinue; $current | Where-Object { $_.IPAddress -ne '127.0.0.1' } | Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue; Get-NetRoute -InterfaceIndex $ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.DestinationPrefix -ne '255.255.255.255/32' } | Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue; New-NetIPAddress -InterfaceIndex $ifIndex -IPAddress $targetIp -PrefixLength 24 -DefaultGateway 10.30.40.1 -ErrorAction Stop }"
+              - "Set-DnsClientServerAddress -InterfaceIndex $ifIndex -ServerAddresses 10.30.40.10"
+              - "net user Administrator '{{domain_password}}'"
+              - "Rename-Computer -NewName DC01 -Force"
+          - name: install-dc01-roles
+            timeout_seconds: 600
+            reboot: true
+            commands:
+              - "Install-WindowsFeature -Name AD-Domain-Services,DNS -IncludeManagementTools -ErrorAction Stop | Out-Null"
+          - name: promote-dc01
+            timeout_seconds: 900
+            reboot: true
+            commands:
+              - "$pw = ConvertTo-SecureString '{{domain_password}}' -AsPlainText -Force"
+              - "Install-ADDSForest -DomainName oxblood.lab -DomainNetbiosName OXBLOOD -SafeModeAdministratorPassword $pw -InstallDns -NoRebootOnCompletion -Force"
+          - name: confirm-dc01-address
+            timeout_seconds: 300
+            commands:
+              - "$ErrorActionPreference = 'Stop'"
+              - "$adapter = @(Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' } | Sort-Object InterfaceIndex | Select-Object -First 1)"
+              - "if (-not $adapter) { $adapter = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' -and $_.InterfaceDescription -notmatch 'Loopback|Teredo|ISATAP|WAN Miniport' } | Sort-Object InterfaceIndex | Select-Object -First 1) }"
+              - "if (-not $adapter) { throw 'No active physical network adapter after domain promotion' }"
+              - "$ifIndex = [int]$adapter.InterfaceIndex"
+              - "$targetIp = '10.30.40.10'"
+              - "$current = Get-NetIPAddress -InterfaceIndex $ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue"
+              - "if (-not ($current | Where-Object IPAddress -eq $targetIp)) { Set-NetIPInterface -InterfaceIndex $ifIndex -Dhcp Disabled -ErrorAction SilentlyContinue; $current | Where-Object { $_.IPAddress -ne '127.0.0.1' } | Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue; Get-NetRoute -InterfaceIndex $ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.DestinationPrefix -ne '255.255.255.255/32' } | Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue; New-NetIPAddress -InterfaceIndex $ifIndex -IPAddress $targetIp -PrefixLength 24 -DefaultGateway 10.30.40.1 -ErrorAction Stop }"
+              - "Set-DnsClientServerAddress -InterfaceIndex $ifIndex -ServerAddresses 10.30.40.10"
+          - name: create-service-account
+            timeout_seconds: 120
+            commands:
+              - "$ErrorActionPreference = 'Stop'"
+              - "$pw = ConvertTo-SecureString 'DomainSvc@2024!' -AsPlainText -Force"
+              - "if (-not (Get-ADUser -Filter {SamAccountName -eq 'svc_domain'} -ErrorAction SilentlyContinue)) { New-ADUser -SamAccountName svc_domain -Name 'Domain Service Account' -AccountPassword $pw -PasswordNeverExpires $true -Enabled $true -ErrorAction Stop }"
+              - "Add-ADGroupMember -Identity 'Domain Admins' -Members svc_domain -ErrorAction SilentlyContinue"
+              - "Add-ADGroupMember -Identity 'Remote Management Users' -Members svc_domain -ErrorAction SilentlyContinue"
 
     - role: file_server
       vm_name: FILE01
       kind: vm
       template: tpl-win2022-member
-      count: 1
       networks: [dc02_vlan]
       resources:
         cores: 2
         ram_mb: 4096
+        disk_gb: 60
+      windows_setup:
+        phases:
+          - name: configure-fileserver
+            timeout_seconds: 300
+            commands:
+              - "$ErrorActionPreference = 'SilentlyContinue'"
+              - "New-Item -Path 'C:\\CompanyFiles' -ItemType Directory -Force | Out-Null"
+              - "Set-Content -Path 'C:\\CompanyFiles\\quarterly_report.docx' -Value 'Q4 Financial Report - CONFIDENTIAL'"
+              - "Set-Content -Path 'C:\\CompanyFiles\\patient_records.csv' -Value 'PatientID,Name,DOB,Diagnosis'"
+              - "Set-Content -Path 'C:\\CompanyFiles\\staff_payroll.xlsx' -Value 'EmployeeID,Name,Department,Salary'"
+              - "New-SmbShare -Name 'CompanyFiles' -Path 'C:\\CompanyFiles' -FullAccess Everyone -ErrorAction SilentlyContinue | Out-Null"
+
+    - role: blue_analyst
+      vm_name: BLUE01
+      kind: vm
+      template: tpl-debian-blue-gui-wazuh-xrdp
+      networks: [security_vlan]
+      exposed: true
+      resources:
+        cores: 2
+        ram_mb: 2048
+        disk_gb: 24
 
   networks:
     - name: red_vlan
@@ -122,7 +235,7 @@ spec:
       vlan_id: 235
       isolation: tight
       egress: blocked
-      dhcp: false
+      dhcp: true
     - name: backup_vlan
       cidr: 10.30.60.0/24
       vlan_id: 236
@@ -134,19 +247,89 @@ spec:
       vlan_id: 221
       isolation: tight
       egress: blocked
-      dhcp: false
+      dhcp: true
+
+  routing_policy:
+    default_forward: drop
+    rules:
+      - {from: red_vlan,      to: dc02_vlan,  protocol: tcp, ports: [3389]}
+      - {from: dc02_vlan,     to: dc01_vlan,  protocol: tcp, ports: [88, 389, 445, 5985]}
+      - {from: dc01_vlan,     to: dc02_vlan,  protocol: tcp, ports: [445, 3389, 5985]}
+      - {from: security_vlan, to: dc02_vlan,  protocol: tcp, ports: [443, 9200]}
+      - {from: security_vlan, to: dc01_vlan,  protocol: tcp, ports: [443, 9200]}
+
+  flags:
+    - id: red-initial-access
+      side: red
+      value: "FLAG{phish_initial_access}"
+      planted_on_role: victim_workstation
+      objective: "Gain a foothold on a victim workstation via the phishing credential."
+      decay_window_seconds: 5400
+      base_points: 100
+    - id: red-dcsync
+      side: red
+      value: "FLAG{phish_domain_admin}"
+      planted_on_role: dc_server
+      objective: "Escalate to Domain Admin and perform DCSync."
+      decay_window_seconds: 5400
+      base_points: 200
+    - id: red-ransomware
+      side: red
+      value: "FLAG{phish_ransomware_deployed}"
+      planted_on_role: file_server
+      objective: "Deploy the ransomware simulation on two endpoints."
+      decay_window_seconds: 5400
+      base_points: 150
+    - id: blue-foothold-detected
+      side: blue
+      value: "FLAG{blue_foothold_detected}"
+      planted_on_role: blue_analyst
+      objective: "Identify the initial phishing foothold on the victim workstation."
+      decay_window_seconds: 5400
+      base_points: 120
+    - id: blue-dcsync-detected
+      side: blue
+      value: "FLAG{blue_dcsync_detected}"
+      planted_on_role: blue_analyst
+      objective: "Detect the Domain Admin escalation or DCSync-equivalent activity."
+      decay_window_seconds: 5400
+      base_points: 160
+    - id: blue-contained
+      side: blue
+      value: "FLAG{blue_endpoints_contained}"
+      planted_on_role: blue_analyst
+      objective: "Block or isolate affected endpoints before ransomware spreads to FILE01."
+      decay_window_seconds: 5400
+      base_points: 180
+
+  validation:
+    probes:
+      - {id: dc01-online,      label: "DC01 is running",             type: role_running, role: dc_server,          side: shared}
+      - {id: red-online,       label: "Red attacker is running",     type: role_running, role: red_attacker,       side: red}
+      - {id: blue-online,      label: "Blue analyst is running",     type: role_running, role: blue_analyst,       side: blue}
+      - {id: blue-address,     label: "Blue analyst address assigned", type: role_address, role: blue_analyst,     side: blue}
+      - {id: flags-loaded,     label: "Scenario flags loaded",       type: flag_seeded,  side: shared}
+      - {id: objectives-loaded, label: "Mission objectives loaded",  type: objectives_seeded, side: shared}
 
   telemetry:
     sinks:
-      - type: misp
-        endpoint: misp.local:443
-        channels: [iocs]
       - type: minio
-        bucket: divide-runs
-    alerting:
-      rules:
-        - severity: [critical, high]
-          to: [slack]
+        bucket: oxblood-artifacts
+        channels: [pcap, authentication, system]
+
+  artifacts:
+    sink_to: minio
+    bucket: oxblood-artifacts
+    required_pcaps: [red_vlan, dc01_vlan, dc02_vlan, security_vlan]
+    retention_days: 30
+
+  win_conditions:
+    red:
+      - "DCSync of at least one Domain Admin account succeeds."
+      - "Ransomware note is observed on two or more endpoints in dc02_vlan."
+    blue:
+      - "All compromised endpoints isolated within 30 minutes of initial detection."
+      - "No encryption events observed on file_server or dc_server."
 
   scoring:
     blue:
@@ -171,21 +354,3 @@ spec:
         - id: objective_completion
           weight: 30
       pass_threshold: 60
-
-  win_conditions:
-    red:
-      - "DCSync of at least one Domain Admin account succeeds."
-      - "Ransomware note is observed on two or more endpoints in dc02_vlan."
-    blue:
-      - "All compromised endpoints isolated within 30 minutes of initial detection."
-      - "No encryption events observed on file_server or dc_server."
-
-  artifacts:
-    sink_to: minio
-    bucket: divide-runs
-    required_pcaps:
-      - red_vlan
-      - dc01_vlan
-      - dc02_vlan
-      - security_vlan
-    retention_days: 30

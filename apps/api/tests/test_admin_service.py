@@ -51,7 +51,7 @@ def test_probe_reports_missing_drill_privs(monkeypatch):
     from app.services.admin import probe_pve
 
     monkeypatch.setenv("PROXMOX_HOST", "pve.lan")
-    monkeypatch.setenv("PROXMOX_TOKEN_ID", "divide@pve!t")
+    monkeypatch.setenv("PROXMOX_TOKEN_ID", "oxblood@pve!t")
     monkeypatch.setenv("PROXMOX_TOKEN_SECRET", "secret")
     get_settings.cache_clear()
     px.get_proxmox_client.cache_clear()
@@ -85,7 +85,7 @@ def test_probe_passes_when_full_perms_present(monkeypatch):
     from app.services.admin import probe_pve
 
     monkeypatch.setenv("PROXMOX_HOST", "pve.lan")
-    monkeypatch.setenv("PROXMOX_TOKEN_ID", "divide@pve!t")
+    monkeypatch.setenv("PROXMOX_TOKEN_ID", "oxblood@pve!t")
     monkeypatch.setenv("PROXMOX_TOKEN_SECRET", "secret")
     get_settings.cache_clear()
     px.get_proxmox_client.cache_clear()
@@ -193,7 +193,7 @@ def _patched_admin(monkeypatch, *, redis_client=None):
     from app.services import proxmox as px
 
     monkeypatch.setenv("PROXMOX_HOST", "pve.lan")
-    monkeypatch.setenv("PROXMOX_TOKEN_ID", "divide@pve!t")
+    monkeypatch.setenv("PROXMOX_TOKEN_ID", "oxblood@pve!t")
     monkeypatch.setenv("PROXMOX_TOKEN_SECRET", "secret")
     get_settings.cache_clear()
     px.get_proxmox_client.cache_clear()
@@ -333,7 +333,7 @@ def test_create_template_walks_through_steps(monkeypatch):
     from app.services import proxmox as px
 
     monkeypatch.setenv("PROXMOX_HOST", "pve.lan")
-    monkeypatch.setenv("PROXMOX_TOKEN_ID", "divide@pve!t")
+    monkeypatch.setenv("PROXMOX_TOKEN_ID", "oxblood@pve!t")
     monkeypatch.setenv("PROXMOX_TOKEN_SECRET", "secret")
     get_settings.cache_clear()
     px.get_proxmox_client.cache_clear()
@@ -391,7 +391,7 @@ def test_create_template_records_failure_on_error(monkeypatch):
     from app.services import proxmox as px
 
     monkeypatch.setenv("PROXMOX_HOST", "pve.lan")
-    monkeypatch.setenv("PROXMOX_TOKEN_ID", "divide@pve!t")
+    monkeypatch.setenv("PROXMOX_TOKEN_ID", "oxblood@pve!t")
     monkeypatch.setenv("PROXMOX_TOKEN_SECRET", "secret")
     get_settings.cache_clear()
     px.get_proxmox_client.cache_clear()
@@ -447,7 +447,7 @@ class _FakeRedis:
             for k in list(self.data.keys()):
                 yield k
             return
-        # Match is a glob like 'divide:setup:*'. We don't need glob here
+        # Match is a glob like 'oxblood:setup:*'. We don't need glob here
         # since the tests only store one or two keys.
         for k in list(self.data.keys()):
             if "*" in match:

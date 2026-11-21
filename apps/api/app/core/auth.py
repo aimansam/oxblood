@@ -19,7 +19,7 @@ test. A real lib (PyJWT, authlib) would add a dependency for very
 little benefit at this scale -- the audience here is one LAN, five
 roles (see :class:`Role`), no third-party identity provider.
 
-Header convention: ``X-Divide-Token: <token>`` on every request that
+Header convention: ``X-Oxblood-Token: <token>`` on every request that
 wants to identify a user. Absence of the header means "anonymous".
 Whether anonymous is allowed depends on the endpoint:
 
@@ -72,7 +72,7 @@ class Role(str, Enum):
     """The five persona roles on the OxBlood control plane.
 
     The string values are the wire format — they appear in token
-    payloads, in ``X-Divide-Token`` claim, in audit rows, and in
+    payloads, in ``X-Oxblood-Token`` claim, in audit rows, and in
     ``tools/issue_token.py --role``. Changing a value here is a
     breaking change for every existing token. Add new values at
     the end; don't reorder.
@@ -96,7 +96,7 @@ class Role(str, Enum):
     OBSERVER = "observer"
 
 
-# Per-process fallback secret cache (used when neither divide_token_secret
+# Per-process fallback secret cache (used when neither oxblood_token_secret
 # nor proxmox.token_secret is configured). Cached so sign_token and
 # verify_token in the same process agree on the same secret.
 _RANDOM_FALLBACK_SECRET: bytes | None = None
@@ -138,7 +138,7 @@ def _b64decode(data: str) -> bytes:
 def _signing_secret() -> bytes:
     """Resolve the HMAC secret.
 
-    Priority: explicit ``divide_token_secret`` env / settings value
+    Priority: explicit ``oxblood_token_secret`` env / settings value
     > derived from PROXMOX_TOKEN_SECRET (so a single env var does both)
     > per-process random fallback (with warning, dev only).
 
@@ -146,9 +146,9 @@ def _signing_secret() -> bytes:
     of the API process but doesn't persist across restarts -- a
     deliberate trade-off: tokens are valid only as long as the process
     that minted them. Production should always set
-    ``DIVIDE_TOKEN_SECRET`` explicitly.
+    ``OXBLOOD_TOKEN_SECRET`` explicitly.
     """
-    explicit = settings.divide_token_secret
+    explicit = settings.oxblood_token_secret
     if explicit:
         return explicit.get_secret_value().encode("utf-8")
     # Derive from Proxmox secret if present (so operators don't have
@@ -159,13 +159,13 @@ def _signing_secret() -> bytes:
         import warnings
 
         warnings.warn(
-            "DIVIDE_TOKEN_SECRET is unset; falling back to a derivation of "
-            "PROXMOX_TOKEN_SECRET. Set DIVIDE_TOKEN_SECRET explicitly in "
+            "OXBLOOD_TOKEN_SECRET is unset; falling back to a derivation of "
+            "PROXMOX_TOKEN_SECRET. Set OXBLOOD_TOKEN_SECRET explicitly in "
             "production -- the dev fallback is not security-grade.",
             stacklevel=2,
         )
         return hashlib.sha256(
-            b"divide-token|" + settings.proxmox.token_secret.get_secret_value().encode("utf-8")
+            b"oxblood-token|" + settings.proxmox.token_secret.get_secret_value().encode("utf-8")
         ).digest()
     # No proxmox secret either -- cache a per-process random secret.
     # Cached so that one process's sign_token and verify_token agree
@@ -175,7 +175,7 @@ def _signing_secret() -> bytes:
         return _RANDOM_FALLBACK_SECRET
     import os
 
-    pid_secret = os.environ.get("DIVIDE_TOKEN_DEV_SECRET")
+    pid_secret = os.environ.get("OXBLOOD_TOKEN_DEV_SECRET")
     _RANDOM_FALLBACK_SECRET = pid_secret.encode("utf-8") if pid_secret else os.urandom(32)
     return _RANDOM_FALLBACK_SECRET
 
@@ -266,14 +266,14 @@ class AuthError(Exception):
 
 async def current_token(
     request: Request,
-    x_divide_token: Annotated[str | None, Header(alias="X-Divide-Token")] = None,
+    x_oxblood_token: Annotated[str | None, Header(alias="X-Oxblood-Token")] = None,
 ) -> TokenData | None:
     """Read the bearer token from the request and stash it on
     ``request.state.token`` so downstream code can access it without
     re-decoding.
 
     Token lookup order:
-      1. ``X-Divide-Token`` header (the standard path).
+      1. ``X-Oxblood-Token`` header (the standard path).
       2. ``?token=<token>`` query parameter (Q24 SSE fallback;
          ``EventSource`` doesn't allow custom headers, so SSE
          clients pass the token as a query param. We validate it
@@ -285,18 +285,18 @@ async def current_token(
     to validate -- that's a real authentication failure, not an
     anonymous request.
     """
-    if x_divide_token is None:
+    if x_oxblood_token is None:
         # Q24-B2: SSE fallback. The browser EventSource API doesn't
         # support custom headers, so SSE clients send the token
         # via the query string. The token is HMAC-signed, so
         # putting it in a URL doesn't weaken the auth model --
         # an attacker would need the signing secret to forge one.
-        x_divide_token = request.query_params.get("token")
-    if x_divide_token is None:
+        x_oxblood_token = request.query_params.get("token")
+    if x_oxblood_token is None:
         request.state.token = None
         return None
     try:
-        token = verify_token(x_divide_token)
+        token = verify_token(x_oxblood_token)
     except AuthError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -332,7 +332,7 @@ async def require_token(
     if token is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="this endpoint requires an X-Divide-Token header",
+            detail="this endpoint requires an X-Oxblood-Token header",
             headers={"WWW-Authenticate": "Bearer"},
         )
     return token

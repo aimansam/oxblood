@@ -5,11 +5,11 @@ import { defineConfig } from '@playwright/test';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '../..');
 const python = process.env.E2E_PYTHON ?? 'python3';
-const redis = process.env.DIVIDE_REDIS_URL ?? 'redis://127.0.0.1:6399/0';
+const redis = process.env.OXBLOOD_REDIS_URL ?? 'redis://127.0.0.1:6399/0';
 const db = process.env.E2E_DB ?? '/tmp/oxblood-e2e.sqlite';
 
 // A throwaway stack: the real API (SQLite + a mock Proxmox with the scenario templates, e2e/serve_api.py) behind the real Flask portal,
-// serving the production build. Needs a Redis at DIVIDE_REDIS_URL and `npm run build` done first
+// serving the production build. Needs a Redis at OXBLOOD_REDIS_URL and `npm run build` done first
 // (`npm run test:e2e` does both).
 export default defineConfig({
   testDir: './e2e',
@@ -36,9 +36,9 @@ export default defineConfig({
       timeout: 120_000,
       stdout: 'ignore',
       env: {
-        DIVIDE_DB_URL: `sqlite+aiosqlite:///${db}`,
-        DIVIDE_REDIS_URL: redis,
-        DIVIDE_SCENARIOS_DIR: path.join(repo, 'examples/scenarios'),
+        OXBLOOD_DB_URL: `sqlite+aiosqlite:///${db}`,
+        OXBLOOD_REDIS_URL: redis,
+        OXBLOOD_SCENARIOS_DIR: path.join(repo, 'examples/scenarios'),
       },
     },
     {

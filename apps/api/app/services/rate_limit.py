@@ -20,7 +20,7 @@ Why this isn't just an in-process counter:
 
 Algorithm (fixed-window counter):
 
-    For each ``sub`` we keep a counter at ``divide:rl:drills:<sub>``
+    For each ``sub`` we keep a counter at ``oxblood:rl:drills:<sub>``
     with TTL = ``window_s``. Each ``start_drill`` call does
     ``INCR``; if the post-increment value exceeds the limit, the
     request is rejected with 429. The TTL refreshes on every call
@@ -108,7 +108,7 @@ def set_config(limit: int | None = None, window_seconds: int | None = None) -> N
 
 def _bucket_key(sub: str) -> str:
     """Redis key for the drill-start bucket of one subject."""
-    return f"divide:rl:drills:{sub}"
+    return f"oxblood:rl:drills:{sub}"
 
 
 async def check_drill_start_limit(sub: str) -> None:
@@ -126,7 +126,7 @@ async def check_drill_start_limit(sub: str) -> None:
     a structured-log warning is emitted. This is the right default for
     a safety net — we'd rather let a few extra drill starts through
     than refuse a legitimate request because Redis went down. If you
-    want fail-closed, set ``DIVIDE_RATE_LIMIT_FAIL_CLOSED=true``.
+    want fail-closed, set ``OXBLOOD_RATE_LIMIT_FAIL_CLOSED=true``.
     """
     import os
 
@@ -142,13 +142,13 @@ async def check_drill_start_limit(sub: str) -> None:
         pipe.expire(key, cfg.window_seconds)
         count, _ = await pipe.execute()
     except Exception as exc:  # noqa: BLE001 — fail-open is intentional
-        if os.environ.get("DIVIDE_RATE_LIMIT_FAIL_CLOSED", "").lower() in ("1", "true", "yes"):
+        if os.environ.get("OXBLOOD_RATE_LIMIT_FAIL_CLOSED", "").lower() in ("1", "true", "yes"):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=f"rate limiter unavailable: {exc}",
             ) from exc
         structlog.get_logger().warning(
-            "divide.rate_limit.redis_unreachable",
+            "oxblood.rate_limit.redis_unreachable",
             subject=sub,
             error=str(exc),
         )

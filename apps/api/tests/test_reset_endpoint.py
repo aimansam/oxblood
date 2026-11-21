@@ -43,7 +43,7 @@ async def session(engine):
             difficulty="smoke",
             duration_min=5,
             spec={
-                "apiVersion": "divide/v1",
+                "apiVersion": "oxblood/v1",
                 "kind": "Scenario",
                 "spec": {"assets": []},
             },

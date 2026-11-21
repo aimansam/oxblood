@@ -418,7 +418,7 @@ class Runner(AssetSeedingMixin, BaselineMixin, WatchdogMixin):
                     # F6: stash exercise + team attrs for the spawner log.
                     asset._f6_exercise_id = req.exercise_id  # type: ignore[attr-defined]
                     asset._f6_team = req.team  # type: ignore[attr-defined]
-                    asset._divide_scenario_spec = spec  # type: ignore[attr-defined]
+                    asset._oxblood_scenario_spec = spec  # type: ignore[attr-defined]
                     baseline = baseline_by_role.get(asset.role)
                     if baseline is not None:
                         await self._restore_baseline_asset(

@@ -125,10 +125,10 @@ def test_stdout_sink_writes_json_line(caplog):
     async def _go():
         await sink.send(event)
 
-    with caplog.at_level(logging.INFO, logger="divide.telemetry.stdout"):
+    with caplog.at_level(logging.INFO, logger="oxblood.telemetry.stdout"):
         asyncio.run(_go())
 
-    matched = [r for r in caplog.records if r.name == "divide.telemetry.stdout"]
+    matched = [r for r in caplog.records if r.name == "oxblood.telemetry.stdout"]
     assert matched, caplog.records
     payload = matched[-1].getMessage()
     assert "run_id" in payload

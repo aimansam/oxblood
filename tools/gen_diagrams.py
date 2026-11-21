@@ -29,7 +29,7 @@ PANEL = "#1a1f2b"
 BORDER = "#2a3142"
 TEXT = "#e6e9ef"
 MUTED = "#9aa3b2"
-DIVIDE = "#5eead4"  # teal accent (div:ide brand)
+OXBLOOD = "#5eead4"  # teal accent (div:ide brand)
 BLUE = "#60a5fa"
 RED = "#f87171"
 GREEN = "#34d399"
@@ -59,7 +59,9 @@ def style_axes(ax, title, xlim=(0, 14), ylim=(0, 9.6)):
         va="center",
     )
     # Accent underline just below title text — well above any bracket
-    ax.add_patch(Rectangle((xlim[0] + 0.2, ylim[1] - 0.7), 2.4, 0.04, color=DIVIDE, lw=0, zorder=5))
+    ax.add_patch(
+        Rectangle((xlim[0] + 0.2, ylim[1] - 0.7), 2.4, 0.04, color=OXBLOOD, lw=0, zorder=5)
+    )
 
 
 def pill(ax, x, y, w, h, text, *, color=TEXT, edge=BORDER, face=PANEL, fontsize=9, weight="normal"):
@@ -196,9 +198,9 @@ def fig_overview():
         13.4,
         9.7,
         "  Proxmox VE host  ·  all phases",
-        color=DIVIDE,
+        color=OXBLOOD,
         face="#0d1b22",
-        text_color=DIVIDE,
+        text_color=OXBLOOD,
     )
 
     # === CONTROL PLANE (top section) ===
@@ -222,9 +224,9 @@ def fig_overview():
         2.0,
         0.7,
         "div:ide-portal\n(Next.js)",
-        edge=DIVIDE,
+        edge=OXBLOOD,
         face="#11242b",
-        color=DIVIDE,
+        color=OXBLOOD,
         weight="bold",
     )
     pill(
@@ -234,9 +236,9 @@ def fig_overview():
         2.0,
         0.7,
         "div:ide-api\n(FastAPI)",
-        edge=DIVIDE,
+        edge=OXBLOOD,
         face="#11242b",
-        color=DIVIDE,
+        color=OXBLOOD,
         weight="bold",
     )
     pill(
@@ -246,9 +248,9 @@ def fig_overview():
         2.0,
         0.7,
         "orchestrator\n(RQ workers)",
-        edge=DIVIDE,
+        edge=OXBLOOD,
         face="#11242b",
-        color=DIVIDE,
+        color=OXBLOOD,
         weight="bold",
     )
     pill(ax, 8.6, 8.7, 1.6, 0.7, "postgres", edge=BORDER)
@@ -486,11 +488,11 @@ def fig_overview():
     )
 
     # === ARROW: API -> SDN (one arrow showing provisioning) ===
-    arrow(ax, 4.0, 4.3, 4.0, 3.6, color=DIVIDE, label="Provisioner API", lw=1.4)
+    arrow(ax, 4.0, 4.3, 4.0, 3.6, color=OXBLOOD, label="Provisioner API", lw=1.4)
 
     # === LEGEND (top-left corner, below title) ===
     legend_items = [
-        Line2D([0], [0], color=DIVIDE, lw=2, label="div:ide control plane"),
+        Line2D([0], [0], color=OXBLOOD, lw=2, label="div:ide control plane"),
         Line2D([0], [0], color=AMBER, lw=2, label="Drill SDN zones"),
         Line2D([0], [0], color=GREEN, lw=2, label="Proxmox templates"),
         Line2D([0], [0], color=BLUE, lw=2, label="Existing infra"),
@@ -531,10 +533,10 @@ def fig_phase0():
     )
 
     # Three brackets (no inline labels)
-    bracket(ax, 0.5, 0.6, 13.0, 7.6, "", color=DIVIDE, face="#0e1e26")  # whole proxmox host
+    bracket(ax, 0.5, 0.6, 13.0, 7.6, "", color=OXBLOOD, face="#0e1e26")  # whole proxmox host
     bracket(ax, 0.7, 4.4, 6.3, 4.7, "", color=AMBER, face="#1f1a0d")  # control plane
     bracket(ax, 7.2, 4.4, 6.1, 4.7, "", color=BLUE, face="#0e1726")  # existing infra
-    bracket(ax, 0.7, 0.9, 6.3, 3.2, "", color=DIVIDE, face="#0e1e26")  # services
+    bracket(ax, 0.7, 0.9, 6.3, 3.2, "", color=OXBLOOD, face="#0e1e26")  # services
     bracket(ax, 7.2, 0.9, 6.1, 3.2, "", color=GREY, face="#161b25")  # trainee/operator
 
     # Section labels (placed in their own bands, not inside the brackets)
@@ -545,9 +547,9 @@ def fig_phase0():
         6.3,
         0.5,
         "Control plane  ·  Docker Compose stack",
-        color=DIVIDE,
+        color=OXBLOOD,
         face="#0e1e26",
-        text_color=DIVIDE,
+        text_color=OXBLOOD,
     )
     header_band(
         ax,
@@ -596,9 +598,9 @@ def fig_phase0():
         2.0,
         0.7,
         "div:ide-api\n(FastAPI)",
-        edge=DIVIDE,
+        edge=OXBLOOD,
         face="#11242b",
-        color=DIVIDE,
+        color=OXBLOOD,
         weight="bold",
         fontsize=10,
     )
@@ -671,7 +673,7 @@ def fig_phase0():
         1.55,
         4.0,
         0.5,
-        "PVE token  ·  divide@pve  (PVEVMAdmin)",
+        "PVE token  ·  oxblood@pve  (PVEVMAdmin)",
         edge=BORDER,
         color=MUTED,
         fontsize=8.5,
@@ -730,7 +732,7 @@ def fig_phase1():
     )
 
     # Section brackets (no inline labels)
-    bracket(ax, 0.5, 4.6, 13.0, 3.6, "", color=DIVIDE, face="#0e1e26")  # control plane
+    bracket(ax, 0.5, 4.6, 13.0, 3.6, "", color=OXBLOOD, face="#0e1e26")  # control plane
     bracket(ax, 0.5, 0.6, 13.0, 3.7, "", color=MUTED, face="#161b25")  # trainee/infra row
     # drill VM bracket
     bracket(ax, 8.5, 5.0, 5.1, 4.3, "", color=AMBER, face="#1f1a0d")
@@ -743,9 +745,9 @@ def fig_phase1():
         13.0,
         0.5,
         "Proxmox host  ·  mgmt VLAN 192.168.0.0/24",
-        color=DIVIDE,
+        color=OXBLOOD,
         face="#0d1b22",
-        text_color=DIVIDE,
+        text_color=OXBLOOD,
     )
     header_band(
         ax,
@@ -754,9 +756,9 @@ def fig_phase1():
         7.9,
         0.45,
         "Control plane  ·  Docker Compose stack",
-        color=DIVIDE,
+        color=OXBLOOD,
         face="#0e1e26",
-        text_color=DIVIDE,
+        text_color=OXBLOOD,
     )
     header_band(
         ax,
@@ -790,9 +792,9 @@ def fig_phase1():
         1.8,
         0.7,
         "div:ide-portal",
-        edge=DIVIDE,
+        edge=OXBLOOD,
         face="#11242b",
-        color=DIVIDE,
+        color=OXBLOOD,
         weight="bold",
     )
     pill(
@@ -802,9 +804,9 @@ def fig_phase1():
         1.8,
         0.7,
         "div:ide-api",
-        edge=DIVIDE,
+        edge=OXBLOOD,
         face="#11242b",
-        color=DIVIDE,
+        color=OXBLOOD,
         weight="bold",
     )
     pill(
@@ -814,9 +816,9 @@ def fig_phase1():
         1.6,
         0.7,
         "orchestrator",
-        edge=DIVIDE,
+        edge=OXBLOOD,
         face="#11242b",
-        color=DIVIDE,
+        color=OXBLOOD,
         weight="bold",
     )
     pill(ax, 2.5, 6.4, 1.6, 0.55, "postgres", edge=BORDER, color=MUTED, fontsize=9)
@@ -920,8 +922,8 @@ def fig_phase1():
 
     # === Arrows ===
     # Short control-plane flow (left to right)
-    arrow(ax, 1.7, 7.15, 3.9, 7.15, color=DIVIDE, label="REST")
-    arrow(ax, 3.9, 7.15, 6.1, 7.15, color=DIVIDE, label="queue")
+    arrow(ax, 1.7, 7.15, 3.9, 7.15, color=OXBLOOD, label="REST")
+    arrow(ax, 3.9, 7.15, 6.1, 7.15, color=OXBLOOD, label="queue")
     arrow(ax, 6.1, 7.15, 10.0, 7.15, color=AMBER, label="clone + boot", label_offset=(-1.0, 0.45))
     # cloud-init: short diagonal from provisioner area to qemu-guest-agent pill only
     # (origin moved LEFT and DOWN to avoid crossing vsftpd pill)
@@ -971,7 +973,7 @@ def fig_phase2():
     )
 
     # Brackets (no labels)
-    bracket(ax, 0.4, 7.1, 13.2, 2.0, "", color=DIVIDE, face="#0e1e26")  # control plane band
+    bracket(ax, 0.4, 7.1, 13.2, 2.0, "", color=OXBLOOD, face="#0e1e26")  # control plane band
     bracket(ax, 0.4, 4.1, 6.4, 2.7, "", color=AMBER, face="#1f1a0d")  # Drill A
     bracket(ax, 7.2, 4.1, 6.4, 2.7, "", color=AMBER, face="#1f1a0d")  # Drill B
     bracket(ax, 0.4, 1.5, 6.4, 2.3, "", color=GREEN, face="#0e1f1a")  # telemetry / egress
@@ -986,9 +988,9 @@ def fig_phase2():
         13.2,
         0.5,
         "Proxmox host  ·  mgmt VLAN",
-        color=DIVIDE,
+        color=OXBLOOD,
         face="#0d1b22",
-        text_color=DIVIDE,
+        text_color=OXBLOOD,
     )
     header_band(
         ax,
@@ -997,9 +999,9 @@ def fig_phase2():
         13.2,
         0.5,
         "Control plane  ·  mgmt VLAN",
-        color=DIVIDE,
+        color=OXBLOOD,
         face="#0e1e26",
-        text_color=DIVIDE,
+        text_color=OXBLOOD,
     )
     header_band(
         ax,
@@ -1042,9 +1044,9 @@ def fig_phase2():
     )
 
     # Control plane row
-    pill(ax, 1.7, 7.7, 1.6, 0.5, "portal", edge=DIVIDE, face="#11242b", color=DIVIDE)
-    pill(ax, 3.5, 7.7, 1.6, 0.5, "api", edge=DIVIDE, face="#11242b", color=DIVIDE)
-    pill(ax, 5.3, 7.7, 1.6, 0.5, "orch.", edge=DIVIDE, face="#11242b", color=DIVIDE)
+    pill(ax, 1.7, 7.7, 1.6, 0.5, "portal", edge=OXBLOOD, face="#11242b", color=OXBLOOD)
+    pill(ax, 3.5, 7.7, 1.6, 0.5, "api", edge=OXBLOOD, face="#11242b", color=OXBLOOD)
+    pill(ax, 5.3, 7.7, 1.6, 0.5, "orch.", edge=OXBLOOD, face="#11242b", color=OXBLOOD)
     pill(ax, 7.1, 7.7, 1.4, 0.5, "postgres", edge=BORDER)
     pill(ax, 8.7, 7.7, 1.4, 0.5, "redis", edge=BORDER)
     pill(ax, 10.3, 7.7, 1.4, 0.5, "minio", edge=BORDER)
@@ -1349,7 +1351,7 @@ def fig_phase3():
     bracket(ax, 0.3, 4.8, 4.0, 4.2, "", color=AMBER, face="#1f1a0d")  # Drill VMs
     bracket(ax, 4.6, 4.8, 4.6, 4.2, "", color=BLUE, face="#0e1726")  # Evidence
     bracket(ax, 9.5, 6.4, 4.2, 2.6, "", color=GREEN, face="#0e1f1a")  # PCAP tap
-    bracket(ax, 4.6, 0.4, 9.1, 4.0, "", color=DIVIDE, face="#0e1e26")  # report builder
+    bracket(ax, 4.6, 0.4, 9.1, 4.0, "", color=OXBLOOD, face="#0e1e26")  # report builder
 
     # Header bands
     header_band(
@@ -1384,9 +1386,9 @@ def fig_phase3():
         9.1,
         0.4,
         "div:ide report builder  ·  on drill teardown",
-        color=DIVIDE,
+        color=OXBLOOD,
         face="#0e1e26",
-        text_color=DIVIDE,
+        text_color=OXBLOOD,
     )
 
     # Drill VMs
@@ -1430,9 +1432,9 @@ def fig_phase3():
         2.2,
         0.7,
         "extract IOCs\nfrom PCAP",
-        edge=DIVIDE,
+        edge=OXBLOOD,
         face="#11242b",
-        color=DIVIDE,
+        color=OXBLOOD,
         fontsize=9.5,
         weight="bold",
     )
@@ -1443,9 +1445,9 @@ def fig_phase3():
         2.2,
         0.7,
         "review guest\nevidence",
-        edge=DIVIDE,
+        edge=OXBLOOD,
         face="#11242b",
-        color=DIVIDE,
+        color=OXBLOOD,
         fontsize=9.5,
         weight="bold",
     )
@@ -1456,9 +1458,9 @@ def fig_phase3():
         2.2,
         0.7,
         "timeline + injects\ncorrelate",
-        edge=DIVIDE,
+        edge=OXBLOOD,
         face="#11242b",
-        color=DIVIDE,
+        color=OXBLOOD,
         fontsize=9.5,
         weight="bold",
     )
@@ -1485,20 +1487,20 @@ def fig_phase3():
         2.8,
         0.6,
         "-> PDF AAR (MinIO)",
-        edge=DIVIDE,
+        edge=OXBLOOD,
         face="#11242b",
-        color=DIVIDE,
+        color=OXBLOOD,
         weight="bold",
         fontsize=9.5,
     )
 
     # Arrows (clean, no overlap with pills)
     arrow(ax, 3.2, 7.9, 5.85, 7.9, color=BLUE, label="agents", label_offset=(0, 0.3))
-    arrow(ax, 11.6, 6.3, 7.2, 3.7, color=DIVIDE, ls="--", label="PCAP meta", label_offset=(0.4, 0))
-    arrow(ax, 8.4, 6.95, 7.2, 3.7, color=DIVIDE, label="alerts", label_offset=(0, 0.3))
+    arrow(ax, 11.6, 6.3, 7.2, 3.7, color=OXBLOOD, ls="--", label="PCAP meta", label_offset=(0.4, 0))
+    arrow(ax, 8.4, 6.95, 7.2, 3.7, color=OXBLOOD, label="alerts", label_offset=(0, 0.3))
     arrow(ax, 11.6, 7.0, 5.85, 3.7, color=GREEN, ls=":", label="span", label_offset=(0, 0.3))
     arrow(ax, 7.95, 1.4, 7.95, 1.0, color=PURPLE, label="publish", label_offset=(0.4, 0))
-    arrow(ax, 11.8, 1.4, 11.8, 1.0, color=DIVIDE, label="store", label_offset=(0.4, 0))
+    arrow(ax, 11.8, 1.4, 11.8, 1.0, color=OXBLOOD, label="store", label_offset=(0.4, 0))
 
     plt.tight_layout()
     fig.savefig(
@@ -1526,9 +1528,9 @@ def fig_phase4():
     # Brackets (no labels)
     bracket(ax, 0.3, 6.4, 13.4, 2.6, "", color=PURPLE, face="#1a1330")  # identity band
     bracket(ax, 0.3, 3.5, 4.4, 2.6, "", color=AMBER, face="#1f1a0d")  # scheduled drills
-    bracket(ax, 5.0, 3.5, 4.4, 2.6, "", color=DIVIDE, face="#0e1e26")  # marketplace
+    bracket(ax, 5.0, 3.5, 4.4, 2.6, "", color=OXBLOOD, face="#0e1e26")  # marketplace
     bracket(ax, 9.7, 3.5, 4.0, 2.6, "", color=GREEN, face="#0e1f1a")  # observability
-    bracket(ax, 0.3, 0.4, 13.4, 2.9, "", color=DIVIDE, face="#0e1e26")  # lifecycle strip
+    bracket(ax, 0.3, 0.4, 13.4, 2.9, "", color=OXBLOOD, face="#0e1e26")  # lifecycle strip
 
     # Header bands
     header_band(
@@ -1537,7 +1539,7 @@ def fig_phase4():
         8.6,
         13.4,
         0.4,
-        "Identity & access  ·  Keycloak realm: divide",
+        "Identity & access  ·  Keycloak realm: oxblood",
         color=PURPLE,
         face="#1a1330",
         text_color=PURPLE,
@@ -1552,9 +1554,9 @@ def fig_phase4():
         4.4,
         0.4,
         "Scenarios marketplace",
-        color=DIVIDE,
+        color=OXBLOOD,
         face="#0e1e26",
-        text_color=DIVIDE,
+        text_color=OXBLOOD,
     )
     header_band(
         ax, 9.7, 5.85, 4.0, 0.4, "Observability", color=GREEN, face="#0e1f1a", text_color=GREEN
@@ -1566,9 +1568,9 @@ def fig_phase4():
         13.4,
         0.4,
         "div:ide — full lifecycle",
-        color=DIVIDE,
+        color=OXBLOOD,
         face="#0e1e26",
-        text_color=DIVIDE,
+        text_color=OXBLOOD,
     )
 
     # Roles row
@@ -1601,10 +1603,20 @@ def fig_phase4():
 
     # Marketplace
     pill(
-        ax, 7.2, 5.05, 3.6, 0.55, "import / export YAML", edge=DIVIDE, face="#11242b", color=DIVIDE
+        ax,
+        7.2,
+        5.05,
+        3.6,
+        0.55,
+        "import / export YAML",
+        edge=OXBLOOD,
+        face="#11242b",
+        color=OXBLOOD,
     )
-    pill(ax, 7.2, 4.30, 3.6, 0.55, "versioned + signed", edge=DIVIDE, face="#11242b", color=DIVIDE)
-    pill(ax, 7.2, 3.55, 3.6, 0.55, "multi-tenant orgs", edge=DIVIDE, face="#11242b", color=DIVIDE)
+    pill(
+        ax, 7.2, 4.30, 3.6, 0.55, "versioned + signed", edge=OXBLOOD, face="#11242b", color=OXBLOOD
+    )
+    pill(ax, 7.2, 3.55, 3.6, 0.55, "multi-tenant orgs", edge=OXBLOOD, face="#11242b", color=OXBLOOD)
 
     # Observability
     pill(
@@ -1642,7 +1654,7 @@ def fig_phase4():
             if s == "LIVE"
             else BLUE
             if s in ("PROVISIONING", "REPORTED")
-            else DIVIDE
+            else OXBLOOD
             if s in ("DRAFT", "SCHEDULED", "ARCHIVED")
             else MUTED
         )

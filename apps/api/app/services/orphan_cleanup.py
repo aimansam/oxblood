@@ -217,9 +217,9 @@ def _is_terminal_run(status: RunStatus | None) -> bool:
     }
 
 
-def _parse_divide_vm_name(name: str) -> tuple[int | None, str | None]:
+def _parse_oxblood_vm_name(name: str) -> tuple[int | None, str | None]:
     parts = str(name or "").split("-", 2)
-    if len(parts) != 3 or parts[0] != "divide":
+    if len(parts) != 3 or parts[0] != "oxblood":
         return None, None
     try:
         return int(parts[1]), parts[2]
@@ -227,7 +227,7 @@ def _parse_divide_vm_name(name: str) -> tuple[int | None, str | None]:
         return None, parts[2]
 
 
-def _list_pve_divide_vms() -> list[dict]:
+def _list_pve_oxblood_vms() -> list[dict]:
     try:
         raw = get_proxmox_client().cluster.resources.get(type="vm")
     except Exception as exc:  # noqa: BLE001
@@ -235,7 +235,7 @@ def _list_pve_divide_vms() -> list[dict]:
     out: list[dict] = []
     for vm in raw:
         name = str(vm.get("name") or "")
-        if not name.startswith("divide-"):
+        if not name.startswith("oxblood-"):
             continue
         if vm.get("template"):
             continue
@@ -266,7 +266,7 @@ async def list_pve_unused_vms(
     """
     now = datetime.now(UTC)
     grace_cutoff = now.timestamp() - grace_minutes * 60
-    vms = _list_pve_divide_vms()
+    vms = _list_pve_oxblood_vms()
     if not vms:
         return []
 
@@ -297,7 +297,7 @@ async def list_pve_unused_vms(
             # cleanup_pve_unused_vms()'s server-side allow-list.
             continue
         name = vm["name"]
-        parsed_run_id, parsed_role = _parse_divide_vm_name(name)
+        parsed_run_id, parsed_role = _parse_oxblood_vm_name(name)
         asset_run = by_vmid_run.get((vmid, parsed_run_id)) if parsed_run_id is not None else None
         if asset_run is None and len(by_vmid.get(vmid, [])) == 1:
             asset_run = by_vmid[vmid][0]
@@ -482,7 +482,7 @@ async def cleanup_pve_unused_vms(
                     asset_id=int((cand.asset_id if cand else 0) or 0),
                     run_id=int((cand.run_id if cand else 0) or 0),
                     pve_vmid=vmid or None,
-                    error="VM is not an eligible unused Divide VM",
+                    error="VM is not an eligible unused Oxblood VM",
                 )
             )
             continue

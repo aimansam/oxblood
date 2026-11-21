@@ -361,7 +361,7 @@ def _scenario_with(name: str, assets_spec: list[dict]) -> models.Scenario:
         difficulty="beginner",
         duration_min=30,
         spec={
-            "apiVersion": "divide/v1",
+            "apiVersion": "oxblood/v1",
             "kind": "Scenario",
             "spec": {
                 "networks": [
@@ -558,7 +558,7 @@ async def test_mock_adapter_records_calls(session: AsyncSession) -> None:
     # 2 clones, 2 starts, 2 VM-state queries
     assert len(adapter.cloned) == 2
     assert len(adapter.started) == 2
-    assert all(spec.name.startswith("divide-") for spec in adapter.cloned)
+    assert all(spec.name.startswith("oxblood-") for spec in adapter.cloned)
     # Asset names embed role; check both roles show up. Note that the
     # runner sanitizes underscores from the role before passing it to
     # PVE (PVE 9 rejects DNS-invalid names on the clone endpoint), so
@@ -859,7 +859,7 @@ def test_legacy_linux_image_removes_agent_and_keeps_syslog() -> None:
     assert "dpkg --remove wazuh-agent" in seed.runcmd[0]
     assert "agent-auth" not in "\n".join(seed.runcmd) + str(seed.files)
     assert "wazuh-enroll.sh" not in str(seed.files)
-    assert seed.files["/etc/rsyslog.d/30-divide-forward.conf"] == "*.* @@10.30.40.31:514\n"
+    assert seed.files["/etc/rsyslog.d/30-oxblood-forward.conf"] == "*.* @@10.30.40.31:514\n"
     subprocess.run(["sh", "-n"], input=seed.runcmd[0], text=True, check=True)
     # Mock package tools in the shell; never uninstall a package on the test host.
     result = subprocess.run(
@@ -898,12 +898,12 @@ def test_compact_blue_workstation_receives_investigation_bundle() -> None:
     )
 
     assert seed is not None
-    assert "/opt/divide/evidence/incident-timeline.log" in seed.files
+    assert "/opt/oxblood/evidence/incident-timeline.log" in seed.files
     assert (
         "dmz_gateway authenticated to dc01"
-        in seed.files["/opt/divide/evidence/incident-timeline.log"]
+        in seed.files["/opt/oxblood/evidence/incident-timeline.log"]
     )
-    assert seed.files["/opt/divide/flags/blue-pivot.txt"] == "FLAG{pivot}\n"
+    assert seed.files["/opt/oxblood/flags/blue-pivot.txt"] == "FLAG{pivot}\n"
 
 
 @pytest.mark.asyncio
@@ -962,7 +962,7 @@ async def test_runner_seeds_role_credentials_and_flags(session: AsyncSession) ->
         difficulty="beginner",
         duration_min=30,
         spec={
-            "apiVersion": "divide/v1",
+            "apiVersion": "oxblood/v1",
             "kind": "Scenario",
             "spec": {
                 "objectives": {
@@ -1002,9 +1002,9 @@ async def test_runner_seeds_role_credentials_and_flags(session: AsyncSession) ->
     assert seeds["blue_workstation"].ciuser == "blue"
     assert seeds["blue_workstation"].cipassword == "blue-team"
     file_seed = seeds["file_server"]
-    assert file_seed.ciuser == "divide"
+    assert file_seed.ciuser == "oxblood"
     assert file_seed.files
-    assert file_seed.files["/opt/divide/flags/red-flag-file-server.txt"] == (
+    assert file_seed.files["/opt/oxblood/flags/red-flag-file-server.txt"] == (
         "FLAG{file_server_access_confirmed}\n"
     )
 

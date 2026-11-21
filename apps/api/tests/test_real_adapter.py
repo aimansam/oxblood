@@ -35,8 +35,8 @@ def test_constructor_rejects_empty_host():
         RealProxmoxAdapter(
             host="",
             port=8006,
-            user="divide@pve",
-            token_id="divide@pve!t",
+            user="oxblood@pve",
+            token_id="oxblood@pve!t",
             token_secret="x",
         )
 
@@ -46,7 +46,7 @@ def test_constructor_rejects_missing_token():
         RealProxmoxAdapter(
             host="pve.example",
             port=8006,
-            user="divide@pve",
+            user="oxblood@pve",
             token_id="",
             token_secret="x",
         )
@@ -56,8 +56,8 @@ def test_constructor_strips_scheme_from_host():
     a = RealProxmoxAdapter(
         host="https://pve.example/",
         port=8006,
-        user="divide@pve",
-        token_id="divide@pve!t",
+        user="oxblood@pve",
+        token_id="oxblood@pve!t",
         token_secret="x",
         verify_ssl=False,
     )
@@ -71,7 +71,7 @@ def test_from_settings_missing_host():
 
 
 def test_from_settings_missing_secret():
-    p = ProxmoxSettings(host="pve", token_id="divide@pve!t", token_secret=None)
+    p = ProxmoxSettings(host="pve", token_id="oxblood@pve!t", token_secret=None)
     with pytest.raises(ProxmoxNotConfiguredError):
         RealProxmoxAdapter.from_settings(p)
 
@@ -80,8 +80,8 @@ def test_from_settings_happy_path():
     p = ProxmoxSettings(
         host="pve.example",
         port=8006,
-        user="divide@pve",
-        token_id="divide@pve!drill",
+        user="oxblood@pve",
+        token_id="oxblood@pve!drill",
         token_secret="s3cret",
         verify_ssl=False,
     )
@@ -381,7 +381,7 @@ def test_clone_vm_with_explicit_vmid_and_overrides():
         source_vmid=9001,
         new_vmid=9100,
         node="pve",
-        name="divide-7-attacker",
+        name="oxblood-7-attacker",
         cores=4,
         sockets=1,
         ram_mb=4096,
@@ -395,7 +395,7 @@ def test_clone_vm_with_explicit_vmid_and_overrides():
     # config.post on the new VMID; disk resize goes via resize.put
     # (PVE 9 rejects ``disk`` on config.post).
     clone_post.assert_called_once_with(
-        name="divide-7-attacker",
+        name="oxblood-7-attacker",
         newid=9100,
         full=1,
         storage="local-lvm",
@@ -414,7 +414,7 @@ def test_clone_vm_with_explicit_vmid_and_overrides():
     resize_put.assert_called_once_with(disk="scsi0", size="+20G")
     assert result.vmid == 9100
     assert result.node == "pve"
-    assert result.name == "divide-7-attacker"
+    assert result.name == "oxblood-7-attacker"
 
 
 def test_clone_vm_without_newid_allocates_via_nextid():
@@ -459,13 +459,13 @@ def test_clone_vm_uses_configured_clone_storage():
                 source_vmid=9001,
                 new_vmid=9100,
                 node="pve",
-                name="divide-7-attacker",
+                name="oxblood-7-attacker",
             )
         )
     )
 
     client.nodes("pve").qemu(9001).clone.post.assert_called_once_with(
-        name="divide-7-attacker",
+        name="oxblood-7-attacker",
         newid=9100,
         full=1,
         storage="fast-zfs",
@@ -490,14 +490,14 @@ def test_clone_vm_linked_uses_template_storage():
                 source_vmid=9001,
                 new_vmid=9100,
                 node="pve",
-                name="divide-7-attacker",
+                name="oxblood-7-attacker",
                 full_clone=False,
             )
         )
     )
 
     client.nodes("pve").qemu(9001).clone.post.assert_called_once_with(
-        name="divide-7-attacker",
+        name="oxblood-7-attacker",
         newid=9100,
         full=0,
     )
@@ -526,15 +526,15 @@ def test_clone_vm_retries_unsupported_linked_template_as_full_clone():
                 source_vmid=9001,
                 new_vmid=9100,
                 node="pve",
-                name="divide-7-router",
+                name="oxblood-7-router",
                 full_clone=False,
             )
         )
     )
 
     assert clone_post.call_args_list == [
-        call(name="divide-7-router", newid=9100, full=0),
-        call(name="divide-7-router", newid=9100, full=1, storage="SSD-Backups"),
+        call(name="oxblood-7-router", newid=9100, full=0),
+        call(name="oxblood-7-router", newid=9100, full=1, storage="SSD-Backups"),
     ]
 
 
@@ -559,7 +559,7 @@ def test_clone_vm_resizes_detected_primary_disk_for_windows_template():
                 source_vmid=9001,
                 new_vmid=9100,
                 node="pve",
-                name="divide-7-victim",
+                name="oxblood-7-victim",
                 template_name="tpl-win11-enterprise",
                 # disk_gb is a target size: the 64G template disk grows by 16G.
                 disk_gb=80,
@@ -648,8 +648,8 @@ def test_seed_vm_applies_cloud_init_credentials():
                 role="red_workstation",
                 ciuser="red",
                 cipassword="red-team",
-                files={"/opt/divide/role.txt": "red_workstation\n"},
-                runcmd=["mkdir -p /opt/divide"],
+                files={"/opt/oxblood/role.txt": "red_workstation\n"},
+                runcmd=["mkdir -p /opt/oxblood"],
             ),
         )
     )
@@ -688,8 +688,8 @@ def test_seed_vm_continues_when_config_apply_fails():
                 role="router_fw",
                 ciuser="router",
                 cipassword="router-pass",
-                files={"/opt/divide/role.txt": "router_fw\n"},
-                runcmd=["mkdir -p /opt/divide"],
+                files={"/opt/oxblood/role.txt": "router_fw\n"},
+                runcmd=["mkdir -p /opt/oxblood"],
             ),
         )
     )
@@ -1323,8 +1323,8 @@ def test_get_client_uses_settings():
         a = RealProxmoxAdapter(
             host="pve.example",
             port=8006,
-            user="divide@pve",
-            token_id="divide@pve!drill",
+            user="oxblood@pve",
+            token_id="oxblood@pve!drill",
             token_secret="s3cret",
             verify_ssl=False,
         )
@@ -1332,7 +1332,7 @@ def test_get_client_uses_settings():
         api_cls.assert_called_once_with(
             host="pve.example",
             port=8006,
-            user="divide@pve",
+            user="oxblood@pve",
             token_name="drill",
             token_value="s3cret",
             verify_ssl=False,
@@ -1387,8 +1387,8 @@ def test_factory_picks_real_with_db_overlay(monkeypatch):
         {
             "host": "https://pve.example",
             "port": 8006,
-            "user": "divide@pve",
-            "token_id": "divide@pve!drill",
+            "user": "oxblood@pve",
+            "token_id": "oxblood@pve!drill",
             "token_secret": "s3cret",
             "verify_ssl": False,
             "node": "pve2",

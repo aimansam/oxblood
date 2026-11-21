@@ -177,7 +177,7 @@ function ProxmoxTab() {
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Host"><Input value={form.host} onChange={(e) => set('host', e.target.value)} placeholder="192.168.1.10" /></Field>
             <Field label="Node"><Input value={form.node ?? ''} onChange={(e) => set('node', e.target.value)} placeholder="pve" /></Field>
-            <Field label="User"><Input value={form.user ?? ''} onChange={(e) => set('user', e.target.value)} placeholder="divide@pve" /></Field>
+            <Field label="User"><Input value={form.user ?? ''} onChange={(e) => set('user', e.target.value)} placeholder="oxblood@pve" /></Field>
             <Field label="Port"><Input inputMode="numeric" value={form.port ?? ''} onChange={(e) => set('port', e.target.value ? Number(e.target.value) : undefined)} placeholder="8006" /></Field>
             <Field label="Clone storage"><Input value={form.clone_storage} onChange={(e) => set('clone_storage', e.target.value)} /></Field>
             <Field label="Seed snippet storage" hint="Not required for guest-agent seeding"><Input value={form.seed_snippet_storage} onChange={(e) => set('seed_snippet_storage', e.target.value)} /></Field>

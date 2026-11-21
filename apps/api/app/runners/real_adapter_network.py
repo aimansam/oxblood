@@ -18,7 +18,7 @@ log = logging.getLogger("app.runners.real_adapter")
 class NetworkMixin(_AdapterCore):
     """SDN and bridge management and NIC attachment for the real PVE adapter."""
 
-    async def get_sdn_bridges(self, zone: str = "divide") -> list[str]:
+    async def get_sdn_bridges(self, zone: str = "oxblood") -> list[str]:
         """Query SDN VNets in the specified zone and return bridge names.
 
         This allows the runner to use bridges that are already configured
@@ -32,7 +32,7 @@ class NetworkMixin(_AdapterCore):
 
         return await self._call(_do)
 
-    async def create_sdn_vnet(self, bridge: str, zone: str = "divide") -> None:
+    async def create_sdn_vnet(self, bridge: str, zone: str = "oxblood") -> None:
         """Create an SDN VNet in the specified zone.
 
         This ensures the bridge exists in the SDN zone before the runner
@@ -65,7 +65,7 @@ class NetworkMixin(_AdapterCore):
         need to create it on that node. Bridges are managed via PVE's
         Software-Defined Networking stack (see
         ``README.md §8 §4``): the wizard's Step 0 creates
-        the ``divide`` zone + one VNet per declared network via
+        the ``oxblood`` zone + one VNet per declared network via
         ``POST /cluster/sdn/{zones,vnets}``.
 
         The runner no longer creates bridges itself -- it asserts the
@@ -130,7 +130,7 @@ class NetworkMixin(_AdapterCore):
         """Best-effort cleanup of an SDN-created VNet on PVE.
 
         Since F-pve-bridge-wizard (SDN variant), bridges are managed
-        as SDN Vnets in the ``divide`` zone. The runner can delete
+        as SDN Vnets in the ``oxblood`` zone. The runner can delete
         them via ``DELETE /cluster/sdn/vnets/{bridge}`` -- no
         host-shell access required. We do this so that a failed
         drill doesn't leave orphan Vnets accumulating on the cluster.
@@ -141,7 +141,7 @@ class NetworkMixin(_AdapterCore):
         one HTTP call, and leaving the bridge behind leaks cluster
         state. Best-effort: if the PVE call fails (e.g. permissions,
         transient network), we log and move on -- the operator can
-        run ``pvesh delete /cluster/sdn/zones/divide`` to wipe the
+        run ``pvesh delete /cluster/sdn/zones/oxblood`` to wipe the
         whole zone if needed.
         """
 

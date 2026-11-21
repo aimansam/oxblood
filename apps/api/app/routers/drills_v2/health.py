@@ -103,7 +103,7 @@ async def _refresh_drill_provision_state(db: AsyncSession, drill) -> dict:
         # older/in-flight transaction by discovering the clone directly in
         # PVE. This keeps the live monitor accurate even during long seeds.
         if not asset.pve_vmid:
-            vm_name = f"divide-{run_id}-{asset.role.replace('_', '')}"
+            vm_name = f"oxblood-{run_id}-{asset.role.replace('_', '')}"
             try:
                 discovered = await adapter.find_vm(vm_name)
             except ProxmoxAPIError:

@@ -36,7 +36,7 @@ REGISTRY = CollectorRegistry()
 # --- run lifecycle ---------------------------------------------------------
 
 RUNS_TOTAL = Counter(
-    "divide_runs_total",
+    "oxblood_runs_total",
     "Number of drill runs by terminal outcome.",
     labelnames=("outcome", "adapter"),
     registry=REGISTRY,
@@ -44,14 +44,14 @@ RUNS_TOTAL = Counter(
 # outcome values: started, succeeded, failed, cancelled, timeout
 
 RUN_ACTIVE = Gauge(
-    "divide_runs_active",
+    "oxblood_runs_active",
     "Drill runs currently in a non-terminal state.",
     labelnames=("adapter",),
     registry=REGISTRY,
 )
 
 RUN_DURATION_SECONDS = Histogram(
-    "divide_run_duration_seconds",
+    "oxblood_run_duration_seconds",
     "End-to-end duration of a drill run (start -> terminal).",
     labelnames=("outcome",),
     buckets=(1, 5, 15, 30, 60, 120, 300, 600, 1800, 3600),
@@ -61,7 +61,7 @@ RUN_DURATION_SECONDS = Histogram(
 # --- adapter / PVE --------------------------------------------------------
 
 ADAPTER_CALLS_TOTAL = Counter(
-    "divide_adapter_calls_total",
+    "oxblood_adapter_calls_total",
     "Proxmox adapter method calls.",
     labelnames=("method", "adapter", "outcome"),
     registry=REGISTRY,
@@ -71,7 +71,7 @@ ADAPTER_CALLS_TOTAL = Counter(
 # outcome values: ok, error
 
 ADAPTER_CALL_LATENCY_SECONDS = Histogram(
-    "divide_adapter_call_latency_seconds",
+    "oxblood_adapter_call_latency_seconds",
     "Latency of Proxmox adapter calls.",
     labelnames=("method", "adapter"),
     buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30),
@@ -81,14 +81,14 @@ ADAPTER_CALL_LATENCY_SECONDS = Histogram(
 # --- HTTP (set by the middleware) -----------------------------------------
 
 HTTP_REQUESTS_TOTAL = Counter(
-    "divide_http_requests_total",
+    "oxblood_http_requests_total",
     "HTTP requests handled by the API, by route template.",
     labelnames=("method", "route", "status"),
     registry=REGISTRY,
 )
 
 HTTP_REQUEST_LATENCY_SECONDS = Histogram(
-    "divide_http_request_latency_seconds",
+    "oxblood_http_request_latency_seconds",
     "HTTP request handler latency.",
     labelnames=("method", "route"),
     buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10),
@@ -98,7 +98,7 @@ HTTP_REQUEST_LATENCY_SECONDS = Histogram(
 # --- cancellation-specific (so the new endpoint is visible) ---------------
 
 CANCEL_REQUESTS_TOTAL = Counter(
-    "divide_cancel_requests_total",
+    "oxblood_cancel_requests_total",
     "Drill cancel requests, by result.",
     labelnames=("result",),
     registry=REGISTRY,

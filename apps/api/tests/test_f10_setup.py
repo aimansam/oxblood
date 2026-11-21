@@ -152,7 +152,7 @@ def test_create_user_as_admin_returns_201(client):
     _run_async(_seed_user("admin-1", role="admin"))
     r = client.post(
         "/api/v1/auth/users",
-        headers={"X-Divide-Token": _admin_token("admin-1")},
+        headers={"X-Oxblood-Token": _admin_token("admin-1")},
         json={"sub": "red-1", "password": "red-pass", "role": "red"},
     )
     assert r.status_code == 201
@@ -171,7 +171,7 @@ def test_create_user_duplicate_sub_returns_409(client):
     _run_async(_seed_user("red-1", role="red"))
     r = client.post(
         "/api/v1/auth/users",
-        headers={"X-Divide-Token": _admin_token("admin-1")},
+        headers={"X-Oxblood-Token": _admin_token("admin-1")},
         json={"sub": "red-1", "password": "another", "role": "red"},
     )
     assert r.status_code == 409
@@ -182,7 +182,7 @@ def test_create_user_unknown_role_returns_422(client):
     _run_async(_seed_user("admin-1", role="admin"))
     r = client.post(
         "/api/v1/auth/users",
-        headers={"X-Divide-Token": _admin_token("admin-1")},
+        headers={"X-Oxblood-Token": _admin_token("admin-1")},
         json={"sub": "oops", "password": "test-pass-1234", "role": "admine"},
     )
     assert r.status_code == 422
@@ -203,7 +203,7 @@ def test_create_user_red_cannot_create_returns_403(client):
     _run_async(_seed_user("red-1", role="red"))
     r = client.post(
         "/api/v1/auth/users",
-        headers={"X-Divide-Token": _red_token("red-1")},
+        headers={"X-Oxblood-Token": _red_token("red-1")},
         json={"sub": "blue-2", "password": "blue-pass", "role": "blue"},
     )
     assert r.status_code == 403
@@ -215,7 +215,7 @@ def test_create_user_blue_cannot_create_returns_403(client):
     _run_async(_seed_user("blue-1", role="blue"))
     r = client.post(
         "/api/v1/auth/users",
-        headers={"X-Divide-Token": _blue_token("blue-1")},
+        headers={"X-Oxblood-Token": _blue_token("blue-1")},
         json={"sub": "blue-2", "password": "blue-pass", "role": "blue"},
     )
     assert r.status_code == 403
@@ -226,7 +226,7 @@ def test_created_user_can_login(client):
     _run_async(_seed_user("admin-1", role="admin"))
     r = client.post(
         "/api/v1/auth/users",
-        headers={"X-Divide-Token": _admin_token("admin-1")},
+        headers={"X-Oxblood-Token": _admin_token("admin-1")},
         json={"sub": "red-1", "password": "red-pass-1234", "role": "red"},
     )
     assert r.status_code == 201

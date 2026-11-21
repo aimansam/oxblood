@@ -6,7 +6,7 @@ via integration tests that use a real DB. Here we only test the
 stub-only behaviour for now.
 
 Auth note (L2 2.9): every endpoint under /api/v1/drills/* now
-requires an ``X-Divide-Token`` header. Tests that need to drive
+requires an ``X-Oxblood-Token`` header. Tests that need to drive
 these endpoints use the ``admin_headers`` fixture, which mints a
 fresh admin token. Tests for the gate itself (no token, wrong role)
 live in ``test_authorization.py``.
@@ -25,7 +25,7 @@ def admin_headers():
     from app.core.auth import Role, sign_token
 
     tok = sign_token("admin-test", Role.ADMIN.value, 3600)
-    return {"X-Divide-Token": tok}
+    return {"X-Oxblood-Token": tok}
 
 
 def test_list_scenarios_returns_empty(client):
@@ -103,7 +103,7 @@ def test_cancel_drill_returns_409_for_already_terminal(client):
     scenario_body = {
         "name": "cancel_test",
         "spec": {
-            "apiVersion": "divide/v1",
+            "apiVersion": "oxblood/v1",
             "kind": "Scenario",
             "metadata": {"name": "cancel_test"},
             "spec": {
@@ -203,7 +203,7 @@ def test_start_drill_maps_proxmox_api_error_to_502(client):
     from app.services.proxmox import ProxmoxAPIError
 
     tok = _setup_admin(client)
-    headers = {"X-Divide-Token": tok}
+    headers = {"X-Oxblood-Token": tok}
     scen_name = f"q7-proxmox-{secrets.token_hex(4)}"
     scen_id = _create_scenario_for_test(client, scen_name)
 
@@ -211,7 +211,7 @@ def test_start_drill_maps_proxmox_api_error_to_502(client):
         "bridge 'vmbr100' not configured on PVE node 'pve' "
         "-- create it via the wizard's Step 0 "
         "(POST /api/v1/admin/pve-setup-bridges) or via "
-        "`pvesh create /cluster/sdn/vnets -vnet vmbr100 -zone divide` "
+        "`pvesh create /cluster/sdn/vnets -vnet vmbr100 -zone oxblood` "
         "(see README.md §8)"
     )
 
@@ -254,14 +254,14 @@ def test_start_drill_maps_sdn_permission_error_to_403(client):
     from app.services.pve_sdn import SdnPermissionError
 
     tok = _setup_admin(client)
-    headers = {"X-Divide-Token": tok}
+    headers = {"X-Oxblood-Token": tok}
     scen_name = f"q7-sdn-{secrets.token_hex(4)}"
     scen_id = _create_scenario_for_test(client, scen_name)
 
     sdn_err = SdnPermissionError(
         message="Permission check failed (/sdn/zones, SDN.Allocate)",
         required_role="SDN.Allocate",
-        pveum_hint="pveum aclmod divide@pve@pam -role SDN.Allocate -path /sdn",
+        pveum_hint="pveum aclmod oxblood@pve@pam -role SDN.Allocate -path /sdn",
         pve_path="/sdn",
     )
 
@@ -381,7 +381,7 @@ def _create_scenario_for_test(client, name: str) -> int:
 
     sm = get_sessionmaker()
     spec = {
-        "apiVersion": "divide/v1",
+        "apiVersion": "oxblood/v1",
         "kind": "Scenario",
         "metadata": {"name": name, "title": name, "version": 1},
         "spec": {"assets": [], "objectives": []},

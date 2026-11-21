@@ -27,7 +27,7 @@ export const uniqueName = (prefix: string) => `${prefix} ${unique()}`;
 export async function createDrill(request: APIRequestContext, title: string, scenarioId: number | null = null) {
   const token = await adminToken(request);
   const res = await request.post('/api/v2/drills', {
-    headers: { 'X-Divide-Token': token },
+    headers: { 'X-Oxblood-Token': token },
     data: { title, drill_type: 'individual', duration_limit_minutes: 60, max_participants: 10, scenario_id: scenarioId },
   });
   expect(res.ok()).toBeTruthy();
@@ -44,7 +44,7 @@ export async function createPlayer(request: APIRequestContext, side: 'red' | 'bl
   const sub = `${side}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
   const password = 'Player12345!';
   const token = await adminToken(request);
-  const created = await request.post('/api/v1/auth/users', { headers: { 'X-Divide-Token': token }, data: { sub, password, role: side } });
+  const created = await request.post('/api/v1/auth/users', { headers: { 'X-Oxblood-Token': token }, data: { sub, password, role: side } });
   expect(created.ok()).toBeTruthy();
   const id = (await created.json()).id as number;
   return { sub, password, id, side };
@@ -57,6 +57,6 @@ export async function playerToken(request: APIRequestContext, user: { sub: strin
 
 export async function enroll(request: APIRequestContext, drillId: number, userId: number, role: 'red' | 'blue') {
   const token = await adminToken(request);
-  const res = await request.post(`/api/v2/drills/${drillId}/participants`, { headers: { 'X-Divide-Token': token }, data: { user_id: userId, role } });
+  const res = await request.post(`/api/v2/drills/${drillId}/participants`, { headers: { 'X-Oxblood-Token': token }, data: { user_id: userId, role } });
   expect(res.ok()).toBeTruthy();
 }

@@ -17,6 +17,7 @@ from app.db.session import get_session
 from app.modules.drills.lifecycle import provision_run_id
 from app.services import matches
 from app.services import teams as svc
+from app.services.drill_quality import build_quality_report
 from app.services.drill_service import get_drill
 from app.services.flag_rotation import rotate_round_flags
 
@@ -533,3 +534,13 @@ async def post_score_event(
         created_by=token.sub,
     )
     return {"id": event.id, "points": event.points, "at": datetime.now(UTC).isoformat()}
+
+
+@router.get("/{drill_id}/quality")
+async def get_quality_report(
+    drill_id: int,
+    db: AsyncSession = Depends(get_session),
+    token: TokenData = Depends(require_role(*_OPERATORS)),
+):
+    """How the exercise played (timings, difficulty, balance) for comparing pilot runs."""
+    return await build_quality_report(db, await _drill_or_404(db, drill_id))

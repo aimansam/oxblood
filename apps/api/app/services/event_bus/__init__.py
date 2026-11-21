@@ -10,8 +10,8 @@ implementations:
 
 Selection is by env var:
 
-  * ``DIVIDE_EVENT_BUS=redis`` + reachable Redis       -> RedisEventBus
-  * ``DIVIDE_EVENT_BUS=memory`` (or unset)            -> InProcessEventBus
+  * ``OXBLOOD_EVENT_BUS=redis`` + reachable Redis       -> RedisEventBus
+  * ``OXBLOOD_EVENT_BUS=memory`` (or unset)            -> InProcessEventBus
   * anything else                                      -> InProcessEventBus (with a warning)
 
 See ``build_event_bus()`` at the bottom of this module for the
@@ -104,8 +104,8 @@ def build_event_bus() -> EventBus:
 
     Selection rules (in order):
 
-      1. ``DIVIDE_EVENT_BUS=redis``                     -> RedisEventBus
-      2. ``DIVIDE_EVENT_BUS=memory`` (or unset)        -> InProcessEventBus
+      1. ``OXBLOOD_EVENT_BUS=redis``                     -> RedisEventBus
+      2. ``OXBLOOD_EVENT_BUS=memory`` (or unset)        -> InProcessEventBus
       3. anything else                                  -> InProcessEventBus
          (with a warning, so misconfig is loud)
 
@@ -117,18 +117,18 @@ def build_event_bus() -> EventBus:
     A failed Redis connection surfaces when ``RedisEventBus`` is
     actually used (subscribe() / publish()).
     """
-    override = os.environ.get("DIVIDE_EVENT_BUS", "").strip().lower()
+    override = os.environ.get("OXBLOOD_EVENT_BUS", "").strip().lower()
     if override == "redis":
         from app.core.config import settings
 
         from .redis_bus import RedisEventBus
 
-        _log.info("event_bus: RedisEventBus selected (DIVIDE_EVENT_BUS=redis)")
+        _log.info("event_bus: RedisEventBus selected (OXBLOOD_EVENT_BUS=redis)")
         return RedisEventBus(settings.redis_url)
 
     if override not in ("", "memory"):
         _log.warning(
-            "unknown DIVIDE_EVENT_BUS=%r; falling back to in-process bus",
+            "unknown OXBLOOD_EVENT_BUS=%r; falling back to in-process bus",
             override,
         )
 

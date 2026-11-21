@@ -104,7 +104,7 @@ async def _seed_terminal_run_with_events(*, started_by: str = "alice") -> tuple[
             duration_min=5,
             tags=[],
             spec={
-                "apiVersion": "divide/v1",
+                "apiVersion": "oxblood/v1",
                 "kind": "Scenario",
                 "metadata": {"name": name, "title": "F11 Debrief Test", "version": 1},
                 "spec": {
@@ -186,7 +186,7 @@ def test_get_debrief_returns_markdown(client):
 
     r = client.get(
         f"/api/v1/drills/{run_id}/debrief.md",
-        headers={"X-Divide-Token": _admin_token()},
+        headers={"X-Oxblood-Token": _admin_token()},
     )
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/markdown")
@@ -208,7 +208,7 @@ def test_get_debrief_includes_per_team_scores(client):
 
     r = client.get(
         f"/api/v1/drills/{run_id}/debrief.md",
-        headers={"X-Divide-Token": _admin_token()},
+        headers={"X-Oxblood-Token": _admin_token()},
     )
     assert r.status_code == 200
     body = r.text
@@ -227,7 +227,7 @@ def test_get_debrief_includes_per_flag_rows(client):
 
     r = client.get(
         f"/api/v1/drills/{run_id}/debrief.md",
-        headers={"X-Divide-Token": _admin_token()},
+        headers={"X-Oxblood-Token": _admin_token()},
     )
     assert r.status_code == 200
     body = r.text
@@ -242,7 +242,7 @@ def test_get_debrief_includes_pivot_timeline(client):
 
     r = client.get(
         f"/api/v1/drills/{run_id}/debrief.md",
-        headers={"X-Divide-Token": _admin_token()},
+        headers={"X-Oxblood-Token": _admin_token()},
     )
     assert r.status_code == 200
     body = r.text
@@ -259,7 +259,7 @@ def test_get_debrief_includes_asset_table(client):
 
     r = client.get(
         f"/api/v1/drills/{run_id}/debrief.md",
-        headers={"X-Divide-Token": _admin_token()},
+        headers={"X-Oxblood-Token": _admin_token()},
     )
     assert r.status_code == 200
     body = r.text
@@ -276,7 +276,7 @@ def test_get_debrief_includes_lessons_learned_placeholder(client):
 
     r = client.get(
         f"/api/v1/drills/{run_id}/debrief.md",
-        headers={"X-Divide-Token": _admin_token()},
+        headers={"X-Oxblood-Token": _admin_token()},
     )
     assert r.status_code == 200
     body = r.text
@@ -291,7 +291,7 @@ def test_get_debrief_content_disposition_inline(client):
 
     r = client.get(
         f"/api/v1/drills/{run_id}/debrief.md",
-        headers={"X-Divide-Token": _admin_token()},
+        headers={"X-Oxblood-Token": _admin_token()},
     )
     assert r.status_code == 200
     assert "run-" in r.headers.get("content-disposition", "")
@@ -304,7 +304,7 @@ def test_get_debrief_content_disposition_inline(client):
 def test_get_debrief_unknown_run_returns_404(client):
     r = client.get(
         "/api/v1/drills/9999999/debrief.md",
-        headers={"X-Divide-Token": _admin_token()},
+        headers={"X-Oxblood-Token": _admin_token()},
     )
     assert r.status_code == 404
 
@@ -329,7 +329,7 @@ def test_get_debrief_non_terminal_returns_409(client):
                 duration_min=5,
                 tags=[],
                 spec={
-                    "apiVersion": "divide/v1",
+                    "apiVersion": "oxblood/v1",
                     "kind": "Scenario",
                     "metadata": {"name": name, "title": "running", "version": 1},
                     "spec": {
@@ -352,7 +352,7 @@ def test_get_debrief_non_terminal_returns_409(client):
     run_id = _run_async(_seed_running())
     r = client.get(
         f"/api/v1/drills/{run_id}/debrief.md",
-        headers={"X-Divide-Token": _admin_token()},
+        headers={"X-Oxblood-Token": _admin_token()},
     )
     assert r.status_code == 409
     assert "non-terminal" in r.text.lower()
@@ -377,7 +377,7 @@ def test_get_debrief_red_cannot_see_another_team_run(client):
                 duration_min=5,
                 tags=[],
                 spec={
-                    "apiVersion": "divide/v1",
+                    "apiVersion": "oxblood/v1",
                     "kind": "Scenario",
                     "metadata": {"name": name, "title": "other", "version": 1},
                     "spec": {
@@ -400,6 +400,6 @@ def test_get_debrief_red_cannot_see_another_team_run(client):
     run_id = _run_async(_seed_other_run())
     r = client.get(
         f"/api/v1/drills/{run_id}/debrief.md",
-        headers={"X-Divide-Token": _red_token("red-2")},
+        headers={"X-Oxblood-Token": _red_token("red-2")},
     )
     assert r.status_code == 403

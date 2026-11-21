@@ -36,10 +36,10 @@ def test_render_latest_includes_known_metric_names():
     body, _ = render_latest()
     text = body.decode()
     # Counter + histogram names we expect to see.
-    assert "divide_runs_total" in text
-    assert "divide_cancel_requests_total" in text
-    assert "divide_http_requests_total" in text
-    assert "divide_adapter_calls_total" in text
+    assert "oxblood_runs_total" in text
+    assert "oxblood_cancel_requests_total" in text
+    assert "oxblood_http_requests_total" in text
+    assert "oxblood_adapter_calls_total" in text
 
 
 # --- counter increments --------------------------------------------------
@@ -69,14 +69,14 @@ def test_record_cancel_increments_per_result_label():
 
 def test_record_adapter_call_increments():
     before_ok = _counter_value(
-        REGISTRY._names_to_collectors.get("divide_adapter_calls_total"),
+        REGISTRY._names_to_collectors.get("oxblood_adapter_calls_total"),
         method="clone_vm",
         adapter="mock",
         outcome="ok",
     )
     record_adapter_call(method="clone_vm", adapter="mock", outcome="ok")
     after_ok = _counter_value(
-        REGISTRY._names_to_collectors.get("divide_adapter_calls_total"),
+        REGISTRY._names_to_collectors.get("oxblood_adapter_calls_total"),
         method="clone_vm",
         adapter="mock",
         outcome="ok",
@@ -93,7 +93,7 @@ def test_metrics_endpoint_returns_200_and_prometheus_body():
     assert r.status_code == 200
     assert "text/plain" in r.headers["content-type"]
     # Should at minimum contain one of our metric names.
-    assert "divide_runs_total" in r.text or "divide_http_requests_total" in r.text
+    assert "oxblood_runs_total" in r.text or "oxblood_http_requests_total" in r.text
 
 
 def test_metrics_endpoint_increments_http_counter_on_request():

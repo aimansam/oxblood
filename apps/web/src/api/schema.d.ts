@@ -403,7 +403,7 @@ export interface paths {
          * @description Run the canonical L1 demo drill.
          *
          *     Q14: was a loopback HTTP call to ``/api/v1/drills`` which
-         *     required ``X-Divide-Token`` to be forwarded. The forward
+         *     required ``X-Oxblood-Token`` to be forwarded. The forward
          *     was missing, so every call returned a doubly-nested 401.
          *     Rewritten to call the runner in-process:
          *       * look up the scenario in the same DB session,
@@ -788,8 +788,8 @@ export interface paths {
          *     keypair and IP are stable across logins.
          *
          *     The response body contains:
-         *       ``config``    — the full .conf text (save as divide.conf)
-         *       ``filename``  — suggested filename (``divide-<sub>.conf``)
+         *       ``config``    — the full .conf text (save as oxblood.conf)
+         *       ``filename``  — suggested filename (``oxblood-<sub>.conf``)
          *       ``client_ip`` — the VPN IP assigned to this peer
          *       ``server_ip`` — the server's VPN IP (for reference)
          *       ``allowed_ips`` — the CIDRs routed over VPN
@@ -1378,7 +1378,7 @@ export interface paths {
          * Return the verified identity for the bearer token
          * @description Decoded + verified token payload, plus ``ttl_remaining_s``.
          *
-         *     Anonymous (no ``X-Divide-Token`` header or invalid token) ->
+         *     Anonymous (no ``X-Oxblood-Token`` header or invalid token) ->
          *     ``HTTP 401`` from :func:`require_token`. Same shape as the rest
          *     of the authenticated API surface.
          */
@@ -1404,7 +1404,7 @@ export interface paths {
          *
          *     Use this to verify write-permission grants before running a drill.
          *     The runner needs at least PVEVMAdmin on /v2/vm (or PVEAdmin on /
-         *     with propagate=1) for the divide user.
+         *     with propagate=1) for the oxblood user.
          */
         get: operations["list_proxmox_acl_api_v1_proxmox_acl_get"];
         put?: never;
@@ -2313,6 +2313,26 @@ export interface paths {
          * @description Prepare the range without starting the participant exercise or timer.
          */
         post: operations["prepare_drill_endpoint_api_v2_drills__drill_id__prepare_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/drills/{drill_id}/quality": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Quality Report
+         * @description How the exercise played (timings, difficulty, balance) for comparing pilot runs.
+         */
+        get: operations["get_quality_report_api_v2_drills__drill_id__quality_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4210,14 +4230,14 @@ export interface components {
             seed_snippet_storage: string;
             /**
              * Token Id
-             * @description e.g. divide@pve@pam!drill-token
+             * @description e.g. oxblood@pve@pam!drill-token
              */
             token_id: string;
             /** Token Secret */
             token_secret: string;
             /**
              * User
-             * @description e.g. divide@pve@pam
+             * @description e.g. oxblood@pve@pam
              */
             user: string;
             /**
@@ -4614,7 +4634,7 @@ export interface components {
          *
          *     Used by the in-portal onboarding wizard (F10.3) to create
          *     the very first admin without requiring the operator to set
-         *     ``DIVIDE_BOOTSTRAP_ADMIN_*`` env vars + restart the API.
+         *     ``OXBLOOD_BOOTSTRAP_ADMIN_*`` env vars + restart the API.
          *
          *     Public endpoint; only the first call succeeds. Once any
          *     user exists, the wizard falls through to the sign-in flow.
@@ -4774,7 +4794,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -4812,7 +4832,7 @@ export interface operations {
                 asset_ids?: string | null;
             };
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -4843,7 +4863,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -4880,7 +4900,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -4913,7 +4933,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -4944,7 +4964,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -4975,7 +4995,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5008,7 +5028,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 kind: string;
@@ -5044,7 +5064,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5079,7 +5099,7 @@ export interface operations {
                 node?: string;
             };
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5110,7 +5130,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5143,7 +5163,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5180,7 +5200,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5215,7 +5235,7 @@ export interface operations {
                 drill_only?: boolean;
             };
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5250,7 +5270,7 @@ export interface operations {
                 node?: string;
             };
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5283,7 +5303,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5318,7 +5338,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5351,7 +5371,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 vmid: number;
@@ -5390,7 +5410,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -5429,7 +5449,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5466,7 +5486,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5499,7 +5519,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5549,7 +5569,7 @@ export interface operations {
                 limit?: number;
             };
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5582,7 +5602,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5791,7 +5811,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5822,7 +5842,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5857,7 +5877,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 sub: string;
@@ -5890,7 +5910,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 sub: string;
@@ -5923,7 +5943,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5956,7 +5976,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5989,7 +6009,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -6028,7 +6048,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -6063,7 +6083,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -6105,7 +6125,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -6141,7 +6161,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -6176,7 +6196,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -6217,7 +6237,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -6250,7 +6270,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -6291,7 +6311,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -6326,7 +6346,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -6361,7 +6381,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -6402,7 +6422,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -6437,7 +6457,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -6478,7 +6498,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -6511,7 +6531,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -6550,7 +6570,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 exercise_id: number;
@@ -6585,7 +6605,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 exercise_id: number;
@@ -6620,7 +6640,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 exercise_id: number;
@@ -6655,7 +6675,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 exercise_id: number;
@@ -6696,7 +6716,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 exercise_id: number;
@@ -6731,7 +6751,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 exercise_id: number;
@@ -6766,7 +6786,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 exercise_id: number;
@@ -6807,7 +6827,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -6837,7 +6857,7 @@ export interface operations {
     list_proxmox_acl_api_v1_proxmox_acl_get: {
         parameters: {
             query?: {
-                /** @description Filter by ugid (e.g. 'divide@pve@pam'). Default: all entries. */
+                /** @description Filter by ugid (e.g. 'oxblood@pve@pam'). Default: all entries. */
                 user?: string | null;
             };
             header?: never;
@@ -6998,7 +7018,7 @@ export interface operations {
                 kind?: string | null;
             };
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -7033,7 +7053,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -7076,7 +7096,7 @@ export interface operations {
                 n?: number;
             };
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -7111,7 +7131,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 run_id: number;
@@ -7312,7 +7332,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -7345,7 +7365,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -7384,7 +7404,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 template_id: number;
@@ -7419,7 +7439,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 template_id: number;
@@ -7489,7 +7509,7 @@ export interface operations {
                 limit?: number;
             };
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -7520,7 +7540,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -7555,7 +7575,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -7586,7 +7606,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 scenario_id: number;
@@ -7619,7 +7639,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -7654,7 +7674,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -7687,7 +7707,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -7724,7 +7744,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -7760,7 +7780,7 @@ export interface operations {
                 match?: number | null;
             };
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -7793,7 +7813,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -7831,7 +7851,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -7868,7 +7888,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8128,7 +8148,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8165,7 +8185,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8202,7 +8222,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8239,7 +8259,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8374,7 +8394,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8407,7 +8427,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8444,7 +8464,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8481,7 +8501,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8514,7 +8534,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8548,7 +8568,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8581,7 +8601,40 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
+            };
+            path: {
+                drill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_quality_report_api_v2_drills__drill_id__quality_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8616,7 +8669,7 @@ export interface operations {
                 refresh?: boolean;
             };
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8649,7 +8702,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8682,7 +8735,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8715,7 +8768,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8748,7 +8801,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8781,7 +8834,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8818,7 +8871,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8852,7 +8905,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8890,7 +8943,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -8924,7 +8977,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -9024,7 +9077,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -9057,7 +9110,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -9094,7 +9147,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -9158,7 +9211,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -9224,7 +9277,7 @@ export interface operations {
                 refresh?: boolean;
             };
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -9257,7 +9310,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -9324,7 +9377,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -9357,7 +9410,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -9394,7 +9447,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -9432,7 +9485,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -9470,7 +9523,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -9505,7 +9558,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -9543,7 +9596,7 @@ export interface operations {
                 match?: number | null;
             };
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 drill_id: number;
@@ -10209,11 +10262,11 @@ export interface operations {
     post_submission_api_v2_submissions_post: {
         parameters: {
             query: {
-                /** @description User ID (0 = resolve from X-Divide-Token sub) */
+                /** @description User ID (0 = resolve from X-Oxblood-Token sub) */
                 user_id: number;
             };
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -10310,7 +10363,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                "X-Divide-Token"?: string | null;
+                "X-Oxblood-Token"?: string | null;
             };
             path: {
                 submission_id: number;

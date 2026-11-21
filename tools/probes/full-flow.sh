@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-TOKEN=$(docker exec divide-api python3 -c "
+TOKEN=$(docker exec oxblood-api python3 -c "
 import sys; sys.path.insert(0, '/app')
 from app.core import auth
 print(auth.sign_token('admin', 'admin', 3600))
 ")
 HOST="https://192.168.0.10:8006"
-PVE_TOK="divide@pve@pam!drill-token=4ea3414f-d3a4-47b5-a2ed-19018f416cc0"
+PVE_TOK="oxblood@pve@pam!drill-token=4ea3414f-d3a4-47b5-a2ed-19018f416cc0"
 API="http://localhost:8000"
-H_AUTH="X-Divide-Token: $TOKEN"
+H_AUTH="X-Oxblood-Token: $TOKEN"
 H_PVE="Authorization: PVEAPIToken=$PVE_TOK"
 
 run() {
@@ -111,12 +111,12 @@ echo "HTTP=$(echo "$out" | grep '^__HTTP__' | sed 's/__HTTP__//')"
 echo "$out" | sed '/^__HTTP__/,$d'
 echo ""
 echo "===== 5.3 GET /v1/admin/probe - non-admin role tries ====="
-non_admin=$(docker exec divide-api python3 -c "
+non_admin=$(docker exec oxblood-api python3 -c "
 import sys; sys.path.insert(0, '/app')
 from app.core import auth
 print(auth.sign_token('analyst', 'lead', 3600))
 ")
 out=$(curl -s -w "\n__HTTP__%{http_code}" "$API/api/v1/admin/probe" \
-    -H "X-Divide-Token: $non_admin" --max-time 5 2>&1)
+    -H "X-Oxblood-Token: $non_admin" --max-time 5 2>&1)
 echo "HTTP=$(echo "$out" | grep '^__HTTP__' | sed 's/__HTTP__//')"
 echo "$out" | sed '/^__HTTP__/,$d'

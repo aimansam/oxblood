@@ -22,7 +22,7 @@ OUT = REPO / "apps" / "web" / "openapi.json"
 
 def render() -> str:
     # Importing the app must not need a database or Redis.
-    os.environ.setdefault("DIVIDE_DB_URL", "sqlite+aiosqlite:///:memory:")
+    os.environ.setdefault("OXBLOOD_DB_URL", "sqlite+aiosqlite:///:memory:")
     sys.path.insert(0, str(REPO / "apps" / "api"))
     from app.main import app
 

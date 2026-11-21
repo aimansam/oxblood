@@ -9,7 +9,7 @@ test('play a whole exercise: prepare, start, a player scores from the map, pause
     page.on('response', (r) => r.status() >= 500 && problems.push(`[${who}] http ${r.status()} ${r.request().method()} ${r.url()}`));
   };
 
-  const headers = { 'X-Divide-Token': await adminToken(request) };
+  const headers = { 'X-Oxblood-Token': await adminToken(request) };
   const scenarios = (await (await request.get('/api/v1/scenarios')).json()).items as { id: number; name: string }[];
   const scenario = scenarios.find((s) => s.name === 'enterprise-file-breach') ?? scenarios[0];
   const title = uniqueName('Lifecycle');
@@ -76,7 +76,7 @@ test('play a whole exercise: prepare, start, a player scores from the map, pause
 
 test('the wizard prepares a range and "Open live range" takes the operator into it', async ({ page, request }) => {
   const title = uniqueName('Wizard live');
-  const headers = { 'X-Divide-Token': await adminToken(request) };
+  const headers = { 'X-Oxblood-Token': await adminToken(request) };
   await signInAsAdmin(page);
   await page.goto('/app/exercises');
   await page.getByRole('button', { name: 'New exercise' }).first().click();
@@ -104,7 +104,7 @@ test('the wizard prepares a range and "Open live range" takes the operator into 
 
 
 test('the exercise card says why Start is refused and can add test players', async ({ page, request }) => {
-  const headers = { 'X-Divide-Token': await adminToken(request) };
+  const headers = { 'X-Oxblood-Token': await adminToken(request) };
   const scenarios = (await (await request.get('/api/v1/scenarios')).json()).items as { id: number; name: string }[];
   const scenario = scenarios.find((s) => s.name === 'enterprise-file-breach') ?? scenarios[0];
   const title = uniqueName('Blockers');
@@ -142,7 +142,7 @@ test('the exercise card says why Start is refused and can add test players', asy
 test('a team competition is set up in the wizard, players join while the range builds, and the accounts are destroyed after cleanup', async ({ page, request }) => {
   test.setTimeout(120_000);
   const title = uniqueName('Wizard teams');
-  const headers = { 'X-Divide-Token': await adminToken(request) };
+  const headers = { 'X-Oxblood-Token': await adminToken(request) };
   await signInAsAdmin(page);
   await page.goto('/app/exercises');
   await page.getByRole('button', { name: 'New exercise' }).first().click();

@@ -106,9 +106,9 @@ async def test_rotation_plants_then_saves_and_leaves_machineless_flags_alone(wor
     seed = drill.environment_config["flag_seed"]
     assert values["red-web"] == derive_flag_value(seed, 1, "red-web")
     planted = {
-        seed_spec.files["/opt/divide/flags/red-web.txt"].strip()
+        seed_spec.files["/opt/oxblood/flags/red-web.txt"].strip()
         for (_vm, _node, seed_spec) in adapter.seeds_applied[before:]
-        if seed_spec.files and "/opt/divide/flags/red-web.txt" in seed_spec.files
+        if seed_spec.files and "/opt/oxblood/flags/red-web.txt" in seed_spec.files
     }
     assert planted == {values["red-web"]}  # the machine holds exactly what the database holds
 
@@ -124,7 +124,7 @@ async def test_a_failed_plant_keeps_the_old_value(world) -> None:
     real = adapter.apply_guest_seed
 
     async def flaky(vmid, node, seed):
-        if "/opt/divide/flags/red-db.txt" in (seed.files or {}):
+        if "/opt/oxblood/flags/red-db.txt" in (seed.files or {}):
             raise RuntimeError("guest agent timeout")
         await real(vmid, node, seed)
 
@@ -194,6 +194,6 @@ async def test_separate_matches_get_a_value_per_team_planted_only_on_their_own_c
     first_run = drill.environment_config["provision_run_id"]
     planted = {}
     for vmid, _node, spec in adapter.seeds_applied[before:]:
-        if spec.files and "/opt/divide/flags/red-web.txt" in spec.files:
-            planted[owner[vmid]] = spec.files["/opt/divide/flags/red-web.txt"].strip()
+        if spec.files and "/opt/oxblood/flags/red-web.txt" in spec.files:
+            planted[owner[vmid]] = spec.files["/opt/oxblood/flags/red-web.txt"].strip()
     assert planted == {first_run: web[teams[0].id], second.run_id: web[teams[1].id]}

@@ -1,7 +1,7 @@
 # Portal end-to-end probe scripts
 
 These bash scripts hit every endpoint the portal's Config tab + wizard
-calls, against a running `divide-api` container. They also cross-reference
+calls, against a running `oxblood-api` container. They also cross-reference
 direct PVE API calls to confirm the API reports ground truth.
 
 ## Usage
@@ -14,8 +14,8 @@ direct PVE API calls to confirm the API reports ground truth.
 ```
 
 Each script:
-- mints an admin token via `docker exec divide-api sign_token(...)`
-- hits every endpoint with the correct `X-Divide-Token` header
+- mints an admin token via `docker exec oxblood-api sign_token(...)`
+- hits every endpoint with the correct `X-Oxblood-Token` header
 - cross-references PVE via direct `curl` to the PVE host
 - prints status codes + JSON bodies for each call
 - asserts shape consistency (e.g. `ready: true` on bridge status)

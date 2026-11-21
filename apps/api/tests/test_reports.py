@@ -46,7 +46,7 @@ async def _seed_terminal_run(
             duration_min=5,
             tags=[],
             spec={
-                "apiVersion": "divide/v1",
+                "apiVersion": "oxblood/v1",
                 "kind": "Scenario",
                 "metadata": {
                     "name": name,
@@ -152,7 +152,7 @@ def test_report_200_shape_for_terminal_run(client):
     run_id, _ = asyncio.run(_seed_terminal_run())
     r = client.get(
         f"/api/v1/drills/{run_id}/report",
-        headers={"X-Divide-Token": _token("alice", "admin")},
+        headers={"X-Oxblood-Token": _token("alice", "admin")},
     )
     assert r.status_code == 200, r.text
     body = r.json()
@@ -168,7 +168,7 @@ def test_report_200_shape_for_terminal_run(client):
 def test_report_404_unknown_run(client):
     r = client.get(
         "/api/v1/drills/9999999/report",
-        headers={"X-Divide-Token": _token("alice", "admin")},
+        headers={"X-Oxblood-Token": _token("alice", "admin")},
     )
     assert r.status_code == 404
 
@@ -178,7 +178,7 @@ def test_report_403_red_cannot_see_anothers_run(client):
     run_id, _ = asyncio.run(_seed_terminal_run(started_by="bob"))
     r = client.get(
         f"/api/v1/drills/{run_id}/report",
-        headers={"X-Divide-Token": _token("alice", "red")},
+        headers={"X-Oxblood-Token": _token("alice", "red")},
     )
     assert r.status_code == 403
     assert "do not have access" in r.json()["detail"]
@@ -189,7 +189,7 @@ def test_report_200_red_can_see_own_run(client):
     run_id, _ = asyncio.run(_seed_terminal_run(started_by="alice"))
     r = client.get(
         f"/api/v1/drills/{run_id}/report",
-        headers={"X-Divide-Token": _token("alice", "red")},
+        headers={"X-Oxblood-Token": _token("alice", "red")},
     )
     assert r.status_code == 200, r.text
 
@@ -199,7 +199,7 @@ def test_report_200_admin_can_see_any_run(client):
     run_id, _ = asyncio.run(_seed_terminal_run(started_by="bob"))
     r = client.get(
         f"/api/v1/drills/{run_id}/report",
-        headers={"X-Divide-Token": _token("ops", "admin")},
+        headers={"X-Oxblood-Token": _token("ops", "admin")},
     )
     assert r.status_code == 200
 
@@ -209,7 +209,7 @@ def test_report_200_lead_can_see_any_run(client):
     run_id, _ = asyncio.run(_seed_terminal_run(started_by="bob"))
     r = client.get(
         f"/api/v1/drills/{run_id}/report",
-        headers={"X-Divide-Token": _token("ops", "lead")},
+        headers={"X-Oxblood-Token": _token("ops", "lead")},
     )
     assert r.status_code == 200
 
@@ -219,7 +219,7 @@ def test_report_200_observer_can_see_any_run(client):
     run_id, _ = asyncio.run(_seed_terminal_run(started_by="bob"))
     r = client.get(
         f"/api/v1/drills/{run_id}/report",
-        headers={"X-Divide-Token": _token("auditor", "observer")},
+        headers={"X-Oxblood-Token": _token("auditor", "observer")},
     )
     assert r.status_code == 200
 
@@ -229,7 +229,7 @@ def test_report_409_for_in_progress_run(client):
     run_id, _ = asyncio.run(_seed_terminal_run(status_value="running"))
     r = client.get(
         f"/api/v1/drills/{run_id}/report",
-        headers={"X-Divide-Token": _token("alice", "admin")},
+        headers={"X-Oxblood-Token": _token("alice", "admin")},
     )
     assert r.status_code == 409
     assert "non-terminal" in r.json()["detail"]
@@ -240,7 +240,7 @@ def test_report_409_for_pending_run(client):
     run_id, _ = asyncio.run(_seed_terminal_run(status_value="pending"))
     r = client.get(
         f"/api/v1/drills/{run_id}/report",
-        headers={"X-Divide-Token": _token("alice", "admin")},
+        headers={"X-Oxblood-Token": _token("alice", "admin")},
     )
     assert r.status_code == 409
 
@@ -255,7 +255,7 @@ def test_report_metrics_summary_has_runs_total_block(client):
     run_id, _ = asyncio.run(_seed_terminal_run())
     r = client.get(
         f"/api/v1/drills/{run_id}/report",
-        headers={"X-Divide-Token": _token("alice", "admin")},
+        headers={"X-Oxblood-Token": _token("alice", "admin")},
     )
     body = r.json()
     ms = body["metrics_summary"]

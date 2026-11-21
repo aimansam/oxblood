@@ -169,14 +169,14 @@ def test_current_token_returns_token_when_valid(app):
 
     client = TestClient(app)
     tok = sign_token("alice", "trainee", 3600)
-    r = client.get("/optional", headers={"X-Divide-Token": tok})
+    r = client.get("/optional", headers={"X-Oxblood-Token": tok})
     assert r.status_code == 200
     assert r.json() == {"sub": "alice"}
 
 
 def test_current_token_returns_401_when_invalid(app):
     client = TestClient(app)
-    r = client.get("/optional", headers={"X-Divide-Token": "not-a-real-token"})
+    r = client.get("/optional", headers={"X-Oxblood-Token": "not-a-real-token"})
     assert r.status_code == 401
     assert "WWW-Authenticate" in r.headers
 
@@ -192,7 +192,7 @@ def test_require_token_returns_sub_when_valid(app):
 
     client = TestClient(app)
     tok = sign_token("alice", "admin", 3600)
-    r = client.get("/required", headers={"X-Divide-Token": tok})
+    r = client.get("/required", headers={"X-Oxblood-Token": tok})
     assert r.status_code == 200
     assert r.json() == {"sub": "alice"}
 
@@ -205,7 +205,7 @@ def test_issue_token_cli_outputs_a_valid_token(tmp_path, monkeypatch):
 
     Proves the CLI prints parseable tokens.
 
-    Why we set DIVIDE_TOKEN_DEV_SECRET: the test process and the
+    Why we set OXBLOOD_TOKEN_DEV_SECRET: the test process and the
     subprocess both use the random-fallback branch (no proxmox
     secret configured in CI). Each gets its own random secret by
     default; passing a fixed secret via env makes them agree.
@@ -217,7 +217,7 @@ def test_issue_token_cli_outputs_a_valid_token(tmp_path, monkeypatch):
     env = {
         **__import__("os").environ,
         "PYTHONPATH": "apps/api",
-        "DIVIDE_TOKEN_DEV_SECRET": shared_secret,
+        "OXBLOOD_TOKEN_DEV_SECRET": shared_secret,
     }
     r = subprocess.run(
         [
@@ -261,7 +261,7 @@ def test_issue_token_cli_ttl_formats(monkeypatch):
     env = {
         **__import__("os").environ,
         "PYTHONPATH": "apps/api",
-        "DIVIDE_TOKEN_DEV_SECRET": shared_secret,
+        "OXBLOOD_TOKEN_DEV_SECRET": shared_secret,
     }
     # Sync the test process to the same secret.
     from app.core import auth as auth_mod
@@ -382,7 +382,7 @@ def test_require_role_allows_listed_role():
     app = _role_app()
     client = TestClient(app)
     tok = sign_token("alice", Role.ADMIN.value, 3600)
-    r = client.get("/admin-only", headers={"X-Divide-Token": tok})
+    r = client.get("/admin-only", headers={"X-Oxblood-Token": tok})
     assert r.status_code == 200
     assert r.json() == {"ok": True}
 
@@ -393,7 +393,7 @@ def test_require_role_rejects_other_role_with_403():
     app = _role_app()
     client = TestClient(app)
     tok = sign_token("mallory", Role.RED.value, 3600)
-    r = client.get("/admin-only", headers={"X-Divide-Token": tok})
+    r = client.get("/admin-only", headers={"X-Oxblood-Token": tok})
     assert r.status_code == 403
     # Detail should name both the rejected role and the allow-list so
     # the developer hitting the 403 from curl can see why.
@@ -422,7 +422,7 @@ def test_require_role_multi_role_accepts_any_listed():
     client = TestClient(app)
     for role in (Role.LEAD, Role.ADMIN):
         tok = sign_token("bob", role.value, 3600)
-        r = client.get("/lead-or-admin", headers={"X-Divide-Token": tok})
+        r = client.get("/lead-or-admin", headers={"X-Oxblood-Token": tok})
         assert r.status_code == 200, f"{role.value} should be allowed"
 
 
@@ -437,7 +437,7 @@ def test_require_role_rejects_unknown_role_string():
     app = _role_app()
     client = TestClient(app)
     tok = sign_token("legacy", "trainee", 3600)  # role no longer exists
-    r = client.get("/admin-only", headers={"X-Divide-Token": tok})
+    r = client.get("/admin-only", headers={"X-Oxblood-Token": tok})
     assert r.status_code == 403
 
 

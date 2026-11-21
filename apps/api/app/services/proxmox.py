@@ -87,7 +87,7 @@ def _validate_config() -> tuple[str, str, str, str]:
     host = host.rstrip("/")
     if not (cfg.token_id or "").strip() or not cfg.token_secret:
         raise ProxmoxNotConfiguredError("PROXMOX_TOKEN_ID and PROXMOX_TOKEN_SECRET must be set")
-    # PROXMOX_TOKEN_ID is the full "user!tokenname" string (e.g. "divide@pve!drill-token"),
+    # PROXMOX_TOKEN_ID is the full "user!tokenname" string (e.g. "oxblood@pve!drill-token"),
     # NOT just the token name. proxmoxer wants (user, token_name) separately:
     #   token_name = everything after the first "!" in token_id
     token_full = (cfg.token_id or "").strip()
@@ -350,9 +350,9 @@ def list_acl() -> list[dict]:
     triple that grants permissions on the cluster.
 
     Note: with API-token auth, the token is treated as a separate principal
-    (``divide@pve@pam!drill-token``). For our flow the token inherits the
+    (``oxblood@pve@pam!drill-token``). For our flow the token inherits the
     user's roles; we don't grant roles on the token directly. So the check
-    for write-permissions is really: does the *user* ``divide@pve@pam``
+    for write-permissions is really: does the *user* ``oxblood@pve@pam``
     have ``PVEVMAdmin`` (or broader) on ``/v2/vm`` or ``/`` with propagate?
 
     Each entry is a dict with keys: ``path``, ``ugid``, ``roleid``, ``type``,

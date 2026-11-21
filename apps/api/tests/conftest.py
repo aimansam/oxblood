@@ -8,49 +8,49 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-# Set DIVIDE_PORTAL_DIR *before* any test module imports app.main,
+# Set OXBLOOD_PORTAL_DIR *before* any test module imports app.main,
 # because the app's create_app() reads settings at module import.
 # Without this, tests that run after the first create_app() call
 # see a stale /app/portal path that doesn't exist on the dev box.
-_REPO_ROOT = Path(__file__).resolve().parents[3]  # .../divide-cyber-drill
+_REPO_ROOT = Path(__file__).resolve().parents[3]  # .../oxblood-cyber-drill
 _PORTAL_DIR = _REPO_ROOT / "apps" / "portal"
 if _PORTAL_DIR.is_dir():
-    os.environ.setdefault("DIVIDE_PORTAL_DIR", str(_PORTAL_DIR))
+    os.environ.setdefault("OXBLOOD_PORTAL_DIR", str(_PORTAL_DIR))
 
 # --- live PG mode ---------------------------------------------------------
 #
-# Setting DIVIDE_TEST_LIVE_PG to a non-empty value switches the test suite
+# Setting OXBLOOD_TEST_LIVE_PG to a non-empty value switches the test suite
 # from SQLite to a real PostgreSQL. Useful for catching enum/JSONB/case
 # bugs that SQLite is permissive about. Tests that should only run under
 # live PG should be marked with ``@pytest.mark.live_pg``; they're skipped
 # otherwise so the default `pytest` run stays SQLite-only and fast.
 #
 # The URL defaults to the docker-compose dev DB; override via env if needed.
-LIVE_PG_URL_DEFAULT = "postgresql+asyncpg://divide:divide@localhost:5432/divide_test"
+LIVE_PG_URL_DEFAULT = "postgresql+asyncpg://oxblood:oxblood@localhost:5432/oxblood_test"
 
 
 def _live_pg_url() -> str | None:
-    val = os.environ.get("DIVIDE_TEST_LIVE_PG", "").strip()
+    val = os.environ.get("OXBLOOD_TEST_LIVE_PG", "").strip()
     if not val:
         return None
     if val in ("1", "true", "yes"):
-        return os.environ.get("DIVIDE_TEST_LIVE_PG_URL", LIVE_PG_URL_DEFAULT)
+        return os.environ.get("OXBLOOD_TEST_LIVE_PG_URL", LIVE_PG_URL_DEFAULT)
     return val
 
 
 @pytest.fixture(scope="session", autouse=True)
 def _env(monkeypatch_session):
     """Set sane defaults for tests."""
-    monkeypatch_session.setenv("DIVIDE_ENV", "dev")
-    monkeypatch_session.setenv("DIVIDE_LOG_LEVEL", "WARNING")
-    # DIVIDE_PORTAL_DIR is set at conftest import time (above) so it's
+    monkeypatch_session.setenv("OXBLOOD_ENV", "dev")
+    monkeypatch_session.setenv("OXBLOOD_LOG_LEVEL", "WARNING")
+    # OXBLOOD_PORTAL_DIR is set at conftest import time (above) so it's
     # already in os.environ before any test module imports app.main.
     if _live_pg_url():
         # Live PG mode — caller is responsible for pointing at a working DB.
-        monkeypatch_session.setenv("DIVIDE_DB_URL", _live_pg_url())
+        monkeypatch_session.setenv("OXBLOOD_DB_URL", _live_pg_url())
     else:
         # Use SQLite for tests — no Postgres needed for unit tests.
-        os.environ.setdefault("DIVIDE_DB_URL", "sqlite+aiosqlite:///./test.sqlite")
+        os.environ.setdefault("OXBLOOD_DB_URL", "sqlite+aiosqlite:///./test.sqlite")
     yield
 
 
@@ -78,10 +78,10 @@ def _create_tables():
     live = _live_pg_url()
 
     if live:
-        # Live PG mode — caller supplies the URL via DIVIDE_TEST_LIVE_PG.
+        # Live PG mode — caller supplies the URL via OXBLOOD_TEST_LIVE_PG.
         # We trust it and skip the alembic step (assume migrations are
         # already applied by the operator).
-        os.environ["DIVIDE_DB_URL"] = live
+        os.environ["OXBLOOD_DB_URL"] = live
         from app.db import session as session_module
         from app.services import db as db_module
 
@@ -96,7 +96,7 @@ def _create_tables():
         db_path.unlink()
 
     env = dict(os.environ)
-    env["DIVIDE_DB_URL"] = f"sqlite:///{db_path}"
+    env["OXBLOOD_DB_URL"] = f"sqlite:///{db_path}"
     env["PYTHONPATH"] = (
         str(Path(__file__).resolve().parents[1]) + os.pathsep + env.get("PYTHONPATH", "")
     )
@@ -117,9 +117,9 @@ def _create_tables():
         raise RuntimeError("alembic upgrade head failed")
 
     # Point the running app at the same DB.
-    os.environ["DIVIDE_DB_URL"] = f"sqlite+aiosqlite:///{db_path}"
+    os.environ["OXBLOOD_DB_URL"] = f"sqlite+aiosqlite:///{db_path}"
     # Test modules that import app.main at collection time populate the
-    # cached settings with whatever DIVIDE_DB_URL was set back then.
+    # cached settings with whatever OXBLOOD_DB_URL was set back then.
     from app.core.config import get_settings
 
     get_settings.cache_clear()
@@ -140,10 +140,10 @@ def _create_tables():
 
 
 def pytest_collection_modifyitems(config, items):
-    """Skip live_pg tests unless DIVIDE_TEST_LIVE_PG is set."""
+    """Skip live_pg tests unless OXBLOOD_TEST_LIVE_PG is set."""
     if _live_pg_url():
         return  # live PG requested — let the tests run
-    skip_marker = pytest.mark.skip(reason="DIVIDE_TEST_LIVE_PG not set")
+    skip_marker = pytest.mark.skip(reason="OXBLOOD_TEST_LIVE_PG not set")
     for item in items:
         if "live_pg" in item.keywords:
             item.add_marker(skip_marker)

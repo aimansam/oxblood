@@ -57,11 +57,11 @@ def world(tmp_path):
 
 
 def admin():
-    return {"X-Divide-Token": sign_token("root", "admin", 3600)}
+    return {"X-Oxblood-Token": sign_token("root", "admin", 3600)}
 
 
 def lead():
-    return {"X-Divide-Token": sign_token("lead", "lead", 3600)}
+    return {"X-Oxblood-Token": sign_token("lead", "lead", 3600)}
 
 
 def test_names_become_enrolled_accounts_with_one_time_passwords(world):
@@ -95,7 +95,7 @@ def test_names_become_enrolled_accounts_with_one_time_passwords(world):
 def test_it_refuses_what_does_not_fit_and_who_may_not(world):
     client, _ = world
     url = "/api/v2/drills/1/participants/bulk"
-    player = {"X-Divide-Token": sign_token("a.player", "red", 3600)}
+    player = {"X-Oxblood-Token": sign_token("a.player", "red", 3600)}
     assert (
         client.post(url, json={"names": ["a"]}, headers=player).status_code == 403
     )  # players cannot make accounts

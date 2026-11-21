@@ -661,7 +661,7 @@ class RealProxmoxAdapter(GuestSeedMixin, NetworkMixin, PreflightMixin):
                 # "Only root may use this option". ``purge=1`` alone
                 # destroys the VM + its disks, which is what the
                 # runner always wants on cleanup. Operators running
-                # the DivideDrill role don't race against PVE's
+                # the OxbloodDrill role don't race against PVE's
                 # internal VM locks; they own the VM namespace.
                 self._get_client().nodes(node).qemu(vmid).delete(purge=1)
             except Exception as exc:  # noqa: BLE001

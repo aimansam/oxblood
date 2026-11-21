@@ -100,7 +100,7 @@ def test_snapshot_includes_scenario_id_and_name():
                 version=1,
                 difficulty="beginner",
                 duration_min=30,
-                spec={"apiVersion": "divide/v1", "kind": "Scenario", "spec": {"assets": []}},
+                spec={"apiVersion": "oxblood/v1", "kind": "Scenario", "spec": {"assets": []}},
             )
             session.add(scen)
             await session.commit()
@@ -129,7 +129,7 @@ def test_snapshot_carries_assets_and_flags():
                 difficulty="beginner",
                 duration_min=30,
                 spec={
-                    "apiVersion": "divide/v1",
+                    "apiVersion": "oxblood/v1",
                     "kind": "Scenario",
                     "spec": {
                         "assets": [
@@ -168,7 +168,7 @@ def test_snapshot_records_run_status():
                 version=1,
                 difficulty="beginner",
                 duration_min=30,
-                spec={"apiVersion": "divide/v1", "kind": "Scenario", "spec": {"assets": []}},
+                spec={"apiVersion": "oxblood/v1", "kind": "Scenario", "spec": {"assets": []}},
             )
             session.add(scen)
             await session.commit()
@@ -195,7 +195,7 @@ def _seed_scenario_and_succeeded_run() -> tuple[int, int]:
                 difficulty="beginner",
                 duration_min=30,
                 spec={
-                    "apiVersion": "divide/v1",
+                    "apiVersion": "oxblood/v1",
                     "kind": "Scenario",
                     "spec": {
                         "assets": [
@@ -224,7 +224,7 @@ def test_admin_creates_template_from_succeeded_run():
     from app.main import app
 
     token = sign_token(sub="root", role="admin", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
 
     r = client.post(
         "/api/v1/templates",
@@ -249,7 +249,7 @@ def test_create_template_requires_admin():
     from app.main import app
 
     token = sign_token(sub="alice", role="red", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r = client.post(
         "/api/v1/templates",
         json={
@@ -273,7 +273,7 @@ def test_create_template_rejects_running_run():
                 version=1,
                 difficulty="beginner",
                 duration_min=30,
-                spec={"apiVersion": "divide/v1", "kind": "Scenario", "spec": {"assets": []}},
+                spec={"apiVersion": "oxblood/v1", "kind": "Scenario", "spec": {"assets": []}},
             )
             session.add(scen)
             await session.flush()
@@ -290,7 +290,7 @@ def test_create_template_rejects_running_run():
     from app.main import app
 
     token = sign_token(sub="root", role="admin", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r = client.post(
         "/api/v1/templates",
         json={
@@ -306,7 +306,7 @@ def test_create_template_rejects_unknown_run():
     from app.main import app
 
     token = sign_token(sub="root", role="admin", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r = client.post(
         "/api/v1/templates",
         json={
@@ -323,10 +323,10 @@ def test_list_templates_any_role():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     red = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="alice", role="red", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="alice", role="red", ttl_s=300)}
     )
     admin.post(
         "/api/v1/templates",
@@ -346,7 +346,7 @@ def test_get_template_404_for_unknown():
     from app.main import app
 
     token = sign_token(sub="root", role="admin", ttl_s=300)
-    client = TestClient(app, headers={"X-Divide-Token": token})
+    client = TestClient(app, headers={"X-Oxblood-Token": token})
     r = client.get("/api/v1/templates/99999")
     assert r.status_code == 404
 
@@ -356,10 +356,10 @@ def test_delete_template_admin_only():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     red = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="alice", role="red", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="alice", role="red", ttl_s=300)}
     )
     create = admin.post(
         "/api/v1/templates",
@@ -384,7 +384,7 @@ def test_create_template_rejects_duplicate_name():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     name = f"dup-{uuid.uuid4().hex[:8]}"
     r1 = admin.post(
@@ -428,7 +428,7 @@ def test_post_drill_with_template_id_spawns_run_with_template_id():
                 difficulty="beginner",
                 duration_min=30,
                 spec={
-                    "apiVersion": "divide/v1",
+                    "apiVersion": "oxblood/v1",
                     "kind": "Scenario",
                     "spec": {
                         "assets": [
@@ -467,7 +467,7 @@ def test_post_drill_with_template_id_spawns_run_with_template_id():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     # Patch build_runner so we don't need PVE templates.
     from app.runners.mock_adapter import MockProxmoxAdapter
@@ -508,7 +508,7 @@ def test_post_drill_with_template_id_rejects_wrong_scenario():
                 version=1,
                 difficulty="beginner",
                 duration_min=30,
-                spec={"apiVersion": "divide/v1", "kind": "Scenario", "spec": {"assets": []}},
+                spec={"apiVersion": "oxblood/v1", "kind": "Scenario", "spec": {"assets": []}},
             )
             scen2 = models.Scenario(
                 name=f"f7-mismatch-b-{uuid.uuid4().hex[:8]}",
@@ -516,7 +516,7 @@ def test_post_drill_with_template_id_rejects_wrong_scenario():
                 version=1,
                 difficulty="beginner",
                 duration_min=30,
-                spec={"apiVersion": "divide/v1", "kind": "Scenario", "spec": {"assets": []}},
+                spec={"apiVersion": "oxblood/v1", "kind": "Scenario", "spec": {"assets": []}},
             )
             session.add_all([scen1, scen2])
             await session.flush()
@@ -535,7 +535,7 @@ def test_post_drill_with_template_id_rejects_wrong_scenario():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     r = admin.post(
         "/api/v1/drills",
@@ -560,7 +560,7 @@ def test_post_drill_with_unknown_template_404():
                 version=1,
                 difficulty="beginner",
                 duration_min=30,
-                spec={"apiVersion": "divide/v1", "kind": "Scenario", "spec": {"assets": []}},
+                spec={"apiVersion": "oxblood/v1", "kind": "Scenario", "spec": {"assets": []}},
             )
             session.add(scen)
             await session.commit()
@@ -570,7 +570,7 @@ def test_post_drill_with_unknown_template_404():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     r = admin.post(
         "/api/v1/drills",
@@ -588,7 +588,7 @@ def test_save_as_template_admin_only():
     from app.main import app
 
     red = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="alice", role="red", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="alice", role="red", ttl_s=300)}
     )
     r = red.post(
         f"/api/v1/drills/{run_id}/save-as-template",
@@ -606,7 +606,7 @@ def test_save_as_template_binds_template_to_run():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     r = admin.post(
         f"/api/v1/drills/{run_id}/save-as-template",
@@ -640,7 +640,7 @@ def test_reset_run_requires_existing_template_binding():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     r = admin.post(f"/api/v1/drills/{run_id}/reset")
     assert r.status_code == 409
@@ -661,7 +661,7 @@ def test_reset_run_restages_assets_from_template():
                 difficulty="beginner",
                 duration_min=30,
                 spec={
-                    "apiVersion": "divide/v1",
+                    "apiVersion": "oxblood/v1",
                     "kind": "Scenario",
                     "spec": {
                         "assets": [
@@ -700,7 +700,7 @@ def test_reset_run_restages_assets_from_template():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     r = admin.post(f"/api/v1/drills/{run_id}/reset")
     assert r.status_code == 200, r.text
@@ -732,7 +732,7 @@ def test_reset_404_for_unknown_run():
     from app.main import app
 
     admin = TestClient(
-        app, headers={"X-Divide-Token": sign_token(sub="root", role="admin", ttl_s=300)}
+        app, headers={"X-Oxblood-Token": sign_token(sub="root", role="admin", ttl_s=300)}
     )
     r = admin.post("/api/v1/drills/99999/reset")
     assert r.status_code == 404

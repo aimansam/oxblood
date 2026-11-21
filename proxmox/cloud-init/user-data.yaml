@@ -3,7 +3,7 @@
 # Per-drill values (drill_id, role, ssh pubkey) are interpolated by the orchestrator.
 
 hostname: drill-{{drill_id}}-{{role}}
-fqdn: {{role}}.{{drill_id}}.divide.local
+fqdn: {{role}}.{{drill_id}}.oxblood.local
 manage_etc_hosts: true
 
 users:

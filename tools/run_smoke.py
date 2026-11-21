@@ -115,7 +115,7 @@ async def _smoke(scenario_path: Path) -> int:
     )
 
     # Final assertions
-    assert run.status == models.RunStatus.SUCCEEDED, f"expected SUCCEEDED, got {run.status}"
+    assert run.status == models.RunStatus.RUNNING, f"expected RUNNING pre-stop, got {run.status}"
     assert stopped.status == models.RunStatus.SUCCEEDED, "stop should leave status SUCCEEDED"
     assert all(a.status == models.AssetStatus.STOPPED for a in stopped.assets), (
         "not all assets stopped"

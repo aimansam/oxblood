@@ -18,7 +18,7 @@ test('pasted names become accounts with a credentials sheet', async ({ page, req
 
 test('a whole event goes in one paste, each person to their team', async ({ page, request }) => {
   const id = await createDrill(request, uniqueName('E2E one paste'), await firstScenarioId(request));
-  const headers = { 'X-Divide-Token': await adminToken(request) };
+  const headers = { 'X-Oxblood-Token': await adminToken(request) };
   await request.post(`/api/v2/drills/${id}/teams`, { headers, data: { count: 4 } });
   await signInAsAdmin(page);
   await page.goto(`/app/players?drill=${id}`);
@@ -50,7 +50,7 @@ test('a whole event goes in one paste, each person to their team', async ({ page
 
 test('a generated password must be replaced at first sign-in', async ({ page, request }) => {
   const id = await createDrill(request, uniqueName('E2E first login'), await firstScenarioId(request));
-  const headers = { 'X-Divide-Token': await adminToken(request) };
+  const headers = { 'X-Oxblood-Token': await adminToken(request) };
   const stamp = Date.now().toString(36);
   const made = await request.post(`/api/v2/drills/${id}/participants/bulk`, { headers, data: { names: [`Pat ${stamp}`], side: 'red' } });
   expect(made.ok()).toBeTruthy();

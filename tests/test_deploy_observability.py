@@ -28,8 +28,8 @@ def test_prometheus_config_loads() -> None:
     assert "global" in cfg
     # We must scrape the API at the right target.
     jobs = {j["job_name"]: j for j in cfg["scrape_configs"]}
-    assert "divide-api" in jobs
-    api_job = jobs["divide-api"]
+    assert "oxblood-api" in jobs
+    api_job = jobs["oxblood-api"]
     assert api_job["metrics_path"] == "/metrics"
     targets = api_job["static_configs"][0]["targets"]
     assert "api:8000" in targets
@@ -46,7 +46,7 @@ def test_grafana_datasource_provisioning_loads() -> None:
 
 
 def test_grafana_dashboard_provider_loads() -> None:
-    cfg_path = DEPLOY / "grafana" / "provisioning" / "dashboards" / "divide.yml"
+    cfg_path = DEPLOY / "grafana" / "provisioning" / "dashboards" / "oxblood.yml"
     cfg = yaml.safe_load(cfg_path.read_text())
     assert cfg["apiVersion"] == 1
     providers = cfg["providers"]
@@ -58,10 +58,10 @@ def test_grafana_dashboard_provider_loads() -> None:
 
 
 def test_starter_dashboard_loads_and_has_expected_panels() -> None:
-    cfg_path = DEPLOY / "grafana" / "dashboards" / "divide-drill-platform.json"
+    cfg_path = DEPLOY / "grafana" / "dashboards" / "oxblood-drill-platform.json"
     dash = json.loads(cfg_path.read_text())
     assert dash["title"].startswith("OxBlood")
-    assert dash["uid"] == "divide-drill-platform"
+    assert dash["uid"] == "oxblood-drill-platform"
     panel_types = {p["type"] for p in dash["panels"]}
     # We expect at least one of each: timeseries, stat, piechart, heatmap.
     assert "timeseries" in panel_types

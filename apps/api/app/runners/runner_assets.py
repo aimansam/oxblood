@@ -20,6 +20,135 @@ from app.runners.runner_base import (
 
 log = logging.getLogger("app.runners.runner")
 
+# ---------------------------------------------------------------------------
+# Attack-chain service payloads seeded at drill start.
+# Each constant is a file body written via the guest agent.  The services must
+# already be installed on the respective templates; the runner only drops
+# config / code and starts them.
+# ---------------------------------------------------------------------------
+
+# DMZ gateway: a "DevOps admin dashboard" Flask app with three intentional
+# weaknesses: (1) API key embedded in an HTML comment, (2) unauthenticated
+# /api/exec command-execution endpoint, (3) domain credentials exposed in
+# /api/config.  Running as root lets it read the root-only flag file.
+_DMZ_WEBAPP = """\
+from flask import Flask, request, jsonify
+import subprocess
+
+app = Flask(__name__)
+_KEY = "oxblood-admin-2024"
+
+
+def _auth():
+    return request.headers.get("X-API-Key") == _KEY
+
+
+@app.route("/")
+def index():
+    return (
+        "<!DOCTYPE html><html><head><title>DMZ Operations Dashboard</title></head><body>"
+        "<h1>Operations Dashboard</h1><p>Status: operational</p>"
+        "<!-- API key: oxblood-admin-2024 -->"
+        "</body></html>"
+    )
+
+
+@app.route("/api/status/flag")
+def flag():
+    if not _auth():
+        return jsonify({"error": "unauthorized"}), 401
+    try:
+        with open("/opt/oxblood/flags/red-dmz-foothold.txt") as fh:
+            return jsonify({"flag": fh.read().strip()})
+    except FileNotFoundError:
+        return jsonify({"flag": "not_seeded"}), 503
+
+
+@app.route("/api/config")
+def config():
+    if not _auth():
+        return jsonify({"error": "unauthorized"}), 401
+    return jsonify(
+        {"db_host": "dc01.oxblood.lab", "db_user": "svc_app", "db_pass": "AppSvc@2024!", "env": "production"}
+    )
+
+
+@app.route("/api/exec", methods=["POST"])
+def exec_cmd():
+    if not _auth():
+        return jsonify({"error": "unauthorized"}), 401
+    cmd = (request.get_json(silent=True) or {}).get("cmd", "")
+    if not cmd:
+        return jsonify({"error": "missing cmd"}), 400
+    try:
+        out = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, timeout=15)
+        return jsonify({"output": out.decode(errors="replace")})
+    except subprocess.CalledProcessError as exc:
+        return jsonify({"output": exc.output.decode(errors="replace"), "exit_code": exc.returncode})
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "timeout"}), 504
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=80)
+"""
+
+_DMZ_WEBAPP_UNIT = """\
+[Unit]
+Description=Oxblood DMZ Operations Dashboard
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/oxblood-webapp/app.py
+Restart=on-failure
+User=root
+WorkingDirectory=/opt/oxblood-webapp
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+# File server: Samba share with force user=root + guest ok on the flags path.
+# Any host that can reach port 445 can list and retrieve flag files without
+# credentials — a classic "readable root-owned share" misconfiguration.
+_FILE_SERVER_SMB_CONF = """\
+[global]
+    workgroup = OXBLOOD
+    server string = Enterprise File Server
+    security = user
+    map to guest = Bad User
+    log file = /var/log/samba/log.%m
+    max log size = 50
+
+[CompanyFiles]
+    path = /opt/oxblood/flags
+    comment = Company file archive
+    read only = yes
+    guest ok = yes
+    force user = root
+    force group = root
+    browseable = yes
+"""
+
+# Backup server: rsyncd with an unauthenticated read-only module that serves
+# the flags directory.  Running the daemon as root lets it read root-owned
+# files.  No auth users are configured, so the module is world-accessible.
+_BACKUP_SERVER_RSYNCD_CONF = """\
+pid file = /var/run/rsyncd.pid
+log file = /var/log/rsyncd.log
+use chroot = yes
+uid = root
+gid = root
+
+[archives]
+    path = /opt/oxblood/flags
+    comment = Backup Archives
+    read only = yes
+    list = yes
+"""
+
+# ---------------------------------------------------------------------------
+
 
 class AssetSeedingMixin(RunnerBase):
     """Per-asset spawn, guest seeding and network attachment for the run orchestrator."""
@@ -55,7 +184,7 @@ class AssetSeedingMixin(RunnerBase):
             log.info("runner.vmid_allocated role=%s new_vmid=%s", asset.role, new_vmid)
 
             resources = asset_spec.get("resources") or {}
-            provisioning = (getattr(asset, "_divide_scenario_spec", {}) or {}).get(
+            provisioning = (getattr(asset, "_oxblood_scenario_spec", {}) or {}).get(
                 "provisioning", {}
             ) or {}
             linked_clone = provisioning.get("mode") == "linked_clone"
@@ -68,14 +197,14 @@ class AssetSeedingMixin(RunnerBase):
                 source_vmid=template_vmid,
                 new_vmid=new_vmid,
                 node=node,
-                name=f"divide-{asset.run_id}-{sanitized_role}",
+                name=f"oxblood-{asset.run_id}-{sanitized_role}",
                 template_name=asset.template,
                 cores=resources.get("cores"),
                 sockets=resources.get("sockets"),
                 ram_mb=resources.get("ram_mb"),
                 disk_gb=resources.get("disk_gb"),
                 ip_configs=_static_ip_configs(
-                    asset_spec, getattr(asset, "_divide_scenario_spec", {}) or {}
+                    asset_spec, getattr(asset, "_oxblood_scenario_spec", {}) or {}
                 ),
                 full_clone=not linked_clone,
             )
@@ -97,7 +226,7 @@ class AssetSeedingMixin(RunnerBase):
         seed = self._build_seed_spec(
             asset=asset,
             asset_spec=asset_spec,
-            scenario_spec=getattr(asset, "_divide_scenario_spec", {}) or {},
+            scenario_spec=getattr(asset, "_oxblood_scenario_spec", {}) or {},
         )
         async with self._pve_lifecycle_section(
             "boot", run_id=asset.run_id, role=asset.role, vmid=result.vmid
@@ -213,14 +342,14 @@ class AssetSeedingMixin(RunnerBase):
             ciuser = str(access.get("user") or "blue")
             cipassword = str(access.get("password") or "blue-team")
         else:
-            ciuser = str(access.get("user") or "divide")
-            cipassword = str(access.get("password") or "divide")
+            ciuser = str(access.get("user") or "oxblood")
+            cipassword = str(access.get("password") or "oxblood")
 
         objectives = scenario_spec.get("objectives") or {}
         files: dict[str, str] = {
-            "/opt/divide/role.txt": role + "\n",
-            "/opt/divide/objectives-red.txt": "\n".join(objectives.get("red") or []) + "\n",
-            "/opt/divide/objectives-blue.txt": "\n".join(objectives.get("blue") or []) + "\n",
+            "/opt/oxblood/role.txt": role + "\n",
+            "/opt/oxblood/objectives-red.txt": "\n".join(objectives.get("red") or []) + "\n",
+            "/opt/oxblood/objectives-blue.txt": "\n".join(objectives.get("blue") or []) + "\n",
         }
 
         matched_flags = []
@@ -231,29 +360,40 @@ class AssetSeedingMixin(RunnerBase):
             ):
                 matched_flags.append(flag)
 
+        is_windows = "win" in template or "windows" in template
+        win_flag_cmds: list[str] = []
         for flag in matched_flags:
             flag_id = str(flag.get("id") or "flag")
-            files[f"/opt/divide/flags/{flag_id}.txt"] = str(flag.get("value") or "") + "\n"
+            if is_windows:
+                flag_val = str(flag.get("value") or "").replace("'", "''")
+                win_flag_cmds.append(
+                    f"Set-Content -Path 'C:\\oxblood\\flags\\{flag_id}.txt' -Value '{flag_val}'"
+                )
+                win_flag_cmds.append(
+                    f"icacls 'C:\\oxblood\\flags\\{flag_id}.txt' /grant 'Everyone:(R)' | Out-Null"
+                )
+            else:
+                files[f"/opt/oxblood/flags/{flag_id}.txt"] = str(flag.get("value") or "") + "\n"
 
         # Compact ranges keep Blue-team evidence on the investigation
         # workstation instead of dedicating a separate log-aggregator VM.
         # The bundle is only written when Blue flags are intentionally
         # planted on that workstation, so other scenarios retain their
         # existing topology and evidence flow.
-        if base_role == "blue_workstation" and any(
+        if base_role in {"blue_workstation", "blue_analyst"} and any(
             str(flag.get("side") or "") == "blue" for flag in matched_flags
         ):
-            files["/opt/divide/evidence/incident-timeline.log"] = (
-                "2026-01-01T09:12:44Z red_vlan workstation initiated HTTPS to dmz_gateway\n"
-                "2026-01-01T09:18:07Z dmz_gateway authenticated to dc01 over WinRM\n"
-                "2026-01-01T09:26:31Z file_server recorded unusual archive access\n"
-                "2026-01-01T09:31:52Z backup_server received a protected-path access attempt\n"
+            files["/opt/oxblood/evidence/incident-timeline.log"] = (
+                "2026-01-01T09:12:44Z red_vlan workstation RDP to dc02_vlan (victim_workstation)\n"
+                "2026-01-01T09:21:03Z dc02_vlan workstation WinRM to dc01_vlan (dc_server)\n"
+                "2026-01-01T09:33:17Z dc_server DCSync-equivalent request observed\n"
+                "2026-01-01T09:41:52Z dc01_vlan WinRM to dc02_vlan file_server — ransom note created\n"
             )
 
         runcmd = [
-            "mkdir -p /opt/divide/flags",
-            "mkdir -p /opt/divide/evidence",
-            "chmod -R 700 /opt/divide",
+            "mkdir -p /opt/oxblood/flags",
+            "mkdir -p /opt/oxblood/evidence",
+            "chmod -R 700 /opt/oxblood",
             "sysctl --system || true"
             if base_role == "router_fw" and "opnsense" not in template
             else "true",
@@ -270,6 +410,12 @@ class AssetSeedingMixin(RunnerBase):
             for command in (windows_setup.get("commands") or [])
             if str(command).strip()
         ]
+        if win_flag_cmds:
+            # Plant flags in C:\oxblood\flags\ after all other windows_commands.
+            windows_commands.append(
+                "New-Item -Path 'C:\\oxblood\\flags' -ItemType Directory -Force | Out-Null"
+            )
+            windows_commands.extend(win_flag_cmds)
         windows_phases: list[dict] = []
         for phase in windows_setup.get("phases") or []:
             if not isinstance(phase, dict):
@@ -334,7 +480,7 @@ class AssetSeedingMixin(RunnerBase):
                         ipaddress.ip_network(str(log_network["cidr"]), strict=False).hosts()
                     )
                     if len(log_hosts) > 30:
-                        files["/etc/rsyslog.d/30-divide-forward.conf"] = (
+                        files["/etc/rsyslog.d/30-oxblood-forward.conf"] = (
                             f"*.* @@{log_hosts[30]}:514\n"
                         )
                         runcmd.append("systemctl restart rsyslog || true")
@@ -342,24 +488,57 @@ class AssetSeedingMixin(RunnerBase):
                     log.warning("runner.telemetry.invalid_log_network role=%s", role)
 
         event_log_by_role = {
-            "web_gateway": "/var/log/divide-web-events.log",
-            "file_server": "/var/log/divide-file-events.log",
-            "backup_server": "/var/log/divide-backup-events.log",
+            "web_gateway": "/var/log/oxblood-web-events.log",
+            "file_server": "/var/log/oxblood-file-events.log",
+            "backup_server": "/var/log/oxblood-backup-events.log",
         }
         event_log = event_log_by_role.get(base_role)
         if event_log:
             files[event_log] = (
-                f"divide scenario asset={base_role} event=seeded\n"
-                f"divide scenario asset={base_role} event=ready\n"
+                f"oxblood scenario asset={base_role} event=seeded\n"
+                f"oxblood scenario asset={base_role} event=ready\n"
             )
-            runcmd.append(f"logger -t divide-{base_role} scenario_asset_ready || true")
+            runcmd.append(f"logger -t oxblood-{base_role} scenario_asset_ready || true")
+
+        # Attack-chain services: seed config/code and start the service.
+        # Templates must have the packages pre-installed; commands are no-ops
+        # (|| true) if a package is missing so other seeding still completes.
+        if base_role == "dmz_gateway" and "win" not in template:
+            files["/opt/oxblood-webapp/app.py"] = _DMZ_WEBAPP
+            files["/etc/systemd/system/oxblood-webapp.service"] = _DMZ_WEBAPP_UNIT
+            runcmd.extend(
+                [
+                    "mkdir -p /opt/oxblood-webapp",
+                    "systemctl daemon-reload",
+                    "systemctl enable oxblood-webapp || true",
+                    "systemctl restart oxblood-webapp || true",
+                ]
+            )
+
+        if base_role == "file_server" and "win" not in template:
+            files["/etc/samba/smb.conf"] = _FILE_SERVER_SMB_CONF
+            runcmd.extend(
+                [
+                    "systemctl enable smbd nmbd || true",
+                    "systemctl restart smbd nmbd || true",
+                ]
+            )
+
+        if base_role == "backup_server" and "win" not in template:
+            files["/etc/rsyncd.conf"] = _BACKUP_SERVER_RSYNCD_CONF
+            runcmd.extend(
+                [
+                    "systemctl enable rsync || true",
+                    "systemctl restart rsync || true",
+                ]
+            )
 
         if (
             base_role == "router_fw"
             and "opnsense" not in template
             and str(asset_spec.get("network_mode") or "").lower() != "trunk"
         ):
-            files["/etc/sysctl.d/99-divide-router.conf"] = (
+            files["/etc/sysctl.d/99-oxblood-router.conf"] = (
                 "net.ipv4.ip_forward=1\n"
                 "net.ipv4.conf.all.rp_filter=0\n"
                 "net.ipv4.conf.default.rp_filter=0\n"
@@ -370,7 +549,7 @@ class AssetSeedingMixin(RunnerBase):
                 for index, network in enumerate(asset_spec.get("networks") or [])
             }
             nft_rules = [
-                "table inet divide {",
+                "table inet oxblood {",
                 "  chain input { type filter hook input priority 0; policy accept; }",
                 "  chain output { type filter hook output priority 0; policy accept; }",
                 "  chain forward {",
@@ -398,8 +577,8 @@ class AssetSeedingMixin(RunnerBase):
                         f"{rule.get('protocol')} dport {ports_expr} accept"
                     )
             nft_rules.extend(["  }", "}", ""])
-            files["/etc/nftables.d/divide-policy.nft"] = "\n".join(nft_rules)
-            runcmd.append("nft -f /etc/nftables.d/divide-policy.nft")
+            files["/etc/nftables.d/oxblood-policy.nft"] = "\n".join(nft_rules)
+            runcmd.append("nft -f /etc/nftables.d/oxblood-policy.nft")
 
         return SeedSpec(
             role=role,

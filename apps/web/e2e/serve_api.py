@@ -1,7 +1,7 @@
 """API for the e2e stack: the real app, with a mock Proxmox that already has every scenario template.
 
 A bare mock has no templates, so no exercise could ever be prepared and the lifecycle (prepare, start,
-play, stop) could not be tested in a browser. Run from apps/api with DIVIDE_DB_URL etc. in the environment.
+play, stop) could not be tested in a browser. Run from apps/api with OXBLOOD_DB_URL etc. in the environment.
 """
 
 from __future__ import annotations

@@ -38,7 +38,7 @@ echo ""
 # 1. Restore database
 echo "1. Restoring database..."
 if [ -f "$BACKUP_PATH/database.sql" ]; then
-  docker compose -f /DATA/Storage/docker/divide-cyber-drill/deploy/docker-compose.yml exec -T postgres psql -U divide divide < "$BACKUP_PATH/database.sql"
+  docker compose -f /DATA/Storage/docker/divide-cyber-drill/deploy/docker-compose.yml exec -T postgres psql -U oxblood oxblood < "$BACKUP_PATH/database.sql"
   echo "   ✓ Database restored"
 else
   echo "   ⚠ No database backup found, skipping"

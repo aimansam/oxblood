@@ -1,6 +1,6 @@
 # Monorepo Structure
 
-The repository keeps its existing `divide-*` runtime names and API paths. The
+The repository keeps its existing `oxblood-*` runtime names and API paths. The
 first monorepo phase only separates deployable applications from shared
 infrastructure and scenario content:
 

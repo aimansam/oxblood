@@ -9,7 +9,7 @@ an IP show up before participants are waiting.
 
 It creates real VMs on the Proxmox node the API is configured for.
 
-    export DIVIDE_ADMIN_PASSWORD=...            # or DIVIDE_TOKEN=...
+    export OXBLOOD_ADMIN_PASSWORD=...            # or OXBLOOD_TOKEN=...
     python tools/range_dry_run.py --scenario enterprise-file-breach
     python tools/range_dry_run.py --scenario 3 --keep      # leave the range up to inspect
     python tools/range_dry_run.py --scenario 3 --timeout 2400
@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 
 import httpx
 
-DEFAULT_API_BASE = os.environ.get("DIVIDE_API_BASE", "http://localhost:8000")
+DEFAULT_API_BASE = os.environ.get("OXBLOOD_API_BASE", "http://localhost:8000")
 PREPARE_TERMINAL = {"started", "failed", "validation_failed", "cancelled", "timeout"}
 CLEANUP_TERMINAL = {"stopped", "failed"}
 
@@ -216,21 +216,21 @@ class RangeDryRun:
 
 
 def _login(client: httpx.Client) -> None:
-    token = os.environ.get("DIVIDE_TOKEN")
+    token = os.environ.get("OXBLOOD_TOKEN")
     if not token:
-        password = os.environ.get("DIVIDE_ADMIN_PASSWORD")
+        password = os.environ.get("OXBLOOD_ADMIN_PASSWORD")
         if not password:
             sys.exit(
-                "Set DIVIDE_TOKEN, or DIVIDE_ADMIN_PASSWORD (and optionally DIVIDE_ADMIN_SUB)."
+                "Set OXBLOOD_TOKEN, or OXBLOOD_ADMIN_PASSWORD (and optionally OXBLOOD_ADMIN_SUB)."
             )
         response = client.post(
             "/api/v1/auth/login",
-            json={"sub": os.environ.get("DIVIDE_ADMIN_SUB", "admin"), "password": password},
+            json={"sub": os.environ.get("OXBLOOD_ADMIN_SUB", "admin"), "password": password},
         )
         if response.status_code != 200:
             sys.exit(f"login failed: {response.status_code} {response.text[:120]}")
         token = response.json()["token"]
-    client.headers["X-Divide-Token"] = token
+    client.headers["X-Oxblood-Token"] = token
 
 
 def main(argv: list[str] | None = None) -> int:
