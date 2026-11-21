@@ -6,7 +6,7 @@ from app.core import auth
 print(auth.sign_token('admin', 'admin', 3600))
 ")
 HOST="https://192.168.0.10:8006"
-PVE_TOK="oxblood@pve@pam!drill-token=4ea3414f-d3a4-47b5-a2ed-19018f416cc0"
+PVE_TOK="${PVE_TOK:?set PVE_TOK to <user>!<token-name>=<secret>, e.g. oxblood@pam!drill-token=...}"
 API="http://localhost:8000"
 H_AUTH="X-Oxblood-Token: $TOKEN"
 H_PVE="Authorization: PVEAPIToken=$PVE_TOK"
