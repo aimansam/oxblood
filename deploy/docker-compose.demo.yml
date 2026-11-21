@@ -1,0 +1,90 @@
+# OxBlood demo: the whole app without a Proxmox cluster.
+#
+#   docker compose -f deploy/docker-compose.demo.yml up -d --build
+#   open http://localhost:5050/app/   (admin / OxbloodDemo-2026)
+#
+# The API runs with OXBLOOD_DEMO=true: an in-memory Proxmox that has every template. A one-shot
+# "seed" service then creates a running team competition with players and scores. The database
+# lives in memory, so `down` followed by `up` starts over. Not for production use.
+name: oxblood-demo
+
+x-demo-env: &demo-env
+  OXBLOOD_DEMO_ADMIN: admin
+  OXBLOOD_DEMO_ADMIN_PASSWORD: OxbloodDemo-2026
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: oxblood
+      POSTGRES_PASSWORD: oxblood-demo
+      POSTGRES_DB: oxblood
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oxblood -d oxblood"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    image: oxblood/api:dev
+    environment:
+      OXBLOOD_DEMO: "true"
+      OXBLOOD_DB_URL: postgresql+asyncpg://oxblood:oxblood-demo@postgres:5432/oxblood
+      OXBLOOD_REDIS_URL: redis://redis:6379/0
+      OXBLOOD_SCENARIOS_DIR: /scenarios
+      OXBLOOD_SYNC_ON_STARTUP: "true"
+      OXBLOOD_RANGE_SKIP_MEMORY_CHECK: "true"
+      OXBLOOD_TOKEN_SECRET: demo-only-not-a-secret
+      OXBLOOD_BOOTSTRAP_ADMIN_SUB: admin
+      OXBLOOD_BOOTSTRAP_ADMIN_PASSWORD: OxbloodDemo-2026
+    volumes:
+      - ../examples/scenarios:/scenarios:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  seed:
+    image: oxblood/api:dev
+    command: ["python", "/app/scripts/seed_demo.py"]
+    environment:
+      <<: *demo-env
+      OXBLOOD_DEMO_API: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: "no"
+
+  portal:
+    build:
+      context: ..
+      dockerfile: apps/portal/Dockerfile
+    image: oxblood/portal:dev
+    environment:
+      API_BACKEND: http://api:8000
+    ports:
+      - "${OXBLOOD_DEMO_PORT:-5050}:80"
+    depends_on:
+      api:
+        condition: service_healthy

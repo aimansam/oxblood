@@ -296,3 +296,12 @@ class MockProxmoxAdapter(ProxmoxAdapter):
         if vmid not in self._vms:
             raise KeyError(f"vmid {vmid} not found on node {node}")
         return self._vms[vmid]
+
+
+class DemoProxmoxAdapter(MockProxmoxAdapter):
+    """A mock that has every template a scenario asks for, used by demo mode."""
+
+    async def find_template(self, name: str) -> int | None:
+        if name not in self._templates:
+            self.seed_template(name)
+        return self._templates[name]

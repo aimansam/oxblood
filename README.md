@@ -2,6 +2,41 @@
 
 A cyber range on your own Proxmox VE. OxBlood provisions scenario VMs, runs red-versus-blue exercises, accepts and scores flags, and writes the reports afterwards.
 
+![Overview with a live exercise](assets/screenshots/overview.png)
+
+## Try the demo
+
+No Proxmox needed. The demo runs the full app against an in-memory range and fills it with a live
+team competition: two teams, six players, a running range and the first scores.
+
+```bash
+git clone https://github.com/aimansam/oxblood.git
+cd oxblood
+docker compose -f deploy/docker-compose.demo.yml up -d --build
+```
+
+Open <http://localhost:5050/app/> and sign in:
+
+| Account | Password | Sees |
+| --- | --- | --- |
+| `admin` | `OxbloodDemo-2026` | The operator console: exercises, live range, competition, scoreboard |
+| `aisyah` | `Player-Demo-2026` | A red player's mission screen and map (team Alpha) |
+| `hafiz` | `Player-Demo-2026` | A blue player's mission screen and map (team Bravo) |
+
+Machines are simulated, so there are no consoles to open, and the Infrastructure page and the
+Proxmox tab in Settings show Proxmox as unavailable. Everything else is the real application. Stop it with
+`docker compose -f deploy/docker-compose.demo.yml down`; the next `up` starts from scratch. Set
+`OXBLOOD_DEMO_PORT` to use a port other than 5050.
+
+| | |
+| --- | --- |
+| ![Live range map](assets/screenshots/live-range.png) | ![Team scoreboard](assets/screenshots/scoreboard.png) |
+| **Live range map.** Every machine, link and VLAN, with its state. | **Scoreboard.** Points per team and round. |
+| ![Exercise details](assets/screenshots/exercise.png) | ![New exercise wizard](assets/screenshots/new-exercise.png) |
+| **Exercise details.** Range, players and lifecycle controls. | **New exercise.** From scenario to running range in six steps. |
+| ![Player mission screen](assets/screenshots/player-mission.png) | ![Player map](assets/screenshots/player-map.png) |
+| **Player view.** Team, side, standings and the attack guide. | **Player map.** Only the machines their team can reach. |
+
 ## How it fits together
 
 ```

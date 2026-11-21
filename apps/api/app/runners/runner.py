@@ -901,6 +901,9 @@ class Runner(AssetSeedingMixin, BaselineMixin, WatchdogMixin):
     # --- watchdog (L2 2.8) --------------------------------------------
 
 
+_demo_adapter: ProxmoxAdapter | None = None
+
+
 def _default_adapter() -> ProxmoxAdapter:
     """Pick the right adapter based on env.
 
@@ -916,6 +919,15 @@ def _default_adapter() -> ProxmoxAdapter:
     from app.runners.mock_adapter import MockProxmoxAdapter
     from app.runners.real_adapter import RealProxmoxAdapter
     from app.services import proxmox as proxmox_svc
+
+    if settings.demo:
+        # One shared instance, so clones made by one request are there for the next.
+        global _demo_adapter
+        if _demo_adapter is None:
+            from app.runners.mock_adapter import DemoProxmoxAdapter
+
+            _demo_adapter = DemoProxmoxAdapter()
+        return _demo_adapter
 
     if proxmox_svc._DB_OVERLAY is not None:
         try:

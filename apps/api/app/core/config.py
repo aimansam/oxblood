@@ -33,6 +33,8 @@ class Settings(BaseSettings):
 
     env: Literal["dev", "staging", "production"] = "dev"
     log_level: str = "INFO"
+    # Demo mode: an in-memory Proxmox that has every template, so the whole app runs without a cluster.
+    demo: bool = False
     api_host: str = "0.0.0.0"
     api_port: int = 8000
 
