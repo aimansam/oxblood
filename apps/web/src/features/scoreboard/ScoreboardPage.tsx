@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useDrills } from '@/api/hooks';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
+import { RankBadge, ScoreBar } from '@/components/RankBadge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select } from '@/components/ui/field';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,6 +21,7 @@ export function ScoreboardPage() {
   if (drills.isLoading) return <Skeleton className="h-48 w-full" />;
   if (!list.length) return <EmptyState title="No exercises are available yet" />;
   const rows = board.data ?? [];
+  const top = Math.max(0, ...rows.map((r) => r.total_points));
   return (
     <>
       <PageHeader title="Scoreboard" description={`${rows.length} ${rows.length === 1 ? 'participant' : 'participants'}`} />
@@ -38,15 +40,15 @@ export function ScoreboardPage() {
         <Card>
           <CardContent className="overflow-x-auto p-0">
             <table className="w-full text-left">
-              <thead className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
+              <thead className="hud-label border-b border-border">
                 <tr><th className="px-5 py-3">Rank</th><th>Participant</th><th className="text-right">Points</th><th className="px-5 text-right">Flags</th></tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {rows.map((r) => (
                   <tr key={r.user_id}>
-                    <td className="px-5 py-3 tabular-nums">{r.rank}</td>
-                    <td className="font-medium">{r.name}</td>
-                    <td className="text-right tabular-nums">{r.total_points}</td>
+                    <td className="px-5 py-3"><RankBadge rank={r.rank} /></td>
+                    <td><span className="font-medium">{r.name}</span><ScoreBar value={r.total_points} max={top} /></td>
+                    <td className="text-right font-mono tabular-nums">{r.total_points}</td>
                     <td className="px-5 text-right tabular-nums">{r.flags_captured}</td>
                   </tr>
                 ))}

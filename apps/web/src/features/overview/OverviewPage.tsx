@@ -7,17 +7,20 @@ import { StatusChip } from '@/components/StatusChip';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatWhen } from '@/lib/utils';
+import { cn, formatWhen } from '@/lib/utils';
 import { useWizard } from '../wizard/WizardProvider';
 import { humanizeAction, visibleActivity } from './activity';
 import { nextDrill } from '../exercises/filter';
 
-function Stat({ label, value }: { label: string; value: number | undefined }) {
+function Stat({ label, value, led }: { label: string; value: number | undefined; led: string }) {
   return (
     <Card>
-      <CardContent className="space-y-1">
-        <div className="text-muted-foreground">{label}</div>
-        {value === undefined ? <Skeleton className="h-8 w-12" /> : <div className="text-3xl font-semibold tabular-nums">{value}</div>}
+      <CardContent className="space-y-2">
+        <div className="flex items-center gap-2">
+          <span aria-hidden className={cn('led', value ? led : '')} />
+          <span className="hud-label">{label}</span>
+        </div>
+        {value === undefined ? <Skeleton className="h-9 w-12" /> : <div className="font-mono text-4xl font-semibold tabular-nums tracking-tight">{String(value).padStart(2, '0')}</div>}
       </CardContent>
     </Card>
   );
@@ -50,13 +53,13 @@ export function OverviewPage() {
       )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="Live" value={count('active')} />
-        <Stat label="Scheduled" value={count('scheduled')} />
-        <Stat label="Completed" value={count('completed')} />
-        <Stat label="Organizations" value={scenarios.data?.length} />
+        <Stat label="Live" led="led-ok led-pulse" value={count('active')} />
+        <Stat label="Scheduled" led="led-warn" value={count('scheduled')} />
+        <Stat label="Completed" led="led-info" value={count('completed')} />
+        <Stat label="Organizations" led="led-danger" value={scenarios.data?.length} />
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+      <div className="mt-6 grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
           <CardHeader>
             <CardTitle>{next?.status === 'active' ? 'Live exercise' : 'Next exercise'}</CardTitle>
@@ -65,7 +68,7 @@ export function OverviewPage() {
             {drills.isLoading ? (
               <Skeleton className="h-16 w-full" />
             ) : next ? (
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate text-lg font-semibold">{next.title}</div>
                   <div className="mt-1 text-muted-foreground">{formatWhen(next.scheduled_start_at ?? next.created_at)}</div>

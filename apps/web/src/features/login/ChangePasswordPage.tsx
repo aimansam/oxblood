@@ -4,7 +4,9 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { api, unwrap } from '@/api/client';
 import { useMe } from '@/api/hooks';
 import { getToken, setToken } from '@/api/token';
+import { Wordmark } from '@/components/BrandMark';
 import { Button } from '@/components/ui/button';
+import { AuthLayout } from './AuthLayout';
 import { Input } from '@/components/ui/input';
 
 export const MIN_PASSWORD = 10;
@@ -43,13 +45,10 @@ export function ChangePasswordPage() {
   };
 
   return (
-    <div className="flex min-h-full items-center justify-center px-4">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-5 rounded-lg border border-border bg-card p-6">
+    <AuthLayout>
+      <form onSubmit={submit} className="panel w-full max-w-sm space-y-5 rounded-sm p-6">
         <div>
-          <div className="mb-3 flex items-center gap-2 text-base font-semibold">
-            <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
-            OxBlood
-          </div>
+          <Wordmark className="mb-4 lg:hidden" />
           <h1 className="text-xl font-semibold tracking-tight">Choose your password</h1>
           <p className="mt-1 text-muted-foreground">
             {forced ? `Welcome, ${me.data?.sub}. The password you were given is temporary. Set your own to continue.` : 'Set a new password for your account.'}
@@ -57,15 +56,15 @@ export function ChangePasswordPage() {
         </div>
         <div className="space-y-3">
           <label className="block space-y-1.5">
-            <span className="text-muted-foreground">Current password</span>
+            <span className="hud-label">Current password</span>
             <Input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" required autoFocus />
           </label>
           <label className="block space-y-1.5">
-            <span className="text-muted-foreground">New password</span>
+            <span className="hud-label">New password</span>
             <Input type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" required minLength={MIN_PASSWORD} aria-describedby="pw-rules" />
           </label>
           <label className="block space-y-1.5">
-            <span className="text-muted-foreground">Repeat the new password</span>
+            <span className="hud-label">Repeat the new password</span>
             <Input type="password" value={again} onChange={(e) => setAgain(e.target.value)} autoComplete="new-password" required />
           </label>
           <p id="pw-rules" className="text-xs text-muted-foreground">
@@ -81,6 +80,6 @@ export function ChangePasswordPage() {
           {busy ? 'Saving…' : 'Save and continue'}
         </Button>
       </form>
-    </div>
+    </AuthLayout>
   );
 }

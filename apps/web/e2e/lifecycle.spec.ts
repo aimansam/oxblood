@@ -86,6 +86,7 @@ test('the wizard prepares a range and "Open live range" takes the operator into 
   await dialog.getByLabel('Title').fill(title);
   await dialog.getByRole('button', { name: 'Next' }).click();
   await dialog.getByRole('button', { name: 'Next' }).click(); // Format
+  await dialog.getByRole('button', { name: 'Next' }).click(); // Setup -> Snapshots
   await dialog.getByRole('button', { name: 'Prepare range' }).click();
   await page.getByRole('button', { name: /Prepare|Create/ }).last().click(); // "not start-ready, prepare anyway?"
   try {
@@ -161,6 +162,7 @@ test('a team competition is set up in the wizard, players join while the range b
   await expect(dialog.getByText(/OPNsense/)).toBeVisible();
   await expect(dialog.getByText(/Destroy the accounts made for this exercise/)).toBeVisible();
   await dialog.getByRole('button', { name: 'Next' }).click();
+  await dialog.getByRole('button', { name: 'Next' }).click(); // Setup -> Snapshots
   await dialog.getByRole('button', { name: 'Prepare range' }).click();
   await page.getByRole('button', { name: /Prepare|Create/ }).last().click();
 

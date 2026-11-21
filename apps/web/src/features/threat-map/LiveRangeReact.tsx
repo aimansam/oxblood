@@ -17,7 +17,7 @@ import { RefereeStrip } from './RefereeStrip';
 import { ThreatMap } from './map/ThreatMap';
 import { useThreatMap } from './useThreatMap';
 
-const icon = 'grid h-9 w-9 place-items-center rounded-md border border-border bg-card text-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+const icon = 'grid h-9 w-9 place-items-center rounded-sm border border-border bg-card text-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 /** Live range page: header with the exercise controls, the interactive map, and the player / referee overlays. */
 export function LiveRangeReact({ drill, user }: { drill: Drill; user: { sub: string; role: string } }) {
@@ -56,15 +56,15 @@ export function LiveRangeReact({ drill, user }: { drill: Drill; user: { sub: str
 
   return (
     <div className="fixed inset-0 z-[1000] flex flex-col bg-background text-foreground">
-      <header className="flex items-center gap-3 border-b border-border bg-card px-3 py-2">
+      <header className="flex items-center gap-3 border-b border-border bg-card px-3 py-2 shadow-[inset_0_-1px_0_hsl(var(--primary)/0.5)]">
         <button type="button" className={icon} aria-label="Back to exercises" title="Back to exercises" onClick={() => navigate(`/exercises?drill=${drill.id}`)}>
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="min-w-0">
-          <h1 className="truncate text-sm font-semibold">{drill.title || 'Live operation'}</h1>
-          <p className="truncate text-xs text-muted-foreground">{operator ? 'Operator workspace · full range visibility' : 'Participant workspace · assigned machines only'}</p>
+          <h1 className="truncate font-mono text-sm font-semibold uppercase tracking-wider">{drill.title || 'Live operation'}</h1>
+          <p className="hud-label truncate">{operator ? 'Operator workspace · full range visibility' : 'Participant workspace · assigned machines only'}</p>
         </div>
-        <dl className="ml-auto hidden items-center gap-4 text-xs sm:flex" aria-label="Range status" aria-live="polite">
+        <dl className="ml-auto hidden items-center gap-2 text-xs sm:flex" aria-label="Range status" aria-live="polite">
           {(
             [
               ['state', failed ? 'ATTENTION' : String(status).toUpperCase()],
@@ -73,9 +73,9 @@ export function LiveRangeReact({ drill, user }: { drill: Drill; user: { sub: str
               ['elapsed', started ? formatElapsed(started, now) : '--:--'],
             ] as [string, string | number][]
           ).map(([label, value]) => (
-            <div key={label} className="text-right">
-              <dd className={cn('font-mono font-semibold tabular-nums', label === 'state' && failed && 'text-danger')}>{value}</dd>
-              <dt className="text-muted-foreground">{label}</dt>
+            <div key={label} className="min-w-[4.5rem] border border-border bg-background/60 px-2.5 py-1 text-right">
+              <dd className={cn('font-mono text-sm font-semibold tabular-nums', label === 'state' && (failed ? 'text-danger' : String(status) === 'active' && 'text-success'))}>{value}</dd>
+              <dt className="hud-label !text-[10px]">{label}</dt>
             </div>
           ))}
         </dl>

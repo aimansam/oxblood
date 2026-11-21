@@ -1,42 +1,49 @@
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Design tokens (HSL triplets). Dark is the default theme; a light theme is a
-   second block, not a component change. Primary is the OxBlood red. */
+/* Design tokens (HSL triplets). Dark is the default theme; the light theme is a
+   second block of values, not a component change. Primary is the OxBlood red.
+   Red team = danger, blue team = info. */
 @layer base {
   :root {
-    --background: 240 10% 5%;
-    --foreground: 240 10% 96%;
-    --card: 240 8% 8%;
-    --card-foreground: 240 10% 96%;
-    --muted: 240 6% 13%;
-    --muted-foreground: 240 6% 64%;
-    --border: 240 6% 17%;
-    --primary: 352 68% 46%;
+    --background: 220 22% 4%;
+    --card: 220 18% 7%;
+    --card-foreground: 210 20% 94%;
+    --foreground: 210 20% 94%;
+    --muted: 220 14% 11%;
+    --muted-foreground: 218 10% 62%;
+    --border: 220 14% 17%;
+    --primary: 352 72% 48%;
     --primary-foreground: 0 0% 100%;
-    --ring: 352 68% 56%;
-    --success: 152 52% 48%;
-    --warning: 38 92% 56%;
-    --danger: 0 72% 58%;
-    --info: 215 82% 64%;
+    --ring: 352 80% 58%;
+    --success: 152 62% 50%;
+    --warning: 38 94% 56%;
+    --danger: 2 78% 60%;
+    --info: 208 90% 62%;
+    --grid: 220 20% 100% / 0.035;
+    --scrim: 220 40% 2% / 0.78;
   }
-  /* Light theme: same tokens, different values. The live range map keeps its own dark palette. */
   html.light {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 8%;
+    --background: 220 20% 96%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 8%;
-    --muted: 240 5% 95%;
-    --muted-foreground: 240 4% 38%;
-    --border: 240 6% 88%;
-    --primary: 352 68% 42%;
+    --card-foreground: 222 28% 10%;
+    --foreground: 222 28% 10%;
+    --muted: 220 16% 92%;
+    --muted-foreground: 220 8% 38%;
+    --border: 220 14% 82%;
+    --primary: 352 72% 42%;
     --primary-foreground: 0 0% 100%;
-    --ring: 352 68% 42%;
-    --success: 152 60% 28%;
-    --warning: 30 90% 34%;
-    --danger: 0 70% 44%;
-    --info: 215 80% 42%;
+    --ring: 352 72% 42%;
+    --success: 152 64% 28%;
+    --warning: 30 92% 33%;
+    --danger: 2 72% 42%;
+    --info: 212 84% 40%;
+    --grid: 222 30% 20% / 0.06;
+    --scrim: 220 30% 12% / 0.55;
   }
   * {
     @apply border-border;
@@ -51,5 +58,89 @@
   }
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  /* Small mono caps label used for section titles, metrics and chips. */
+  .hud-label {
+    @apply font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground;
+  }
+
+  /* Bordered panel with corner ticks. */
+  .panel {
+    @apply relative border border-border bg-card text-card-foreground;
+  }
+  .panel::before,
+  .panel::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    pointer-events: none;
+    border-color: hsl(var(--primary));
+    border-style: solid;
+    border-width: 0;
+  }
+  .panel::before {
+    top: -1px;
+    left: -1px;
+    border-top-width: 1px;
+    border-left-width: 1px;
+  }
+  .panel::after {
+    right: -1px;
+    bottom: -1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+  }
+
+  /* Status LED. */
+  .led {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    flex: none;
+    border-radius: 9999px;
+    background: hsl(var(--muted-foreground));
+  }
+  .led-ok {
+    background: hsl(var(--success));
+    box-shadow: 0 0 8px hsl(var(--success) / 0.7);
+  }
+  .led-warn {
+    background: hsl(var(--warning));
+    box-shadow: 0 0 8px hsl(var(--warning) / 0.7);
+  }
+  .led-danger {
+    background: hsl(var(--danger));
+    box-shadow: 0 0 8px hsl(var(--danger) / 0.7);
+  }
+  .led-info {
+    background: hsl(var(--info));
+    box-shadow: 0 0 8px hsl(var(--info) / 0.7);
+  }
+  .led-pulse {
+    animation: led-pulse 2s ease-in-out infinite;
+  }
+
+  /* Faint grid behind the app. */
+  .bg-grid {
+    background-image:
+      linear-gradient(hsl(var(--grid)) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--grid)) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
+
+@keyframes led-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .led-pulse {
+    animation: none;
   }
 }

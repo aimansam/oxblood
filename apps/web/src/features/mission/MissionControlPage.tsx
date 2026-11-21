@@ -19,8 +19,8 @@ function Metric({ k, v }: { k: string; v: string | number }) {
   return (
     <Card>
       <CardContent className="space-y-1">
-        <div className="text-muted-foreground">{k}</div>
-        <div className="text-2xl font-semibold tabular-nums">{v}</div>
+        <div className="hud-label">{k}</div>
+        <div className="font-mono text-2xl font-semibold tabular-nums">{v}</div>
       </CardContent>
     </Card>
   );
@@ -88,7 +88,7 @@ export function MissionControlPage() {
           {drills.isLoading ? <Skeleton className="h-14 w-full" /> : (
             <>
               <div className="min-w-0">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Current exercise {current ? `#${current.id}` : ''}</div>
+                <div className="hud-label">Current exercise {current ? `#${current.id}` : ''}</div>
                 <div className="truncate text-xl font-semibold">{current?.title ?? 'No exercise selected'}</div>
                 <div className="mt-1 flex items-center gap-3 text-muted-foreground">
                   {current && <StatusChip status={current.status} />}
@@ -113,7 +113,7 @@ export function MissionControlPage() {
               ['Network', networkCheck ? (networkCheck.state === 'ready' ? 'Ready' : 'Needs attention') : 'Not checked', networkCheck?.state === 'ready'],
               ['Required checks', requiredChecks.length ? `${requiredChecks.filter((c) => c.state === 'ready').length} / ${requiredChecks.length}` : 'Not checked', requiredChecks.length > 0 && requiredChecks.every((c) => c.state === 'ready')],
             ].map(([k, v, ok]) => (
-              <div key={String(k)} className="flex items-center justify-between py-2"><span className="flex items-center gap-2"><span className={cn('h-2 w-2 rounded-full', ok ? 'bg-success' : 'bg-warning')} />{k}</span><span className="text-muted-foreground">{v}</span></div>
+              <div key={String(k)} className="flex items-center justify-between py-2"><span className="flex items-center gap-2"><span aria-hidden className={cn('led', ok ? 'led-ok' : 'led-warn')} />{k}</span><span className="text-muted-foreground">{v}</span></div>
             ))}
           </CardContent>
         </Card>
