@@ -214,14 +214,14 @@ def test_report_200_lead_can_see_any_run(client):
     assert r.status_code == 200
 
 
-def test_report_200_observer_can_see_any_run(client):
-    """Observer sees any run (read-only persona)."""
+def test_report_403_for_the_retired_observer_role(client):
+    """There is no observer role any more: an old token that carries it is refused."""
     run_id, _ = asyncio.run(_seed_terminal_run(started_by="bob"))
     r = client.get(
         f"/api/v1/drills/{run_id}/report",
         headers={"X-Oxblood-Token": _token("auditor", "observer")},
     )
-    assert r.status_code == 200
+    assert r.status_code == 403
 
 
 def test_report_409_for_in_progress_run(client):

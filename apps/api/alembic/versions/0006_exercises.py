@@ -136,11 +136,19 @@ def downgrade() -> None:
     # the drop_column inside a non-batch op, and batch_alter_table
     # reflects the FK target (exercises) which is gone if we drop
     # it first.
+    # The exercise tables and runs.exercise_id may already be gone (0043_drop_unused_tables).
+    inspector = sa.inspect(op.get_bind())
+    run_columns = {c["name"] for c in inspector.get_columns("runs")}
     with op.batch_alter_table("runs") as batch_op:
         batch_op.drop_column("team")
-        batch_op.drop_column("exercise_id")
-    op.drop_table("team_memberships")
-    op.drop_table("teams")
-    op.drop_index("ix_exercises_scenario_id", table_name="exercises")
-    op.drop_index("ix_exercises_status", table_name="exercises")
-    op.drop_table("exercises")
+        if "exercise_id" in run_columns:
+            batch_op.drop_column("exercise_id")
+    existing = set(inspector.get_table_names())
+    if "team_memberships" in existing:
+        op.drop_table("team_memberships")
+    if "teams" in existing:
+        op.drop_table("teams")
+    if "exercises" in existing:
+        op.drop_index("ix_exercises_scenario_id", table_name="exercises")
+        op.drop_index("ix_exercises_status", table_name="exercises")
+        op.drop_table("exercises")

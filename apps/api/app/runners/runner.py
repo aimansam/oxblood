@@ -79,8 +79,7 @@ class RunRequest:
     started_by: str | None = None
     # Optional override; defaults to first node returned by the adapter.
     node: str | None = None
-    # F6: optional exercise + team binding.
-    exercise_id: int | None = None
+    # Optional label for flag captures (red by default).
     team: str | None = None
     # F7: optional template this run is spawned from. The runner
     # uses the template's ``snapshot`` to pre-stage assets / flags
@@ -292,12 +291,11 @@ class Runner(AssetSeedingMixin, BaselineMixin, WatchdogMixin):
                 )
 
         # 1. Create Run (pending) + Asset (planned) rows.
-        # F6 + F7: propagate exercise_id + team + template_id.
+        # Propagate team + template_id.
         run = models.Run(
             scenario_id=scenario.id,
             status=RunStatus.PENDING,
             started_by=req.started_by,
-            exercise_id=req.exercise_id,
             team=req.team,
             template_id=req.template_id,
             timeout_min=self._resolve_timeout_min(req.timeout_min, scenario.duration_min),
@@ -323,7 +321,6 @@ class Runner(AssetSeedingMixin, BaselineMixin, WatchdogMixin):
                 "scenario_id": scenario.id,
                 "scenario_name": scenario.name,
                 "started_by": req.started_by,
-                "exercise_id": req.exercise_id,
                 "team": req.team,
                 "template_id": req.template_id,
             },
@@ -415,8 +412,7 @@ class Runner(AssetSeedingMixin, BaselineMixin, WatchdogMixin):
                     # safe because we drop it on session.flush boundaries.
                     asset._f3_bridges_by_name = bridges_by_name  # type: ignore[attr-defined]
                     asset._f3_vlan_by_name = vlan_by_name  # type: ignore[attr-defined]
-                    # F6: stash exercise + team attrs for the spawner log.
-                    asset._f6_exercise_id = req.exercise_id  # type: ignore[attr-defined]
+                    # Stash the team label for the spawner log.
                     asset._f6_team = req.team  # type: ignore[attr-defined]
                     asset._oxblood_scenario_spec = spec  # type: ignore[attr-defined]
                     baseline = baseline_by_role.get(asset.role)

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createDrill, firstScenarioId, signInAsAdmin, uniqueName } from './support';
+import { adminToken, createDrill, firstScenarioId, signInAsAdmin, uniqueName } from './support';
 
 test('every operator page renders', async ({ page }) => {
   await signInAsAdmin(page);
@@ -91,4 +91,21 @@ test('overview shows recent activity after something happens', async ({ page, re
   await createDrill(request, uniqueName('E2E activity'));
   await signInAsAdmin(page);
   await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
+});
+
+test('a finished exercise appears under Reports with its result, notes and key moments', async ({ page, request }) => {
+  const title = uniqueName('Report check');
+  const id = await createDrill(request, title, await firstScenarioId(request));
+  // Stopping an exercise that never started cancels it, which finishes it.
+  const headers = { 'X-Oxblood-Token': await adminToken(request) };
+  expect((await request.post(`/api/v2/drills/${id}/stop`, { headers })).ok()).toBeTruthy();
+
+  await signInAsAdmin(page);
+  await page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Reports', exact: true }).click();
+  await page.getByRole('link', { name: new RegExp(title) }).click();
+  await expect(page).toHaveURL(new RegExp(`/app/reports/${id}$`));
+  await expect(page.getByRole('heading', { name: title, level: 1 })).toBeVisible();
+  await expect(page.getByText('Result', { exact: true })).toBeVisible();
+  await expect(page.getByText('How it played', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Key moments/)).toBeVisible();
 });

@@ -26,12 +26,10 @@ from app.routers import (
     drills,
     drills_v2,
     events,
-    exercises,
     health,
     me,
     proxmox,
     reports,
-    reports_v2,
     scenarios,
     submissions_v2,
     templates,
@@ -598,7 +596,6 @@ def create_app() -> FastAPI:
     app.include_router(debrief.router, prefix="/api/v1/drills", tags=["debrief"])
     app.include_router(proxmox.router, prefix="/api/v1/proxmox", tags=["proxmox"])
     app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
-    app.include_router(exercises.router, prefix="/api/v1/exercises", tags=["exercises"])
     app.include_router(templates.router, prefix="/api/v1/templates", tags=["templates"])
     app.include_router(events.router, prefix="/api/v1", tags=["events"])
     # Q21: global audit search across all runs.
@@ -608,7 +605,6 @@ def create_app() -> FastAPI:
     # learning_paths_v2, user_profiles_v2) live in the Learn product.
     app.include_router(drills_v2.router)
     app.include_router(submissions_v2.router)
-    app.include_router(reports_v2.router)
 
     # The web UI is served from the same origin at /app/. Registered last so it can
     # never shadow an API route.

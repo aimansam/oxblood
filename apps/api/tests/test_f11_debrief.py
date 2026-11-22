@@ -69,9 +69,6 @@ def _clean_db_after():
 
     async def _cleanup():
         async with sm() as s:
-            await s.execute(delete(db_models.TeamMembership))
-            await s.execute(delete(db_models.Team))
-            await s.execute(delete(db_models.Exercise))
             await s.execute(delete(db_models.TelemetryEvent))
             await s.execute(delete(db_models.FlagSubmission))
             await s.execute(delete(db_models.AuditLog))

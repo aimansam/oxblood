@@ -82,6 +82,8 @@ def downgrade() -> None:
     bind = op.get_bind()
     if bind.dialect.name != "postgresql":
         return
+    if "exercises" not in sa.inspect(bind).get_table_names():
+        return  # dropped by 0043_drop_unused_tables
     op.execute(sa.text("ALTER TABLE exercises ALTER COLUMN status DROP DEFAULT"))
     op.execute(
         sa.text("ALTER TABLE exercises ALTER COLUMN status TYPE VARCHAR(16) USING status::VARCHAR")

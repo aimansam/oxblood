@@ -17,8 +17,6 @@ from app.db.models_drill import (
     DrillFlagSubmission,
     DrillObjective,
     DrillParticipant,
-    EvidenceSubmission,
-    EvidenceType,
     FirstBlood,
     Score,
     ScoreHistory,
@@ -58,9 +56,7 @@ async def submit_flag(
         drill = drill_result.scalar_one_or_none()
         if drill and drill.actual_start_at:
             started = drill.actual_start_at
-            if (
-                started.tzinfo is None
-            ):  # SQLite returns naive datetimes; Postgres returns aware ones
+            if started.tzinfo is None:  # defensive: a naive datetime is taken to be UTC
                 started = started.replace(tzinfo=UTC)
             elapsed_seconds = int((datetime.now(UTC) - started).total_seconds())
 
@@ -229,85 +225,6 @@ async def get_flag_submission(db: AsyncSession, submission_id: int) -> DrillFlag
         select(DrillFlagSubmission).where(DrillFlagSubmission.submission_id == submission_id)
     )
     return result.scalar_one_or_none()
-
-
-# ============================================================================
-# Evidence Management
-# ============================================================================
-
-
-async def upload_evidence(
-    db: AsyncSession,
-    submission_id: int,
-    evidence_type: EvidenceType,
-    file_path: str,
-    file_size: int,
-    mime_type: str | None = None,
-    description: str | None = None,
-    objective_id: int | None = None,
-) -> EvidenceSubmission:
-    """Upload evidence for a submission."""
-    # Verify submission exists
-    submission = await get_submission(db, submission_id)
-    if not submission:
-        raise ValueError("Submission not found")
-
-    if objective_id is not None:
-        objective = await db.get(DrillObjective, objective_id)
-        if objective is None or objective.drill_id != submission.drill_id:
-            raise ValueError("Evidence objective does not belong to this drill")
-
-    # Award evidence credit once per objective when the submission contains
-    # a usable artifact reference and a concise analyst explanation.
-    quality_points = 0
-    if objective_id is not None and submission.drill_id and description:
-        existing = await db.execute(
-            select(EvidenceSubmission.id)
-            .join(Submission, Submission.id == EvidenceSubmission.submission_id)
-            .where(
-                Submission.user_id == submission.user_id,
-                Submission.drill_id == submission.drill_id,
-                EvidenceSubmission.objective_id == objective_id,
-            )
-            .limit(1)
-        )
-        if existing.scalar_one_or_none() is None:
-            quality_points = 10 if len(description.strip()) >= 24 and file_size > 0 else 5
-
-    evidence = EvidenceSubmission(
-        submission_id=submission_id,
-        objective_id=objective_id,
-        evidence_type=evidence_type,
-        file_path=file_path,
-        file_size=file_size,
-        mime_type=mime_type,
-        description=description,
-    )
-    db.add(evidence)
-    if quality_points:
-        await update_user_score(
-            db,
-            submission.user_id,
-            submission.drill_id,  # type: ignore[arg-type]  # set for drill submissions
-            quality_points,
-            "evidence_quality",
-            submission.team_id,
-        )
-    evidence._quality_points = quality_points  # type: ignore[attr-defined]
-    await db.commit()
-    await db.refresh(evidence)
-    return evidence
-
-
-async def list_submission_evidence(
-    db: AsyncSession,
-    submission_id: int,
-) -> list[EvidenceSubmission]:
-    """List all evidence for a submission."""
-    result = await db.execute(
-        select(EvidenceSubmission).where(EvidenceSubmission.submission_id == submission_id)
-    )
-    return list(result.scalars().all())
 
 
 # ============================================================================

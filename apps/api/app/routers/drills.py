@@ -36,7 +36,6 @@ from sqlalchemy.orm import selectinload
 
 from app.core.auth import Role, current_token, require_role
 from app.db import models as db_models
-from app.db.models import Exercise, Team
 from app.db.session import get_session
 from app.observability import record_cancel
 from app.runners.runner import Runner, RunnerError, RunRequest, build_runner
@@ -84,83 +83,8 @@ async def start_drill(
             detail="body must include integer `scenario_id`",
         )
 
-    # F6: optional exercise binding. If exercise_id is provided,
-    # we verify the exercise exists and is in LIVE state. We accept
-    # a ``team`` name; if the exercise has no team by that name we
-    # 404 (callers should add_team first).
-    exercise_id_raw = body.get("exercise_id")
-    team_raw = body.get("team")
-    exercise_id = None
+    # Runs are not bound to an exercise; the optional ``team`` only labels flag captures (red by default).
     team = None
-    if exercise_id_raw is not None:
-        if not isinstance(exercise_id_raw, int):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="exercise_id must be an int when provided",
-            )
-        ex = (
-            await session.execute(select(Exercise).where(Exercise.id == exercise_id_raw))
-        ).scalar_one_or_none()
-        if ex is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"exercise id={exercise_id_raw} not found",
-            )
-        # Allow starting in IDLE for forward-compat (operator
-        # sometimes starts runs before the operator clicks
-        # /start explicitly). The leaderboard will surface the run
-        # regardless.
-        if ex.status not in (
-            db_models.ExerciseStatus.IDLE,
-            db_models.ExerciseStatus.LIVE,
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    f"exercise id={exercise_id_raw} is {ex.status.value}; "
-                    "cannot start runs against ENDED / ARCHIVED exercises"
-                ),
-            )
-        exercise_id = ex.id
-        # Verify team membership when team is provided.
-        if isinstance(team_raw, str):
-            from app.db.models import TeamMembership
-
-            role = getattr(token, "role", None)
-            role_value = role.value if hasattr(role, "value") else role  # type: ignore[union-attr]
-            is_admin_or_lead = role_value in ("admin", "lead")
-            if not is_admin_or_lead:
-                # Non-admins must be a member of the exercise.
-                tm = (
-                    await session.execute(
-                        select(TeamMembership.id).where(
-                            TeamMembership.exercise_id == exercise_id,
-                            TeamMembership.sub == (token.sub if token else ""),
-                        )
-                    )
-                ).first()
-                if tm is None:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=(
-                            "you are not a member of this exercise; cannot submit a run for it"
-                        ),
-                    )
-            # Validate team name in the exercise (if provided).
-            t = (
-                await session.execute(
-                    select(Team).where(
-                        Team.exercise_id == exercise_id,
-                        Team.name == team_raw,
-                    )
-                )
-            ).scalar_one_or_none()
-            if t is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=(f"team {team_raw!r} is not part of exercise id={exercise_id}"),
-                )
-            team = t.name
 
     # F7: optional template_id. When set, the run is spawned
     # against the template's snapshot (scenario is derived from
@@ -234,7 +158,6 @@ async def start_drill(
             RunRequest(
                 scenario_id=scenario_id,
                 started_by=started_by,
-                exercise_id=exercise_id,
                 team=team,
                 template_id=template_id,
             ),
@@ -304,7 +227,6 @@ async def start_drill(
     return {
         "run_id": result.run_id,
         "status": result.status.value,
-        "exercise_id": exercise_id,
         "team": team,
         "template_id": template_id,
     }
@@ -457,7 +379,6 @@ async def cancel_drill(
             require_role(
                 Role.ADMIN,
                 Role.LEAD,
-                Role.OBSERVER,
                 Role.RED,
                 Role.BLUE,
             )
@@ -470,7 +391,7 @@ async def list_drills(
 ) -> dict:
     """List runs, scoped to what the caller's role can see.
 
-    admin / lead / observer → all runs.
+    admin / lead → all runs.
     red / blue              → only runs where ``started_by == token.sub``.
 
     The visibility filter is applied at the SQL layer (see
@@ -508,7 +429,6 @@ async def list_drills(
             require_role(
                 Role.ADMIN,
                 Role.LEAD,
-                Role.OBSERVER,
                 Role.RED,
                 Role.BLUE,
             )
@@ -567,11 +487,6 @@ async def get_drill(
     return {
         "run_id": run.id,
         "scenario_id": run.scenario_id,
-        # F9.1: expose exercise_id so the portal DrillConsole can
-        # decide whether to render the multi-team panels (leaderboard
-        # + live SOC stream) inline. Legacy single-team Runs have
-        # exercise_id === null.
-        "exercise_id": run.exercise_id,
         "status": run.status.value,
         "started_at": run.started_at.isoformat() if run.started_at else None,
         "ended_at": run.ended_at.isoformat() if run.ended_at else None,
@@ -852,7 +767,6 @@ async def delete_asset(
             require_role(
                 Role.ADMIN,
                 Role.LEAD,
-                Role.OBSERVER,
                 Role.RED,
                 Role.BLUE,
             )
@@ -1006,38 +920,12 @@ async def submit_flag(
             detail=f"run id={run_id} not found",
         )
     _run_id, run_status, started_at, started_by, spec, scenario_name = row
-    # F6: with the multi-team setup, RBAC for submit-flag is:
-    #   * admin/lead/observer: always
-    #   * the run's started_by
-    #   * member of the run's exercise (so a red/blue team member
-    #     can capture flags against their team's run)
-    from app.db.models import TeamMembership
-
+    # RBAC for submit-flag: admin/lead, or the run's owner.
     role = token.role if hasattr(token, "role") else None
     role_value = role.value if hasattr(role, "value") else role  # type: ignore[union-attr]
-    is_admin_or_lead = role_value in ("admin", "lead", "observer")
+    is_admin_or_lead = role_value in ("admin", "lead")
     is_owner = started_by == getattr(token, "sub", None)
-    is_team_member = False
-    if not is_admin_or_lead and not is_owner:
-        # Look up Run.exercise_id (we already have started_by +
-        # the exercise implicit via run; but ex_id isn't in scope
-        # here yet — re-query).
-        ex_id = (
-            await session.execute(
-                select(db_models.Run.exercise_id).where(db_models.Run.id == run_id)
-            )
-        ).scalar_one()
-        if ex_id is not None:
-            tm = (
-                await session.execute(
-                    select(TeamMembership.id).where(
-                        TeamMembership.exercise_id == ex_id,
-                        TeamMembership.sub == (token.sub if token else ""),
-                    )
-                )
-            ).first()
-            is_team_member = tm is not None
-    if not (is_admin_or_lead or is_owner or is_team_member):
+    if not (is_admin_or_lead or is_owner):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="you do not have access to submit flags for this run",
@@ -1147,18 +1035,6 @@ async def submit_flag(
     run_obj = run_result.scalar_one()
     run_obj.score_red = red_total
     run_obj.score_blue = blue_total
-    # F6: if this run is part of an exercise, bump the team's
-    # aggregate score so the leaderboard surfaces it.
-    if run_obj.exercise_id is not None:
-        team_q = await session.execute(
-            select(Team).where(
-                Team.exercise_id == run_obj.exercise_id,
-                Team.name == team,
-            )
-        )
-        team_obj = team_q.scalar_one_or_none()
-        if team_obj is not None:
-            team_obj.score = team_obj.score + points
     await session.commit()
 
     return {

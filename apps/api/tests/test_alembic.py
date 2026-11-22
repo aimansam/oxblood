@@ -95,7 +95,7 @@ def test_alembic_upgrade_creates_drill_and_v1_flag_tables(db) -> None:
         for mapper in Base.registry.mappers
         if mapper.class_.__module__.endswith("models_drill")
     }
-    assert len(drill_tables) >= 20
+    assert len(drill_tables) >= 15
     assert drill_tables <= tables, f"missing drill tables: {sorted(drill_tables - tables)}"
     assert "flag_submissions" in tables
 
@@ -131,3 +131,26 @@ def test_alembic_indexes_present(db) -> None:
     finally:
         engine.dispose()
 
+
+def test_unused_tables_are_gone_after_upgrade(db) -> None:
+    """0043 removed the old exercise model and the benchmark, evidence and report tables."""
+    db.alembic("upgrade", "head")
+    gone = {
+        "exercises",
+        "teams",
+        "team_memberships",
+        "benchmarks",
+        "benchmark_history",
+        "evidence",
+        "evidence_submissions",
+        "report_submissions",
+        "submission_attempts",
+        "reports",
+        "report_findings",
+    }
+    assert not gone & db.tables()
+    engine = db.engine()
+    try:
+        assert "exercise_id" not in {c["name"] for c in inspect(engine).get_columns("runs")}
+    finally:
+        engine.dispose()

@@ -226,7 +226,7 @@ def test_issue_token_cli_outputs_a_valid_token(tmp_path, monkeypatch):
             "--user",
             "alice",
             "--role",
-            "red",  # L2 2.9: role must be one of {admin,lead,red,blue,observer}
+            "red",  # L2 2.9: role must be one of {admin,lead,red,blue}
             "--ttl",
             "1h",
         ],
@@ -348,7 +348,6 @@ def test_role_enum_has_expected_wire_values():
         "lead",
         "red",
         "blue",
-        "observer",
     }
 
 

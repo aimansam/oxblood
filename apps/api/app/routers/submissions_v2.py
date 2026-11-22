@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_token
-from app.db.models_drill import DrillFlag, EvidenceType
+from app.db.models_drill import DrillFlag
 from app.db.session import get_session
 from app.services import competition_flags as comp_flags
 from app.services.drill_service import record_drill_event
@@ -26,10 +26,8 @@ from app.services.submission_service import (
     get_user_first_bloods,
     get_user_scores,
     get_user_stats,
-    list_submission_evidence,
     list_user_submissions,
     submit_flag,
-    upload_evidence,
 )
 
 router = APIRouter(prefix="/api/v2", tags=["Submissions & Scoring v2"])
@@ -47,15 +45,6 @@ class FlagSubmissionCreate(BaseModel):
     flag_value: str
     hints_used: int = 0
     team_id: int | None = None
-
-
-class EvidenceUpload(BaseModel):
-    evidence_type: EvidenceType
-    file_path: str
-    file_size: int
-    mime_type: str | None = None
-    description: str | None = None
-    objective_id: int | None = None
 
 
 # ============================================================================
@@ -112,23 +101,6 @@ def score_to_dict(score) -> dict:
         "completion_time_seconds": score.completion_time_seconds,
         "rank_position": score.rank_position,
         "last_updated_at": score.last_updated_at.isoformat() if score.last_updated_at else None,
-    }
-
-
-def evidence_to_dict(evidence) -> dict:
-    """Convert evidence to dict."""
-    return {
-        "id": evidence.id,
-        "submission_id": evidence.submission_id,
-        "objective_id": evidence.objective_id,
-        "evidence_type": evidence.evidence_type.value
-        if hasattr(evidence.evidence_type, "value")
-        else evidence.evidence_type,
-        "file_path": evidence.file_path,
-        "file_size": evidence.file_size,
-        "mime_type": evidence.mime_type,
-        "description": evidence.description,
-        "captured_at": evidence.captured_at.isoformat() if evidence.captured_at else None,
     }
 
 
@@ -318,61 +290,6 @@ async def get_submission_details(
             result["flag_details"] = flag_submission_to_dict(flag_sub)
 
     return result
-
-
-@router.post("/submissions/{submission_id}/evidence")
-async def post_evidence(
-    submission_id: int,
-    data: EvidenceUpload,
-    session: AsyncSession = Depends(get_session),
-    token=Depends(current_token),
-):
-    """Upload evidence for a submission."""
-    try:
-        evidence = await upload_evidence(
-            session,
-            submission_id=submission_id,
-            evidence_type=data.evidence_type,
-            file_path=data.file_path,
-            file_size=data.file_size,
-            mime_type=data.mime_type,
-            description=data.description,
-            objective_id=data.objective_id,
-        )
-        quality_points = int(getattr(evidence, "_quality_points", 0) or 0)
-        if data.objective_id:
-            try:
-                await record_drill_event(
-                    session,
-                    (await get_submission(session, submission_id)).drill_id,  # type: ignore[union-attr, arg-type]
-                    "milestone",
-                    "Evidence submitted",
-                    detail=(data.description or "Evidence attached to an objective.")[:500],
-                    side="blue",
-                    actor=(token.sub if token else None),
-                )
-            except (AttributeError, ValueError):
-                pass
-        return {
-            "message": "Evidence uploaded",
-            "evidence_id": evidence.id,
-            "quality_points": quality_points,
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get("/submissions/{submission_id}/evidence")
-async def get_evidence(
-    submission_id: int,
-    session: AsyncSession = Depends(get_session),
-):
-    """List evidence for a submission."""
-    evidence_list = await list_submission_evidence(session, submission_id)
-    return {
-        "evidence": [evidence_to_dict(e) for e in evidence_list],
-        "count": len(evidence_list),
-    }
 
 
 @router.get("/drills/{drill_id}/submissions")

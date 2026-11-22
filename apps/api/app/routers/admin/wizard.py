@@ -511,7 +511,6 @@ async def start_first_drill(
             RunRequest(
                 scenario_id=scenario.id,
                 started_by=token.sub,
-                exercise_id=None,
                 team=body.team,
                 template_id=None,
             ),

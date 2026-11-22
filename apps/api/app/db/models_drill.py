@@ -1,10 +1,9 @@
 """Drill ORM models — Drill product only (Learn lives in its own repo/DB).
 
-Tables: drills, drill_scenarios, drill_participants, drill_invitations,
-drill_events (unified exercise timeline), drill_objectives (with status),
-drill_flags, drill_announcements, submissions, drill_flag_submissions,
-evidence_submissions, report_submissions, submission_attempts, scores, score_history,
-first_bloods, benchmarks, benchmark_history, reports, report_findings, evidence.
+Tables: drills, drill_scenarios, drill_participants, drill_events (unified exercise timeline),
+drill_objectives (with status), drill_flags, drill_announcements, drill_environment_locks, drill_teams,
+drill_team_flags, drill_rounds, drill_score_events (the team ledger), submissions,
+drill_flag_submissions, scores, score_history, first_bloods.
 lab_id / team_id columns are plain-integer history refs (Learn tables removed).
 """
 
@@ -15,7 +14,6 @@ from datetime import datetime
 
 from sqlalchemy import (
     JSON,
-    BigInteger,
     Boolean,
     DateTime,
     Enum,
@@ -51,31 +49,6 @@ class SubmissionStatus(str, enum.Enum):
     INCORRECT = "incorrect"
     PARTIAL = "partial"
     REVIEWED = "reviewed"
-
-
-class ReportStatus(str, enum.Enum):
-    DRAFT = "draft"
-    SUBMITTED = "submitted"
-    UNDER_REVIEW = "under_review"
-    GRADED = "graded"
-    APPROVED = "approved"
-
-
-class SeverityLevel(str, enum.Enum):
-    CRITICAL = "critical"
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
-    INFORMATIONAL = "informational"
-
-
-class EvidenceType(str, enum.Enum):
-    SCREENSHOT = "screenshot"
-    COMMAND_OUTPUT = "command_output"
-    LOG_EXCERPT = "log_excerpt"
-    NETWORK_CAPTURE = "network_capture"
-    FILE = "file"
-    OTHER = "other"
 
 
 class Drill(Base):
@@ -482,71 +455,6 @@ class DrillFlagSubmission(Base):
     __table_args__ = (UniqueConstraint("submission_id", "lab_flag_id", name="uq_flag_submissions"),)
 
 
-class EvidenceSubmission(Base):
-    """Evidence file submissions."""
-
-    __tablename__ = "evidence_submissions"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    submission_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False
-    )
-    objective_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("drill_objectives.id", ondelete="SET NULL")
-    )
-    evidence_type: Mapped[EvidenceType] = mapped_column(
-        Enum(EvidenceType, name="evidence_type", values_callable=lambda x: [e.value for e in x]),
-        nullable=False,
-    )
-    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
-    file_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    mime_type: Mapped[str | None] = mapped_column(String(100))
-    description: Mapped[str | None] = mapped_column(Text)
-    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-
-
-class ReportSubmission(Base):
-    """Report submissions."""
-
-    __tablename__ = "report_submissions"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    submission_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False
-    )
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
-    file_path: Mapped[str | None] = mapped_column(String(500))
-    word_count: Mapped[int | None] = mapped_column(Integer)
-    quality_score: Mapped[float | None] = mapped_column(Numeric(5, 2))
-    grade: Mapped[str | None] = mapped_column(String(10))
-
-
-class SubmissionAttempt(Base):
-    """Track all flag submission attempts (Drill-native drill_flags)."""
-
-    __tablename__ = "submission_attempts"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
-    lab_flag_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("drill_flags.id", ondelete="CASCADE"), nullable=False
-    )
-    attempt_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    flag_value: Mapped[str] = mapped_column(String(255), nullable=False)
-    is_correct: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    submitted_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    ip_address: Mapped[str | None] = mapped_column(String(45))
-
-    __table_args__ = (
-        UniqueConstraint("user_id", "lab_flag_id", "attempt_number", name="uq_submission_attempts"),
-    )
-
-
 # ============================================================================
 # MODULE 6: SCORING SYSTEM
 # ============================================================================
@@ -628,164 +536,3 @@ class FirstBlood(Base):
     )
 
     __table_args__ = (UniqueConstraint("drill_id", "lab_flag_id", name="uq_first_bloods"),)
-
-
-# ============================================================================
-# MODULE 7: BENCHMARKING SYSTEM
-# ============================================================================
-
-
-class Benchmark(Base):
-    """Skill benchmark scores for users."""
-
-    __tablename__ = "benchmarks"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
-    )
-    overall_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=0)
-    offensive_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=0)
-    defensive_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=0)
-    web_exploitation_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=0)
-    network_exploitation_score: Mapped[float] = mapped_column(
-        Numeric(5, 2), nullable=False, default=0
-    )
-    active_directory_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=0)
-    linux_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=0)
-    windows_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=0)
-    forensics_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=0)
-    reporting_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=0)
-    total_drills_completed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    total_flags_captured: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    average_completion_time_seconds: Mapped[int | None] = mapped_column(Integer)
-    last_calculated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-
-
-class BenchmarkHistory(Base):
-    """Score progression over time."""
-
-    __tablename__ = "benchmark_history"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
-    drill_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("drills.id", ondelete="SET NULL")
-    )
-    overall_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    offensive_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    defensive_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    web_exploitation_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    network_exploitation_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    active_directory_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    linux_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    windows_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    forensics_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    reporting_score: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    calculated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-
-
-# ============================================================================
-# MODULE 8: REPORTING SYSTEM
-# ============================================================================
-
-
-class Report(Base):
-    """After-action reports and assessments."""
-
-    __tablename__ = "reports"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    drill_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("drills.id", ondelete="CASCADE")
-    )
-    user_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="SET NULL")
-    )
-    team_id: Mapped[int | None] = mapped_column(Integer)  # history ref; teams table removed
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    summary: Mapped[str] = mapped_column(Text, nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[ReportStatus] = mapped_column(
-        Enum(ReportStatus, name="report_status", values_callable=lambda x: [e.value for e in x]),
-        nullable=False,
-        default=ReportStatus.DRAFT,
-    )
-    report_type: Mapped[str] = mapped_column(String(50), nullable=False, default="after_action")
-    quality_score: Mapped[float | None] = mapped_column(Numeric(5, 2))
-    grade: Mapped[str | None] = mapped_column(String(10))
-    word_count: Mapped[int | None] = mapped_column(Integer)
-    file_path: Mapped[str | None] = mapped_column(String(500))
-    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    graded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    graded_by: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="SET NULL")
-    )
-    instructor_feedback: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
-    )
-
-
-class ReportFinding(Base):
-    """Individual findings within reports."""
-
-    __tablename__ = "report_findings"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    report_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("reports.id", ondelete="CASCADE"), nullable=False
-    )
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=False)
-    severity: Mapped[SeverityLevel] = mapped_column(
-        Enum(SeverityLevel, name="severity_level", values_callable=lambda x: [e.value for e in x]),
-        nullable=False,
-    )
-    category: Mapped[str | None] = mapped_column(String(50))
-    evidence: Mapped[str | None] = mapped_column(Text)
-    impact: Mapped[str | None] = mapped_column(Text)
-    recommendation: Mapped[str | None] = mapped_column(Text)
-    cvss_score: Mapped[float | None] = mapped_column(Numeric(3, 1))
-    cwe_id: Mapped[str | None] = mapped_column(String(20))
-    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-
-
-class Evidence(Base):
-    """Evidence files for findings."""
-
-    __tablename__ = "evidence"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    finding_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("report_findings.id", ondelete="CASCADE"), nullable=False
-    )
-    evidence_type: Mapped[EvidenceType] = mapped_column(
-        Enum(EvidenceType, name="evidence_type", values_callable=lambda x: [e.value for e in x]),
-        nullable=False,
-    )
-    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
-    file_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    mime_type: Mapped[str | None] = mapped_column(String(100))
-    description: Mapped[str | None] = mapped_column(Text)
-    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-
-
-# ============================================================================
-# MODULE 9: LEARNING PATH SYSTEM
-# ============================================================================
