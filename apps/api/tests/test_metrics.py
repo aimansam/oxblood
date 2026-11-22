@@ -134,3 +134,31 @@ def _counter_value(metric, **labels):
     except AttributeError:
         pass
     return 0.0
+
+
+# --- optional bearer token -------------------------------------------------
+
+
+def test_metrics_open_when_no_token_is_configured(monkeypatch):
+    from app.core.config import get_settings
+
+    monkeypatch.delenv("OXBLOOD_METRICS_TOKEN", raising=False)
+    get_settings.cache_clear()
+    assert TestClient(app).get("/metrics").status_code == 200
+
+
+def test_metrics_require_the_bearer_token_when_configured(monkeypatch):
+    from app.core.config import get_settings
+
+    monkeypatch.setenv("OXBLOOD_METRICS_TOKEN", "s3cret-scrape-token")
+    get_settings.cache_clear()
+    try:
+        client = TestClient(app)
+        assert client.get("/metrics").status_code == 401
+        assert client.get("/metrics", headers={"Authorization": "Bearer wrong"}).status_code == 401
+        ok = client.get("/metrics", headers={"Authorization": "Bearer s3cret-scrape-token"})
+        assert ok.status_code == 200
+        assert b"# HELP" in ok.content or b"# TYPE" in ok.content
+    finally:
+        monkeypatch.delenv("OXBLOOD_METRICS_TOKEN", raising=False)
+        get_settings.cache_clear()

@@ -51,6 +51,8 @@ services:
       OXBLOOD_TOKEN_SECRET: demo-only-not-a-secret
       OXBLOOD_BOOTSTRAP_ADMIN_SUB: admin
       OXBLOOD_BOOTSTRAP_ADMIN_PASSWORD: OxbloodDemo-2026
+    ports:
+      - "${OXBLOOD_DEMO_PORT:-5050}:8000"
     volumes:
       - ../examples/scenarios:/scenarios:ro
     depends_on:
@@ -75,16 +77,3 @@ services:
       api:
         condition: service_healthy
     restart: "no"
-
-  portal:
-    build:
-      context: ..
-      dockerfile: apps/portal/Dockerfile
-    image: oxblood/portal:dev
-    environment:
-      API_BACKEND: http://api:8000
-    ports:
-      - "${OXBLOOD_DEMO_PORT:-5050}:80"
-    depends_on:
-      api:
-        condition: service_healthy

@@ -33,6 +33,10 @@ class Settings(BaseSettings):
 
     env: Literal["dev", "staging", "production"] = "dev"
     log_level: str = "INFO"
+    # Directory holding the built web UI. Empty: /app/web in the image, apps/web/dist in a checkout.
+    web_dir: str = ""
+    # When set, /metrics requires "Authorization: Bearer <this>". Unset: open (internal network only).
+    metrics_token: SecretStr | None = None
     # Demo mode: an in-memory Proxmox that has every template, so the whole app runs without a cluster.
     demo: bool = False
     api_host: str = "0.0.0.0"
@@ -96,11 +100,6 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="OXBLOOD_TOKEN_SECRET",
     )
-
-    # Setup wizard portal (vanilla HTML+JS). Mounted at /setup/ by main.py.
-    # Defaults to the bundled copy; override for development to point at
-    # the live source tree.
-    portal_dir: str = "/app/portal"
 
     # P12: prefix the portal is mounted at. Used to build absolute
     # magic-link URLs in admin-issued reset links

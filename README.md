@@ -40,15 +40,15 @@ Proxmox tab in Settings show Proxmox as unavailable. Everything else is the real
 ## How it fits together
 
 ```
-Browser ──► Portal (Flask, :5000)
-              ├── /app/   React UI (built from apps/web)
-              └── /api/*  proxy ──► API (FastAPI, :8000, internal)
-                                      ├── PostgreSQL   state and score ledger
-                                      ├── Redis        progress, rate limits, event bus
-                                      └── Proxmox VE   clones, boots and seeds the range
+Browser ──► API (FastAPI, :5000)
+              ├── /app/   React UI (built from apps/web, baked into the image)
+              └── /api/*  REST API
+                            ├── PostgreSQL   state and score ledger
+                            ├── Redis        progress, rate limits, event bus
+                            └── Proxmox VE   clones, boots and seeds the range
 ```
 
-Prometheus, Alertmanager and Grafana ship in the same compose stack and listen on localhost only. The old `/`, `/login` and `/drill/` URLs redirect to `/app/`.
+One service serves both the UI and the API. Prometheus, Alertmanager and Grafana ship in the same compose stack and listen on localhost only. The old `/`, `/login` and `/drill/` URLs redirect to `/app/`.
 
 ## Quickstart
 

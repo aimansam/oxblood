@@ -8,8 +8,8 @@ const python = process.env.E2E_PYTHON ?? 'python3';
 const redis = process.env.OXBLOOD_REDIS_URL ?? 'redis://127.0.0.1:6399/0';
 const db = process.env.E2E_DB ?? '/tmp/oxblood-e2e.sqlite';
 
-// A throwaway stack: the real API (SQLite + a mock Proxmox with the scenario templates, e2e/serve_api.py) behind the real Flask portal,
-// serving the production build. Needs a Redis at OXBLOOD_REDIS_URL and `npm run build` done first
+// A throwaway stack: the real API (SQLite + a mock Proxmox with the scenario templates, e2e/serve_api.py), which also
+// serves the production build. Needs a Redis at OXBLOOD_REDIS_URL and `npm run build` done first
 // (`npm run test:e2e` does both).
 export default defineConfig({
   testDir: './e2e',
@@ -21,7 +21,7 @@ export default defineConfig({
   timeout: 45_000,
   expect: { timeout: 8_000 },
   use: {
-    baseURL: 'http://localhost:5100',
+    baseURL: 'http://localhost:8100',
     viewport: { width: 1440, height: 900 },
     reducedMotion: 'reduce',
     trace: 'retain-on-failure',
@@ -39,16 +39,8 @@ export default defineConfig({
         OXBLOOD_DB_URL: `sqlite+aiosqlite:///${db}`,
         OXBLOOD_REDIS_URL: redis,
         OXBLOOD_SCENARIOS_DIR: path.join(repo, 'examples/scenarios'),
+        OXBLOOD_WEB_DIR: path.join(repo, 'apps/web/dist'),
       },
-    },
-    {
-      command: `${python} -m flask --app flask_app run --port 5100`,
-      cwd: path.join(repo, 'apps/portal'),
-      url: 'http://localhost:5100/healthz',
-      reuseExistingServer: !process.env.CI,
-      timeout: 60_000,
-      stdout: 'ignore',
-      env: { API_BACKEND: 'http://127.0.0.1:8100', WEB_DIR: path.join(repo, 'apps/web/dist') },
     },
   ],
 });

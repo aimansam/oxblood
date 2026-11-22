@@ -1,34 +1,10 @@
 name: oxblood-cyber-drill
 
-# Architecture: Flask portal (port 80) serves the React UI at /app/ + proxies /api/* to FastAPI (internal port 8000)
-# Single entry point for users: http://localhost
+# Architecture: one FastAPI service serves the React UI at /app/ and the API under /api/.
+# Single entry point for users: http://localhost:5000/app/
 
 services:
-  # Flask portal - serves frontend and proxies API requests
-  portal:
-    build:
-      # Repository root, so the image can build apps/web (React UI) as well as the portal.
-      context: ..
-      dockerfile: apps/portal/Dockerfile
-    image: oxblood/portal:dev
-    container_name: oxblood-portal
-    restart: unless-stopped
-    ports:
-      - "5000:80"
-    environment:
-      API_BACKEND: http://api:8000
-    depends_on:
-      api:
-        condition: service_healthy
-    networks: [oxblood-net]
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:80/healthz"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-  # FastAPI backend - internal only, accessed via Flask portal proxy
+  # FastAPI backend: the UI (/app/) and the API (/api/) on one port
   api:
     build:
       context: ..
@@ -36,8 +12,8 @@ services:
     image: oxblood/api:dev
     container_name: oxblood-api
     restart: unless-stopped
-    expose:
-      - "8000"
+    ports:
+      - "5000:8000"
     environment:
       OXBLOOD_ENV: ${OXBLOOD_ENV:-dev}
       OXBLOOD_LOG_LEVEL: ${OXBLOOD_LOG_LEVEL:-INFO}

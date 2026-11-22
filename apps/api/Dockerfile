@@ -1,4 +1,12 @@
 # syntax=docker/dockerfile:1.7
+# --- build the React UI; the API serves it at /app/ ---
+FROM node:22-alpine AS web
+WORKDIR /web
+COPY apps/web/package.json apps/web/package-lock.json ./
+RUN npm ci
+COPY apps/web/ ./
+RUN npm run build
+
 FROM python:3.12-slim-bookworm AS builder
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -47,8 +55,8 @@ COPY apps/api/alembic.ini ./alembic.ini
 # JSON Schema is shared with the host. We bundle a copy at /app/schemas so
 # the schema-sync service works inside the container without a host mount.
 COPY schemas ./schemas
-# Setup wizard portal (vanilla HTML + JS). Mounted at /portal/ by main.py.
-COPY apps/portal ./portal
+# The web UI, served by the API at /app/ (baked in, never bind-mounted).
+COPY --from=web /web/dist ./web
 USER oxblood
 
 EXPOSE 8000

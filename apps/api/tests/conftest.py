@@ -8,15 +8,6 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-# Set OXBLOOD_PORTAL_DIR *before* any test module imports app.main,
-# because the app's create_app() reads settings at module import.
-# Without this, tests that run after the first create_app() call
-# see a stale /app/portal path that doesn't exist on the dev box.
-_REPO_ROOT = Path(__file__).resolve().parents[3]  # .../oxblood-cyber-drill
-_PORTAL_DIR = _REPO_ROOT / "apps" / "portal"
-if _PORTAL_DIR.is_dir():
-    os.environ.setdefault("OXBLOOD_PORTAL_DIR", str(_PORTAL_DIR))
-
 # --- live PG mode ---------------------------------------------------------
 #
 # Setting OXBLOOD_TEST_LIVE_PG to a non-empty value switches the test suite
@@ -43,8 +34,6 @@ def _env(monkeypatch_session):
     """Set sane defaults for tests."""
     monkeypatch_session.setenv("OXBLOOD_ENV", "dev")
     monkeypatch_session.setenv("OXBLOOD_LOG_LEVEL", "WARNING")
-    # OXBLOOD_PORTAL_DIR is set at conftest import time (above) so it's
-    # already in os.environ before any test module imports app.main.
     if _live_pg_url():
         # Live PG mode — caller is responsible for pointing at a working DB.
         monkeypatch_session.setenv("OXBLOOD_DB_URL", _live_pg_url())

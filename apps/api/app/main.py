@@ -35,6 +35,7 @@ from app.routers import (
     scenarios,
     submissions_v2,
     templates,
+    web,
 )
 from app.runners.runner import build_runner
 
@@ -621,9 +622,9 @@ def create_app() -> FastAPI:
     app.include_router(submissions_v2.router)
     app.include_router(reports_v2.router)
 
-    # Frontend is now served by Flask portal (separate service on port 80)
-    # which proxies /api/* requests to this FastAPI backend.
-    # No need to mount static files here anymore.
+    # The web UI is served from the same origin at /app/. Registered last so it can
+    # never shadow an API route.
+    app.include_router(web.router)
 
     return app
 

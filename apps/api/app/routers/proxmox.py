@@ -11,7 +11,7 @@ Status codes:
 RBAC note (L2 2.9): these endpoints are INTENTIONALLY NOT gated
 on ``require_role``. The setup wizard's step 1 calls
 ``GET /api/v1/proxmox/health`` from the operator's browser BEFORE
-any token has been minted, and the wizard UI in ``apps/portal/``
+any token has been minted, and the wizard UI in ``apps/web/``
 loads the storage / templates / nodes lists before the operator
 gets to step 4 (which is when they issue their admin token).
 Gating these endpoints would break the wizard's load-on-page-load

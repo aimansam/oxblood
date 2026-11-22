@@ -62,22 +62,3 @@ def test_boundary_at_exactly_limit(tmp_path):
     # File is one byte over -> fails.
     f.write_bytes(b"\x00" * (280 * 1024 + 1))
     assert _within_budget(str(f)) is False
-
-
-def test_real_portal_bundle_within_budget():
-    """The actual portal bundle (built earlier by portal-build) is
-    under the limit. Skipped if no build exists -- the Makefile
-    target is the canonical gate; this test is for pre-commit /
-    CI convenience."""
-    import glob
-
-    candidates = glob.glob("apps/portal/app/build/assets/index-*.js")
-    if not candidates:
-        # No build available -- skip.
-        return
-    bundle = sorted(candidates)[-1]  # latest build
-    size = _bundle_size_kb(bundle)
-    # Allow a small tolerance for the rare case where the build is
-    # within a few bytes of the limit; we just want to catch
-    # runaway deps (e.g., adding recharts adds ~80 KB).
-    assert size <= LIMIT_KB, f"portal bundle {size:.2f} KB exceeds {LIMIT_KB:.2f} KB budget"

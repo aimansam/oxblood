@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Response
+import hmac
+
+from fastapi import APIRouter, Header, HTTPException, Response, status
 from pydantic import BaseModel
 
 from app import __version__
@@ -23,6 +25,10 @@ class ReadinessResponse(BaseModel):
 
 
 @router.get("/healthz", response_model=HealthResponse, summary="Liveness probe")
+@router.api_route("/healthz", methods=["HEAD"], include_in_schema=False)
+@router.api_route(
+    "/api/healthz", methods=["GET", "HEAD"], response_model=HealthResponse, include_in_schema=False
+)
 async def healthz() -> HealthResponse:
     """Return 200 if the process is alive. Used by Docker / Traefik."""
     from app.core.config import settings
@@ -31,6 +37,7 @@ async def healthz() -> HealthResponse:
 
 
 @router.get("/readyz", response_model=ReadinessResponse, summary="Readiness probe")
+@router.get("/api/readyz", response_model=ReadinessResponse, include_in_schema=False)
 async def readyz() -> ReadinessResponse:
     """Return 200 if all critical dependencies are reachable."""
 
@@ -62,12 +69,23 @@ async def readyz() -> ReadinessResponse:
     summary="Prometheus metrics",
     response_class=Response,
 )
-async def metrics() -> Response:
+async def metrics(authorization: str | None = Header(default=None)) -> Response:
     """Prometheus exposition format. Scrape with /metrics every 15s.
 
-    No auth — the assumption is the API is reachable only via the
-    internal Docker network or behind Traefik with basic auth. If you
-    expose /metrics publicly, add an ACL on the route.
+    Open by default, for the internal Docker network. The API also serves the web UI on its
+    public port, so on an exposed deployment set ``OXBLOOD_METRICS_TOKEN``: callers must then
+    send ``Authorization: Bearer <token>`` (Prometheus: ``authorization.credentials_file``).
     """
+    from app.core.config import settings
+
+    token = settings.metrics_token
+    if token is not None and token.get_secret_value():
+        expected = f"Bearer {token.get_secret_value()}"
+        if not hmac.compare_digest((authorization or "").encode(), expected.encode()):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="metrics require a bearer token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
     body, content_type = render_latest()
     return Response(content=body, media_type=content_type)

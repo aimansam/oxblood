@@ -13826,11 +13826,39 @@
     },
     "/metrics": {
       "get": {
-        "description": "Prometheus exposition format. Scrape with /metrics every 15s.\n\nNo auth \u2014 the assumption is the API is reachable only via the\ninternal Docker network or behind Traefik with basic auth. If you\nexpose /metrics publicly, add an ACL on the route.",
+        "description": "Prometheus exposition format. Scrape with /metrics every 15s.\n\nOpen by default, for the internal Docker network. The API also serves the web UI on its\npublic port, so on an exposed deployment set ``OXBLOOD_METRICS_TOKEN``: callers must then\nsend ``Authorization: Bearer <token>`` (Prometheus: ``authorization.credentials_file``).",
         "operationId": "metrics_metrics_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Prometheus metrics",

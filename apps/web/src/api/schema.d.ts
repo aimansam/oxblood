@@ -3272,9 +3272,9 @@ export interface paths {
          * Prometheus metrics
          * @description Prometheus exposition format. Scrape with /metrics every 15s.
          *
-         *     No auth — the assumption is the API is reachable only via the
-         *     internal Docker network or behind Traefik with basic auth. If you
-         *     expose /metrics publicly, add an ACL on the route.
+         *     Open by default, for the internal Docker network. The API also serves the web UI on its
+         *     public port, so on an exposed deployment set ``OXBLOOD_METRICS_TOKEN``: callers must then
+         *     send ``Authorization: Bearer <token>`` (Prometheus: ``authorization.credentials_file``).
          */
         get: operations["metrics_metrics_get"];
         put?: never;
@@ -10609,7 +10609,9 @@ export interface operations {
     metrics_metrics_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -10621,6 +10623,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

@@ -6,9 +6,8 @@ infrastructure and scenario content:
 
 ```text
 apps/
-  api/       FastAPI service, migrations, API tests, and API scripts
-  portal/    Flask shell: serves the React build at /app/ and proxies /api/*
-  web/       React UI (Vite, TypeScript, Tailwind); built into the portal image
+  api/       FastAPI service (also serves the web UI at /app/), migrations, API tests, and API scripts
+  web/       React UI (Vite, TypeScript, Tailwind); built into the API image
 deploy/      Compose files, observability, and deployment configuration
 examples/    Scenario catalog and seed content
 schemas/     Shared JSON schemas
@@ -18,9 +17,8 @@ tests/       Cross-application and repository smoke tests
 ```
 
 The API image is built from the repository root so it can bundle `schemas/`
-and the portal setup assets. The portal image builds `apps/web` and
-bakes the result in; the development Compose file only bind-mounts the repository root for
-scenario access (into the API).
+and the web UI: a first build stage compiles `apps/web` and the result is baked in. The development
+Compose file only bind-mounts the repository root for scenario access.
 
 Future infrastructure services can move under an `infrastructure/` directory
 as a separate change. This phase intentionally leaves runtime behavior,

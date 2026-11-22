@@ -3,7 +3,7 @@ import { ADMIN, RED } from './support';
 
 /** Seed the first admin and a red-team player. Safe to re-run against a reused stack. */
 export default async function globalSetup() {
-  const api = await request.newContext({ baseURL: 'http://localhost:5100' });
+  const api = await request.newContext({ baseURL: 'http://localhost:8100' });
   const setup = await api.get('/api/v1/auth/setup');
   if ((await setup.json()).needs_setup) {
     const created = await api.post('/api/v1/auth/setup', { data: { sub: ADMIN.sub, password: ADMIN.password } });
