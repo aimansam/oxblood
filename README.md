@@ -83,11 +83,13 @@ Proxmox credentials can also be entered in the web UI under Settings. A Proxmox 
 ## Development
 
 ```bash
-OXBLOOD_DB_URL=sqlite+aiosqlite:///./test.sqlite pytest apps/api/tests tests   # API tests, about 4 minutes
-ruff check . && ruff format --check .
-python3 tools/validate_scenario.py examples/scenarios/
-cd apps/web && npm ci && npm run lint && npm test && npm run build              # web
+scripts/lint-all.sh                    # everything CI runs except the browser tests (about 5 minutes)
+cd apps/web && npx playwright test     # browser tests, against a throwaway stack (build the web app first)
 ```
+
+Individually: `ruff check . && ruff format --check .`, `mypy apps/api/app`,
+`OXBLOOD_DB_URL=sqlite+aiosqlite:///./test.sqlite pytest apps/api/tests tests`, and in `apps/web`
+`npm run lint && npm test && npm run build`.
 
 After an API change, regenerate the typed client with `python3 tools/export_openapi.py` and then `npm run gen:api`. Where things live is in [docs/monorepo-structure.md](docs/monorepo-structure.md).
 
@@ -99,7 +101,15 @@ After an API change, regenerate the typed client with `python3 tools/export_open
 | [Range preparation](docs/range-preparation.md) | Lifecycle, capacity checks and snapshot baselines |
 | [Running a team competition](docs/competition.md) | Teams, rounds, scoring and referees |
 | [Template attack chain](docs/template-attack-chain.md) | The enterprise file breach attack path |
+| [Enterprise file breach standard](docs/file-breach-enterprise-standard.md) | What the investigation scenario must provide |
+| [Ledger leak scenario](docs/scenario-ledger-leak.md) | A planned scenario: supplier portal leaks a ledger database |
+| [Wazuh retirement](docs/wazuh-retirement.md) | Why and how Wazuh was removed from the scenarios |
 | [Monorepo structure](docs/monorepo-structure.md) | Where things live |
+
+Dated working notes, kept for history and not maintained: the
+[drill 143 simulation](docs/drill-143-simulation.md), the
+[27 October scenario setup verification](docs/scenario-setup-verification.md) and the original
+[visual MVP plan](docs/oxblood-visual-mvp-plan.md).
 
 ## License
 
