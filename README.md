@@ -100,11 +100,6 @@ After an API change, regenerate the typed client with `python3 tools/export_open
 | [Wazuh retirement](docs/wazuh-retirement.md) | Why and how Wazuh was removed from the scenarios |
 | [Monorepo structure](docs/monorepo-structure.md) | Where things live |
 
-Dated working notes, kept for history and not maintained: the
-[drill 143 simulation](docs/drill-143-simulation.md), the
-[27 October scenario setup verification](docs/scenario-setup-verification.md) and the original
-[visual MVP plan](docs/oxblood-visual-mvp-plan.md).
-
 ## License
 
 MIT, see [LICENSE](LICENSE).
