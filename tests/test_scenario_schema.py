@@ -230,3 +230,9 @@ def test_retention_out_of_range(validator) -> None:
     bad = _minimal_valid()
     bad["spec"]["artifacts"]["retention_days"] = 99999
     _assert_one_error(validator, bad, "greater than the maximum")
+
+
+def test_unknown_telemetry_sink_type(validator) -> None:
+    bad = _minimal_valid()
+    bad["spec"]["telemetry"]["sinks"] = [{"type": "siem", "endpoint": "host:1514"}]
+    _assert_one_error(validator, bad, "is not one of")

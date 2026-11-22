@@ -445,16 +445,6 @@ class AssetSeedingMixin(RunnerBase):
             len(runcmd),
         )
 
-        # Compatibility while legacy golden images are replaced. Remove the
-        # retired agent on disposable Linux clones without deleting log data.
-        if "win" not in template and "windows" not in template:
-            runcmd.insert(
-                0,
-                "if command -v dpkg-query >/dev/null 2>&1 && "
-                "dpkg-query -W -f='${Status}' wazuh-agent 2>/dev/null | grep -q 'ok installed$'; then "
-                "DEBIAN_FRONTEND=noninteractive dpkg --remove wazuh-agent; fi",
-            )
-
         # Intermediate file-breach scenarios use the blue log aggregator as
         # the investigation trail. Forward local syslog over TCP when the
         # scenario declares that role so telemetry is real, not decorative.

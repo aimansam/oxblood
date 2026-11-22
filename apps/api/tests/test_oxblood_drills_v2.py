@@ -205,7 +205,7 @@ def test_readiness_requires_every_address_and_completed_setup(sessionmaker, monk
                 spec={
                     "spec": {
                         "assets": [{"role": "desktop", "count": 2}],
-                        "telemetry": {"sinks": [{"type": "wazuh"}]},
+                        "telemetry": {"sinks": [{"type": "stdout"}]},
                         "validation": {
                             "probes": [
                                 {

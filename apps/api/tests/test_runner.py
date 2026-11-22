@@ -839,48 +839,24 @@ def test_runner_skips_default_cloud_init_seed_for_windows_template() -> None:
     assert seed is None
 
 
-def test_legacy_linux_image_removes_agent_and_keeps_syslog() -> None:
-    import subprocess
-
+def test_linux_seed_forwards_syslog_to_the_log_aggregator() -> None:
     runner = Runner(MockProxmoxAdapter())
-    asset = models.Asset(
-        run_id=1, role="blue_workstation", template="tpl-debian-blue-gui-wazuh-xrdp"
-    )
+    asset = models.Asset(run_id=1, role="blue_workstation", template="tpl-debian-blue-gui-xrdp")
     seed = runner._build_seed_spec(
         asset=asset,
         asset_spec={"role": asset.role, "template": asset.template},
         scenario_spec={
-            "telemetry": {"sinks": [{"type": "wazuh", "endpoint": "10.30.221.10:1514"}]},
             "assets": [{"role": "log_aggregator", "networks": ["blue"]}],
             "networks": [{"name": "blue", "cidr": "10.30.40.0/24"}],
         },
     )
     assert seed is not None
-    assert "dpkg --remove wazuh-agent" in seed.runcmd[0]
-    assert "agent-auth" not in "\n".join(seed.runcmd) + str(seed.files)
-    assert "wazuh-enroll.sh" not in str(seed.files)
     assert seed.files["/etc/rsyslog.d/30-oxblood-forward.conf"] == "*.* @@10.30.40.31:514\n"
-    subprocess.run(["sh", "-n"], input=seed.runcmd[0], text=True, check=True)
-    # Mock package tools in the shell; never uninstall a package on the test host.
-    result = subprocess.run(
-        [
-            "bash",
-            "-c",
-            "set -eu; dpkg-query() { printf 'hold ok installed'; }; "
-            "dpkg() { return 42; }; " + seed.runcmd[0] + "; echo unexpected-success",
-        ],
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode == 42
-    assert "unexpected-success" not in result.stdout
 
 
 def test_compact_blue_workstation_receives_investigation_bundle() -> None:
     runner = Runner(MockProxmoxAdapter())
-    asset = models.Asset(
-        run_id=1, role="blue_workstation", template="tpl-debian-blue-gui-wazuh-xrdp"
-    )
+    asset = models.Asset(run_id=1, role="blue_workstation", template="tpl-debian-blue-gui-xrdp")
     seed = runner._build_seed_spec(
         asset=asset,
         asset_spec={"role": asset.role, "template": asset.template},
@@ -904,29 +880,6 @@ def test_compact_blue_workstation_receives_investigation_bundle() -> None:
         in seed.files["/opt/oxblood/evidence/incident-timeline.log"]
     )
     assert seed.files["/opt/oxblood/flags/blue-pivot.txt"] == "FLAG{pivot}\n"
-
-
-@pytest.mark.asyncio
-async def test_legacy_sink_never_starts_retired_manager(session: AsyncSession) -> None:
-    from unittest.mock import AsyncMock
-
-    scenario = _scenario_with("retired-manager", [_asset("desktop")])
-    scenario.spec = {
-        **scenario.spec,
-        "spec": {
-            **scenario.spec["spec"],
-            "telemetry": {"sinks": [{"type": "wazuh", "endpoint": "10.30.221.10:1514"}]},
-        },
-    }
-    session.add(scenario)
-    await session.commit()
-    adapter = MockProxmoxAdapter()
-    adapter.seed_template("tpl-x", 9000)
-    adapter.ensure_vm_running = AsyncMock(
-        side_effect=AssertionError("Retired manager must not start")
-    )
-    await Runner(adapter).start_run(RunRequest(scenario_id=scenario.id, timeout_min=-1), session)
-    adapter.ensure_vm_running.assert_not_awaited()
 
 
 def test_runner_can_opt_windows_template_into_cloudbase_seed() -> None:

@@ -39,7 +39,7 @@ spec:
     - asset: dmz_gateway
       issue: "Web admin API key embedded in HTML comment; privileged command-execution endpoint exposed."
       detail: >
-        tpl-debian-dmz-docker-wazuh ships a Docker-based Flask app on port 80 that includes the API key
+        tpl-debian-dmz-docker ships a Docker-based Flask app on port 80 that includes the API key
         (X-API-Key: oxblood-admin-2024) in an HTML comment on the index page. Authenticated requests to
         GET /api/status/flag read and return /opt/oxblood/flags/red-dmz-foothold.txt (service runs as root).
         POST /api/exec runs arbitrary shell commands as root on the DMZ host, enabling lateral movement.
@@ -57,7 +57,7 @@ spec:
     - asset: file_server
       issue: "Samba share CompanyFiles uses force user=root and guest ok=yes."
       detail: >
-        tpl-debian-file-server-wazuh configures /etc/samba/smb.conf with a [CompanyFiles] share at
+        tpl-debian-file-server configures /etc/samba/smb.conf with a [CompanyFiles] share at
         path /opt/oxblood/flags, force user = root, guest ok = yes, read only = yes. Any host on
         dc01_vlan can retrieve flag files without credentials:
         smbclient //FILE01/CompanyFiles -N -c 'get red-file-access.txt /tmp/flag.txt'
@@ -65,7 +65,7 @@ spec:
     - asset: backup_server
       issue: "rsyncd exposes an unauthenticated read-only module that serves the flags directory."
       detail: >
-        tpl-debian-backup-server-wazuh ships /etc/rsyncd.conf with module [archives] pointing to
+        tpl-debian-backup-server ships /etc/rsyncd.conf with module [archives] pointing to
         /opt/oxblood/flags, uid=root, gid=root, read only=yes, list=yes, no auth users set.
         Any host on dc01_vlan (routed to backup_vlan on 873) can enumerate and pull flag files:
         rsync rsync://BAK01/archives/
@@ -141,7 +141,7 @@ spec:
     - role: dmz_gateway
       vm_name: DMZ01
       kind: vm
-      template: tpl-debian-dmz-docker-wazuh
+      template: tpl-debian-dmz-docker
       networks: [dmz_vlan]
       resources:
         cores: 2
@@ -214,7 +214,7 @@ spec:
     - role: file_server
       vm_name: FILE01
       kind: vm
-      template: tpl-debian-file-server-wazuh
+      template: tpl-debian-file-server
       networks: [dc01_vlan]
       resources:
         cores: 2
@@ -224,7 +224,7 @@ spec:
     - role: backup_server
       vm_name: BAK01
       kind: vm
-      template: tpl-debian-backup-server-wazuh
+      template: tpl-debian-backup-server
       networks: [backup_vlan]
       resources:
         cores: 2
@@ -234,7 +234,7 @@ spec:
     - role: blue_workstation
       vm_name: BLUE01
       kind: vm
-      template: tpl-debian-blue-gui-wazuh-xrdp
+      template: tpl-debian-blue-gui-xrdp
       networks: [dc01_vlan]
       exposed: true
       resources:

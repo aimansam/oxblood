@@ -203,7 +203,7 @@ spec:
     - role: blue_analyst
       vm_name: BLUE01
       kind: vm
-      template: tpl-debian-blue-gui-wazuh-xrdp
+      template: tpl-debian-blue-gui-xrdp
       networks: [security_vlan]
       exposed: true
       resources:

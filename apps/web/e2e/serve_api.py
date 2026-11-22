@@ -18,12 +18,12 @@ from app.runners.mock_adapter import MockProxmoxAdapter  # noqa: E402
 TEMPLATES = [
     "tpl-kali-gui-xrdp",
     "tpl-opnsense",
-    "tpl-debian-dmz-docker-wazuh",
+    "tpl-debian-dmz-docker",
     "tpl-win2022-ad-auto",
-    "tpl-debian-file-server-wazuh",
-    "tpl-debian-backup-server-wazuh",
-    "tpl-debian-blue-gui-wazuh-xrdp",
-    "tpl-debian-log-aggregator-wazuh",
+    "tpl-debian-file-server",
+    "tpl-debian-backup-server",
+    "tpl-debian-blue-gui-xrdp",
+    "tpl-debian-log-aggregator",
 ]
 
 mock = MockProxmoxAdapter()

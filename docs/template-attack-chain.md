@@ -7,13 +7,9 @@ scenario attack chain works. The OxBlood runner plants flag files at drill start
 guest agent (`chmod -R 700 /opt/oxblood`). Every service here runs as root so it can read
 those root-only flag files without changing permissions.
 
-Template names ending in `-wazuh` are historical. They are the names of the Proxmox templates, so they stay as they
-are (renaming one in a scenario file alone would break cloning) and Wazuh itself is not used. If a template still
-has the `wazuh-agent` package, the runner removes it from the clone while seeding.
-
 ---
 
-## DMZ01 — `tpl-debian-dmz-docker-wazuh`
+## DMZ01 — `tpl-debian-dmz-docker`
 
 **Attack surface:** HTTP port 80 (Docker Flask app)
 
@@ -79,7 +75,7 @@ trace the pivot in the Windows event log.
 
 ---
 
-## FILE01 — `tpl-debian-file-server-wazuh`
+## FILE01 — `tpl-debian-file-server`
 
 **Attack surface:** Samba SMB port 445
 
@@ -106,7 +102,7 @@ smbclient //10.30.40.x/CompanyFiles -N -c 'get red-file-access.txt /tmp/flag.txt
 
 ---
 
-## BAK01 — `tpl-debian-backup-server-wazuh`
+## BAK01 — `tpl-debian-backup-server`
 
 **Attack surface:** rsync daemon port 873
 
