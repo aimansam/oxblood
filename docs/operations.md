@@ -35,20 +35,14 @@ team competition, on port 5050 (see the README). It needs no `.env` and keeps no
 
 ### Removing OxBlood
 
-`scripts/cleanup.sh` removes only this project's containers, network, volumes and image. By default it stops and
-removes the containers and the network and keeps everything you could not recreate: the database volume,
-`deploy/.env` and the built image, so `scripts/install.sh` brings it back as it was.
+    scripts/cleanup.sh
 
-| Flag | Also removes |
-| --- | --- |
-| `--images` | the built `oxblood/api` image |
-| `--volumes` | **the database** (Docker volumes); asks you to type `delete` |
-| `--env` | `deploy/.env`, which holds your secrets; asks you to type `delete` |
-| `--all` | all three |
-| `--yes` | skips the question (required when there is no terminal) |
-| `--dry-run` | prints what it would do and changes nothing |
-
-Add `--demo` or `--production` to act on those stacks instead. Back up first (`scripts/backup_db.sh`) if the data matters.
+No arguments, no questions. It removes this project's containers, network and data volumes for the everyday stack and
+the demo, the built `oxblood/api` image, and `deploy/.env`. Since that deletes the database, it writes a backup first
+to `~/oxblood-backups/oxblood-<date>.sql.gz` (set `OXBLOOD_BACKUP_DIR` to put it elsewhere). If the database is
+stopped it starts it just long enough to dump it, and if the dump cannot be made or is empty it stops **before
+deleting anything**. The image is kept if something else still uses it, and the production stack is never touched.
+To restore a backup into a fresh install, see `deploy/backup/README.md`.
 
 ### Production (HTTPS)
 

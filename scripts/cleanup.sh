@@ -1,131 +1,100 @@
 #!/usr/bin/env bash
-# Remove an OxBlood stack. By default it only stops and removes the containers and network:
-# your database, deploy/.env and the built images are kept, so scripts/install.sh brings it back as it was.
+# Remove OxBlood from this machine. Takes no arguments and asks no questions: run it and it does everything.
 #
-#   scripts/cleanup.sh                 everyday stack: containers and network only
-#   scripts/cleanup.sh --demo          the demo stack instead
-#   scripts/cleanup.sh --production    the production stack instead
+#   scripts/cleanup.sh
 #
-#   --images     also remove the built oxblood/api image
-#   --volumes    also DELETE THE DATABASE (the Docker volumes); asks you to confirm
-#   --env        also delete deploy/.env, which holds your secrets; asks you to confirm
-#   --all        --images --volumes --env
-#   --yes        do not ask (required when there is no terminal)
-#   --dry-run    show what would happen and change nothing
-#
-# Only this project's containers, volumes and image are touched; nothing else on the host.
+# It removes the everyday stack and the demo stack (containers, network, data volumes), the built image and
+# deploy/.env. Because that deletes the database, it first writes a backup of it to ~/oxblood-backups
+# (override with OXBLOOD_BACKUP_DIR) and stops without deleting anything if that backup cannot be made.
+# Only this project's resources are touched. The production stack (docker-compose.production.yaml) is never
+# touched; remove that one deliberately with docker compose.
+# Set it up again with scripts/install.sh.
 set -euo pipefail
+
+if [ $# -ne 0 ]; then
+  echo "scripts/cleanup.sh takes no arguments; it does everything on its own." >&2
+  exit 2
+fi
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 DEPLOY="$REPO/deploy"
 ENV_FILE="${OXBLOOD_ENV_FILE:-$DEPLOY/.env}"
+BACKUP_DIR="${OXBLOOD_BACKUP_DIR:-$HOME/oxblood-backups}"
 
-STACK=dev
-IMAGES=0
-VOLUMES=0
-ENVF=0
-YES=0
-DRY=0
-
-usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; }
-
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --demo) STACK=demo ;;
-    --production) STACK=production ;;
-    --images) IMAGES=1 ;;
-    --volumes) VOLUMES=1 ;;
-    --env) ENVF=1 ;;
-    --all) IMAGES=1; VOLUMES=1; ENVF=1 ;;
-    --yes | -y) YES=1 ;;
-    --dry-run) DRY=1 ;;
-    -h | --help) usage; exit 0 ;;
-    *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
-  esac
-  shift
-done
+DEV_FILE="$DEPLOY/docker-compose.yml"
+DEV_PROJECT=oxblood-cyber-drill
+DEMO_FILE="$DEPLOY/docker-compose.demo.yml"
+DEMO_PROJECT=oxblood-demo
+DB_CONTAINER=oxblood-postgres
+IMAGE=oxblood/api:dev
 
 say() { printf '%s\n' "$*"; }
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
-run() {
-  if [ "$DRY" = 1 ]; then printf '+ %s\n' "$*"; else "$@"; fi
-}
 
-case "$STACK" in
-  dev) FILE="$DEPLOY/docker-compose.yml"; PROJECT=oxblood-cyber-drill ;;
-  demo) FILE="$DEPLOY/docker-compose.demo.yml"; PROJECT=oxblood-demo ;;
-  production) FILE="$DEPLOY/docker-compose.production.yaml"; PROJECT=oxblood-cyber-drill-prod ;;
-esac
-COMPOSE=(docker compose -f "$FILE")
-if [ "$STACK" = production ] && [ -f "$DEPLOY/.env.production" ]; then
-  COMPOSE+=(--env-file "$DEPLOY/.env.production")
-fi
+command -v docker >/dev/null 2>&1 || die "docker is required but was not found"
+docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required (the 'docker compose' command)"
 
-if [ "$DRY" = 0 ]; then
-  command -v docker >/dev/null 2>&1 || die "docker is required but was not found"
-  docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required (the 'docker compose' command)"
-fi
+label="label=com.docker.compose.project"
+containers_of() { docker ps -aq --filter "$label=$1"; }
+volumes_of() { docker volume ls -q --filter "$label=$1"; }
+exists() { [ -n "$(containers_of "$1")$(volumes_of "$1")" ]; }
 
-# A demo keeps nothing, and --env is about the everyday stack's file.
-if [ "$STACK" = demo ] && [ "$ENVF" = 1 ]; then
-  say "The demo has no env file; ignoring --env."
-  ENVF=0
-fi
+have_dev=0; have_demo=0
+exists "$DEV_PROJECT" && have_dev=1
+exists "$DEMO_PROJECT" && have_demo=1
 
-confirm() {
-  # confirm "<what will be lost>"
-  if [ "$YES" = 1 ] || [ "$DRY" = 1 ]; then return 0; fi
-  [ -t 0 ] || die "$1 would be deleted. Run again with --yes to confirm (there is no terminal to ask)."
-  local answer
-  printf '%s\nType "delete" to continue: ' "$1 will be deleted." >&2
-  read -r answer
-  [ "$answer" = delete ] || die "cancelled; nothing was deleted"
-}
-
-say "Stack: $STACK (project $PROJECT)"
-
-if [ "$VOLUMES" = 1 ]; then
-  if [ "$DRY" = 0 ]; then
-    vols="$(docker volume ls -q --filter "label=com.docker.compose.project=$PROJECT" | tr '\n' ' ')"
-  else
-    vols="(this project's volumes)"
+# ---- 1. back up the database, because removing the stack deletes it
+BACKUP_FILE=""
+if [ -n "$(volumes_of "$DEV_PROJECT")" ]; then
+  running="$(docker inspect -f '{{.State.Running}}' "$DB_CONTAINER" 2>/dev/null || echo false)"
+  if [ "$running" != true ]; then
+    say "Starting the database briefly so it can be backed up..."
+    docker compose -f "$DEV_FILE" up -d --wait postgres >/dev/null ||
+      die "could not start the database to back it up; nothing was deleted"
   fi
-  if [ -n "${vols// /}" ]; then
-    say "This will delete the data volumes: $vols"
-    confirm "The database and every other volume of this stack"
-  else
-    say "No data volumes exist for this stack."
+  mkdir -p "$BACKUP_DIR"
+  BACKUP_FILE="$BACKUP_DIR/oxblood-$(date +%Y%m%d-%H%M%S).sql.gz"
+  if ! (umask 077 && docker exec "$DB_CONTAINER" pg_dump -U oxblood oxblood | gzip >"$BACKUP_FILE"); then
+    rm -f "$BACKUP_FILE"
+    die "the database backup failed; nothing was deleted"
   fi
+  if ! gzip -t "$BACKUP_FILE" 2>/dev/null || [ -z "$(gzip -dc "$BACKUP_FILE" | head -c 1)" ]; then
+    rm -f "$BACKUP_FILE"
+    die "the database backup is empty or damaged; nothing was deleted"
+  fi
+  say "Backed up the database to $BACKUP_FILE"
 fi
 
-if [ "$ENVF" = 1 ] && [ -f "$ENV_FILE" ]; then
-  confirm "$ENV_FILE (your generated secrets and the first admin password)"
+# ---- 2. remove the stacks (containers, network, data volumes)
+if [ "$have_dev" = 1 ]; then
+  say "Removing the OxBlood stack..."
+  docker compose -f "$DEV_FILE" down --remove-orphans --volumes
+fi
+if [ "$have_demo" = 1 ]; then
+  say "Removing the OxBlood demo..."
+  docker compose -f "$DEMO_FILE" down --remove-orphans --volumes
 fi
 
-# 1. containers and network (and volumes, when asked)
-down=("${COMPOSE[@]}" down --remove-orphans)
-[ "$VOLUMES" = 1 ] && down+=(--volumes)
-run "${down[@]}"
-
-# 2. the built image, unless another container still uses it
-if [ "$IMAGES" = 1 ]; then
-  if [ "$DRY" = 1 ]; then
-    run docker image rm oxblood/api:dev
+# ---- 3. the built image (kept if something outside this project still uses it)
+if docker image inspect "$IMAGE" >/dev/null 2>&1; then
+  if docker image rm "$IMAGE" >/dev/null 2>&1; then
+    say "Removed the image $IMAGE"
   else
-    docker image rm oxblood/api:dev >/dev/null 2>&1 && say "Removed the image oxblood/api:dev" ||
-      say "Kept the image oxblood/api:dev (not found, or another stack still uses it)"
+    say "Kept the image $IMAGE (still in use)"
   fi
 fi
 
-# 3. the env file
-if [ "$ENVF" = 1 ]; then
-  if [ -f "$ENV_FILE" ]; then run rm -f "$ENV_FILE"; else say "No $ENV_FILE to delete."; fi
+# ---- 4. the secrets file
+if [ -f "$ENV_FILE" ]; then
+  rm -f "$ENV_FILE"
+  say "Removed $ENV_FILE"
 fi
 
 say ""
-if [ "$DRY" = 1 ]; then
-  say "Dry run: nothing was changed."
+if [ "$have_dev" = 0 ] && [ "$have_demo" = 0 ] && [ -z "$BACKUP_FILE" ]; then
+  say "Nothing was installed; nothing to remove."
 else
-  say "Done."
-  [ "$VOLUMES" = 1 ] || say "Your data is kept. Bring the stack back with scripts/install.sh$([ "$STACK" = demo ] && echo ' --demo')."
+  say "Done. OxBlood is removed."
+  [ -z "$BACKUP_FILE" ] || say "Your database backup is $BACKUP_FILE (restore steps: deploy/backup/README.md)."
 fi
+say "Set it up again with: scripts/install.sh"

@@ -1,42 +1,27 @@
 #!/usr/bin/env bash
-# Install OxBlood: create deploy/.env with generated secrets, build and start the stack, wait until it is ready.
+# Install OxBlood. Takes no arguments: run it and it does everything.
 #
-#   scripts/install.sh              everyday stack (api + postgres) on http://localhost:5000/app/
-#   scripts/install.sh --demo       demo stack on http://localhost:5050/app/ (no Proxmox needed, nothing is kept)
-#   scripts/install.sh --no-start   only create deploy/.env
-#   scripts/install.sh --dry-run    show what would happen and change nothing
+#   scripts/install.sh
 #
-# Safe to run again: an existing deploy/.env is never touched. Proxmox credentials are not asked for here;
-# enter them in the web UI under Settings, or edit deploy/.env. Remove everything with scripts/cleanup.sh.
+# It creates deploy/.env with a generated database password, token secret and first admin (once; an existing
+# deploy/.env is never touched), builds and starts the stack on http://localhost:5000/app/, waits until it is ready
+# and prints the admin password. Running it again is safe. Proxmox credentials are entered in the web UI under
+# Settings. Remove everything with scripts/cleanup.sh.
 set -euo pipefail
+
+if [ $# -ne 0 ]; then
+  echo "scripts/install.sh takes no arguments; it does everything on its own." >&2
+  exit 2
+fi
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 DEPLOY="$REPO/deploy"
 ENV_FILE="${OXBLOOD_ENV_FILE:-$DEPLOY/.env}"
-
-DEMO=0
-START=1
-DRY=0
-
-usage() { sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; }
-
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --demo) DEMO=1 ;;
-    --no-start) START=0 ;;
-    --dry-run) DRY=1 ;;
-    -h | --help) usage; exit 0 ;;
-    *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
-  esac
-  shift
-done
+COMPOSE_FILE="$DEPLOY/docker-compose.yml"
+URL="http://localhost:5000"
 
 say() { printf '%s\n' "$*"; }
 die() { printf 'error: %s\n' "$*" >&2; exit 1; }
-run() {
-  if [ "$DRY" = 1 ]; then printf '+ %s\n' "$*"; else "$@"; fi
-}
-
 need() { command -v "$1" >/dev/null 2>&1 || die "$1 is required but was not found"; }
 
 rand_hex() {
@@ -64,48 +49,25 @@ set_var() {
 }
 
 wait_ready() {
-  local url="$1" i
+  local i
   for i in $(seq 1 90); do
-    if curl -fsS "$url" >/dev/null 2>&1; then return 0; fi
+    if curl -fsS "$URL/readyz" >/dev/null 2>&1; then return 0; fi
     sleep 2
   done
   return 1
 }
 
-# ---- prerequisites: docker is only needed when something will actually be started
-if [ "$START" = 1 ] && [ "$DRY" = 0 ]; then
-  need docker
-  docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required (the 'docker compose' command)"
-  need curl
-fi
-if ! command -v openssl >/dev/null 2>&1; then need python3; fi
+# ---- prerequisites
+need docker
+docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required (the 'docker compose' command)"
+need curl
+command -v openssl >/dev/null 2>&1 || need python3
+[ -f "$COMPOSE_FILE" ] || die "$COMPOSE_FILE is missing; run this from a full checkout of the repository"
 
-# ---- demo: self-contained, no secrets to generate
-if [ "$DEMO" = 1 ]; then
-  FILE="$DEPLOY/docker-compose.demo.yml"
-  say "Starting the demo stack (builds the image on first run; this can take a few minutes)..."
-  run docker compose -f "$FILE" up -d --build
-  if [ "$DRY" = 1 ]; then exit 0; fi
-  wait_ready "http://localhost:5050/readyz" || die "the demo did not become ready; see: docker compose -f $FILE logs api"
-  seed="$(docker compose -f "$FILE" ps -aq seed)"
-  if [ -n "$seed" ]; then
-    code="$(docker wait "$seed")"
-    [ "$code" = 0 ] || die "seeding the demo failed; see: docker logs $seed"
-  fi
-  say ""
-  say "OxBlood demo is ready:  http://localhost:5050/app/"
-  say "  operator   admin / OxbloodDemo-2026"
-  say "  players    aisyah (red) and hafiz (blue), password Player-Demo-2026"
-  say "Remove it with: scripts/cleanup.sh --demo"
-  exit 0
-fi
-
-# ---- everyday stack: create deploy/.env once
+# ---- deploy/.env, created once
 GENERATED_ADMIN=""
 if [ -f "$ENV_FILE" ]; then
   say "Keeping the existing $ENV_FILE"
-elif [ "$DRY" = 1 ]; then
-  say "+ create $ENV_FILE from deploy/.env.example with a generated database password, token secret and admin account"
 else
   [ -f "$DEPLOY/.env.example" ] || die "$DEPLOY/.env.example is missing"
   mkdir -p "$(dirname "$ENV_FILE")"
@@ -119,22 +81,14 @@ else
   say "Created $ENV_FILE (readable only by you) with generated secrets"
 fi
 
-if [ "$START" = 0 ]; then
-  say "Skipping the start (--no-start)."
-  if [ -n "$GENERATED_ADMIN" ]; then
-    say "First admin, created when the API first starts:  admin / $GENERATED_ADMIN"
-  fi
-  exit 0
-fi
-
-FILE="$DEPLOY/docker-compose.yml"
+# ---- build, start, wait
 say "Starting OxBlood (builds the image on first run; this can take a few minutes)..."
-run docker compose -f "$FILE" up -d --build --wait --wait-timeout 240
-if [ "$DRY" = 1 ]; then exit 0; fi
-wait_ready "http://localhost:5000/readyz" || die "OxBlood did not become ready; see: docker compose -f $FILE logs api"
+docker compose -f "$COMPOSE_FILE" up -d --build --wait --wait-timeout 240 ||
+  die "the stack did not start. If a port is already in use, free port 5000 and run this again; otherwise see: docker compose -f $COMPOSE_FILE logs"
+wait_ready || die "OxBlood did not become ready; see: docker compose -f $COMPOSE_FILE logs api"
 
 say ""
-say "OxBlood is ready:  http://localhost:5000/app/"
+say "OxBlood is ready:  $URL/app/"
 if [ -n "$GENERATED_ADMIN" ]; then
   say "  first admin   admin / $GENERATED_ADMIN   (shown once; it is also in $ENV_FILE)"
 fi
