@@ -60,6 +60,14 @@ docker compose up -d
 
 Open <http://localhost:5000/app/>. Create the first admin by setting `OXBLOOD_BOOTSTRAP_ADMIN_SUB` and `OXBLOOD_BOOTSTRAP_ADMIN_PASSWORD` in `.env` before the first start, then remove them. The bootstrap only creates an admin that does not exist yet; it never changes an existing password.
 
+Three compose files, all under `deploy/`:
+
+| File | Runs | Use |
+| --- | --- | --- |
+| `docker-compose.yml` | `api`, `postgres` | The everyday stack, on port 5000 |
+| `docker-compose.demo.yml` | `api`, `postgres`, a seeder | The demo above, on port 5050; no Proxmox needed |
+| `docker-compose.production.yaml` | `traefik`, `api`, `postgres` | HTTPS with Let's Encrypt; see the [runbook](docs/operations.md) |
+
 Proxmox credentials can also be entered in the web UI under Settings. A Proxmox user id is `<name>@<realm>` and the token id is `<user>!<token-name>`, for example `oxblood@pam!drill-token`.
 
 ## What you can do
@@ -87,7 +95,7 @@ After an API change, regenerate the typed client with `python3 tools/export_open
 
 | Document | What it covers |
 | --- | --- |
-| [Operations runbook](docs/operations.md) | Running and looking after the platform |
+| [Operations runbook](docs/operations.md) | What runs, deploying and upgrading, production, health and backups |
 | [Range preparation](docs/range-preparation.md) | Lifecycle, capacity checks and snapshot baselines |
 | [Running a team competition](docs/competition.md) | Teams, rounds, scoring and referees |
 | [Template attack chain](docs/template-attack-chain.md) | The enterprise file breach attack path |
