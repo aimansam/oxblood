@@ -10,13 +10,11 @@ name: oxblood-cyber-drill-prod
 #   * Traefik fronts the API with Let's Encrypt TLS. Public
 #     ingress on :443. The api service is no longer published
 #     on a host port.
-#   * JSON logging (OXBLOOD_LOG_LEVEL=INFO + structlog formatter)
-#     so logs ship cleanly to Loki / Elasticsearch / CloudWatch.
 #   * Resource limits on every service (CPU + memory).
-#   * No bind mounts for source code -- the api image is built
-#     once via `make build` and used as-is.
-#   * Scenarios are baked into the image at build time (the
-#     Dockerfile copies examples/scenarios into /app/scenarios).
+#   * The api image is built once and used as-is:
+#       docker build -f apps/api/Dockerfile -t oxblood/api:latest .
+#     The only bind mount is the scenario catalog, read-only.
+#   * The image's own start command runs the database migrations, then uvicorn.
 #   * Healthchecks tightened to 10s intervals + 5s timeouts.
 #
 # Bring up:
@@ -49,8 +47,8 @@ services:
       OXBLOOD_ENV: production
       OXBLOOD_LOG_LEVEL: ${OXBLOOD_LOG_LEVEL:-INFO}
       OXBLOOD_DB_URL: postgresql+asyncpg://oxblood:${POSTGRES_PASSWORD}@postgres:5432/oxblood
-      # Scenarios are baked into the image; no OXBLOOD_SCENARIOS_DIR.
-      # Sync still runs on startup so any DB-side edits get rolled in.
+      # The scenario catalog is mounted read-only below and synced into the DB on startup.
+      OXBLOOD_SCENARIOS_DIR: /scenarios
       OXBLOOD_SYNC_ON_STARTUP: "true"
       # First admin from the env (idempotent).
       OXBLOOD_BOOTSTRAP_ADMIN_SUB: ${OXBLOOD_BOOTSTRAP_ADMIN_SUB}
@@ -65,24 +63,10 @@ services:
       PROXMOX_TOKEN_ID: ${PROXMOX_TOKEN_ID}
       PROXMOX_TOKEN_SECRET: ${PROXMOX_TOKEN_SECRET}
       PROXMOX_VERIFY_SSL: ${PROXMOX_VERIFY_SSL:-true}
-      # Single worker: in-memory state (see the header comment).
-      WEB_CONCURRENCY: "1"
-    command:
-      - "uvicorn"
-      - "app.main:app"
-      - "--host"
-      - "0.0.0.0"
-      - "--port"
-      - "8000"
-      - "--workers"
-      - "1"
-      - "--proxy-headers"
-      # Honor X-Forwarded-For / X-Forwarded-Proto from Traefik
-      # so redirect URLs + CORS use the public scheme.
-      - "--forwarded-allow-ips"
-      - "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
-      - "--log-config"
-      - "/app/logging.json"
+      # Traefik forwards the public scheme and client address; trust it on the Docker networks.
+      FORWARDED_ALLOW_IPS: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    volumes:
+      - ../examples/scenarios:/scenarios:ro
     depends_on:
       postgres:
         condition: service_healthy
