@@ -12,9 +12,11 @@ no monitoring servers.
 
 ## Deploying
 
-The everyday stack lives in `deploy/docker-compose.yml`. Settings come from `deploy/.env` (copy
-`deploy/.env.example`; the file is git-ignored).
+The everyday stack lives in `deploy/docker-compose.yml`. Settings come from `deploy/.env` (git-ignored).
+`scripts/install.sh` creates it with generated secrets on the first run, starts the stack and waits until it is
+ready; it never overwrites an existing `deploy/.env`. By hand:
 
+    cp deploy/.env.example deploy/.env                 # first time only; set the secrets
     docker compose -f deploy/docker-compose.yml up -d --build --remove-orphans
 
 The API image builds the web UI in a first stage, so a rebuild ships UI changes too. On start the API
@@ -30,6 +32,23 @@ defines. It never removes volumes; old ones such as `oxblood-cyber-drill_redis-d
 
 **Demo.** `deploy/docker-compose.demo.yml` runs the whole app against an in-memory Proxmox, seeded with a live
 team competition, on port 5050 (see the README). It needs no `.env` and keeps nothing between runs.
+
+### Removing OxBlood
+
+`scripts/cleanup.sh` removes only this project's containers, network, volumes and image. By default it stops and
+removes the containers and the network and keeps everything you could not recreate: the database volume,
+`deploy/.env` and the built image, so `scripts/install.sh` brings it back as it was.
+
+| Flag | Also removes |
+| --- | --- |
+| `--images` | the built `oxblood/api` image |
+| `--volumes` | **the database** (Docker volumes); asks you to type `delete` |
+| `--env` | `deploy/.env`, which holds your secrets; asks you to type `delete` |
+| `--all` | all three |
+| `--yes` | skips the question (required when there is no terminal) |
+| `--dry-run` | prints what it would do and changes nothing |
+
+Add `--demo` or `--production` to act on those stacks instead. Back up first (`scripts/backup_db.sh`) if the data matters.
 
 ### Production (HTTPS)
 

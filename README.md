@@ -12,7 +12,7 @@ team competition: two teams, six players, a running range and the first scores.
 ```bash
 git clone https://github.com/aimansam/oxblood.git
 cd oxblood
-docker compose -f deploy/docker-compose.demo.yml up -d --build
+scripts/install.sh --demo      # builds, starts, seeds, and waits until it is ready
 ```
 
 Open <http://localhost:5050/app/> and sign in:
@@ -24,9 +24,10 @@ Open <http://localhost:5050/app/> and sign in:
 | `hafiz` | `Player-Demo-2026` | A blue player's mission screen and map (team Bravo) |
 
 Machines are simulated, so there are no consoles to open, and the Infrastructure page and the
-Proxmox tab in Settings show Proxmox as unavailable. Everything else is the real application. Stop it with
-`docker compose -f deploy/docker-compose.demo.yml down`; the next `up` starts from scratch. Set
-`OXBLOOD_DEMO_PORT` to use a port other than 5050.
+Proxmox tab in Settings show Proxmox as unavailable. Everything else is the real application. Remove it with
+`scripts/cleanup.sh --demo`; the next install starts from scratch. Set `OXBLOOD_DEMO_PORT` to use a port other
+than 5050. (The script runs `docker compose -f deploy/docker-compose.demo.yml up -d --build` if you prefer to run
+that yourself.)
 
 | | |
 | --- | --- |
@@ -47,12 +48,22 @@ One service serves both the UI and the API, plus a PostgreSQL database. Rate lim
 
 ```bash
 git clone https://github.com/aimansam/oxblood.git
-cd oxblood/deploy
-cp .env.example .env     # set POSTGRES_PASSWORD, OXBLOOD_TOKEN_SECRET and the PROXMOX_* values
-docker compose up -d
+cd oxblood
+scripts/install.sh
 ```
 
-Open <http://localhost:5000/app/>. Create the first admin by setting `OXBLOOD_BOOTSTRAP_ADMIN_SUB` and `OXBLOOD_BOOTSTRAP_ADMIN_PASSWORD` in `.env` before the first start, then remove them. The bootstrap only creates an admin that does not exist yet; it never changes an existing password.
+The script needs Docker with Compose v2. It creates `deploy/.env` (readable only by you) with a generated database
+password, token secret and first admin, builds and starts the stack, waits until it is ready, and prints the admin's
+password once. It never overwrites an existing `deploy/.env`, so running it again is safe. Then open
+<http://localhost:5000/app/>, sign in, and add your Proxmox host and API token under Settings.
+
+To remove it: `scripts/cleanup.sh` stops and removes the containers and keeps your data; add `--volumes` to delete the
+database too, `--images` to remove the built image, `--env` to delete `deploy/.env`, or `--all` for everything. It asks
+before deleting anything you cannot get back, and `--dry-run` shows what it would do.
+
+Prefer to do it by hand? `cp deploy/.env.example deploy/.env`, set `POSTGRES_PASSWORD`, `OXBLOOD_TOKEN_SECRET` and the
+`OXBLOOD_BOOTSTRAP_ADMIN_*` pair, then `docker compose -f deploy/docker-compose.yml up -d --build`. The bootstrap only
+creates an admin that does not exist yet; it never changes an existing password.
 
 Three compose files, all under `deploy/`:
 
