@@ -28,8 +28,8 @@ spec:
       - "From DC01, WinRM into FILE01 and a second PC; run the ransom simulation and collect the final flag."
     blue:
       - "On BLUE01, work through the logs and evidence; find the first RDP logon to the entry PC from 10.30.10.x and submit blue-foothold-detected."
-      - "Look for WinRM to DC01 from a non-DC source (dc02_vlan); submit blue-dcsync-detected with source IP."
-      - "Block dc02_vlan endpoints or log ransom-note creation on FILE01; submit blue-contained with evidence."
+      - "Look for WinRM to DC01 from a non-DC source (workstation_vlan); submit blue-dcsync-detected with source IP."
+      - "Block workstation_vlan endpoints or log ransom-note creation on FILE01; submit blue-contained with evidence."
   vulnerabilities:
     - asset: entry_workstation
       issue: "Local account j.smith uses a guessable password; domain creds stored in plaintext on the desktop."
@@ -38,18 +38,18 @@ spec:
         Users. C:\Users\j.smith\Desktop\credentials.txt contains the domain service account
         (svc_domain / DomainSvc@2024!) — simulating a phishing document that exposed domain credentials.
         RDP is enabled; any host on public_vlan can authenticate directly. This PC is dual-homed (public_vlan and
-        dc02_vlan), so it is the only way from the public network into the domain.
+        workstation_vlan), so it is the only way from the public network into the domain.
     - asset: dc_server
       issue: "Service account svc_domain is a Domain Admin member with WinRM enabled on port 5985."
       detail: >
         tpl-win2022-ad-tools is promoted as the oxblood.lab domain controller. svc_domain@oxblood.lab
         (DomainSvc@2024!) is added to both Domain Admins and Remote Management Users. This over-
-        privileged service account lets an attacker WinRM in from any dc02_vlan host and perform a
+        privileged service account lets an attacker WinRM in from any workstation_vlan host and perform a
         DCSync-equivalent operation. Sysmon logs the inbound WinRM session.
     - asset: file_server
       issue: "Windows Server member reachable via WinRM from dc01_vlan with domain admin credentials."
       detail: >
-        tpl-win2022-member is a domain member server on dc02_vlan. With domain admin credentials an
+        tpl-win2022-member is a domain member server on workstation_vlan. With domain admin credentials an
         attacker can WinRM in and execute commands — including dropping a ransom note — on this machine
         and other endpoints. The flag is accessible after WinRM access is established.
 
@@ -86,7 +86,7 @@ spec:
       kind: vm
       template: tpl-opnsense
       network_mode: trunk
-      networks: [public_vlan, dc01_vlan, dc02_vlan, backup_vlan, security_vlan]
+      networks: [public_vlan, dc01_vlan, workstation_vlan, backup_vlan, security_vlan]
       resources:
         cores: 2
         ram_mb: 2048
@@ -98,7 +98,7 @@ spec:
       vm_name: ENTRY01
       kind: vm
       template: tpl-win11-enterprise
-      networks: [public_vlan, dc02_vlan]
+      networks: [public_vlan, workstation_vlan]
       resources:
         cores: 2
         ram_mb: 4096
@@ -122,7 +122,7 @@ spec:
             commands:
               - "$ErrorActionPreference = 'Stop'"
               - "$inside = $null; for ($i = 0; $i -lt 60 -and -not $inside; $i++) { $inside = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -like '10.30.50.*' } | Select-Object -First 1; if (-not $inside) { Start-Sleep -Seconds 5 } }"
-              - "if (-not $inside) { throw 'The internal NIC (dc02_vlan) never got a 10.30.50.x address' }"
+              - "if (-not $inside) { throw 'The internal NIC (workstation_vlan) never got a 10.30.50.x address' }"
               - "$outside = Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' -and $_.ifIndex -ne $inside.InterfaceIndex } | Sort-Object ifIndex | Select-Object -First 1"
               - "if (-not $outside) { throw 'The public NIC is not up' }"
               - "Set-NetIPInterface -InterfaceIndex $outside.ifIndex -Dhcp Disabled"
@@ -135,7 +135,7 @@ spec:
       kind: vm
       template: tpl-win11-enterprise
       count: 2
-      networks: [dc02_vlan]
+      networks: [workstation_vlan]
       resources:
         cores: 2
         ram_mb: 4096
@@ -212,7 +212,7 @@ spec:
       vm_name: FILE01
       kind: vm
       template: tpl-win2022-member
-      networks: [dc02_vlan]
+      networks: [workstation_vlan]
       resources:
         cores: 2
         ram_mb: 4096
@@ -254,7 +254,7 @@ spec:
       isolation: tight
       egress: blocked
       dhcp: false
-    - name: dc02_vlan
+    - name: workstation_vlan
       cidr: 10.30.50.0/24
       vlan_id: 235
       isolation: tight
@@ -277,9 +277,9 @@ spec:
     default_forward: drop
     # No rule joins public_vlan to the internal networks: the entry workstation is the only way in.
     rules:
-      - {from: dc02_vlan,     to: dc01_vlan,  protocol: tcp, ports: [88, 389, 445, 5985]}
-      - {from: dc01_vlan,     to: dc02_vlan,  protocol: tcp, ports: [445, 3389, 5985]}
-      - {from: security_vlan, to: dc02_vlan,  protocol: tcp, ports: [443, 9200]}
+      - {from: workstation_vlan,     to: dc01_vlan,  protocol: tcp, ports: [88, 389, 445, 5985]}
+      - {from: dc01_vlan,     to: workstation_vlan,  protocol: tcp, ports: [445, 3389, 5985]}
+      - {from: security_vlan, to: workstation_vlan,  protocol: tcp, ports: [443, 9200]}
       - {from: security_vlan, to: dc01_vlan,  protocol: tcp, ports: [443, 9200]}
 
   flags:
@@ -342,13 +342,13 @@ spec:
 
   artifacts:
     sink_to: local
-    required_pcaps: [public_vlan, dc01_vlan, dc02_vlan, security_vlan]
+    required_pcaps: [public_vlan, dc01_vlan, workstation_vlan, security_vlan]
     retention_days: 30
 
   win_conditions:
     red:
       - "DCSync of at least one Domain Admin account succeeds."
-      - "Ransomware note is observed on two or more endpoints in dc02_vlan."
+      - "Ransomware note is observed on two or more endpoints in workstation_vlan."
     blue:
       - "All compromised endpoints isolated within 30 minutes of initial detection."
       - "No encryption events observed on file_server or dc_server."

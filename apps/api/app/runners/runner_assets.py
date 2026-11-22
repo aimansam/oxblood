@@ -387,7 +387,7 @@ class AssetSeedingMixin(RunnerBase):
                 "2026-01-01T09:12:44Z public_vlan workstation RDP to entry_workstation (10.30.10.30)\n"
                 "2026-01-01T09:21:03Z entry_workstation WinRM to dc01_vlan (dc_server)\n"
                 "2026-01-01T09:33:17Z dc_server DCSync-equivalent request observed\n"
-                "2026-01-01T09:41:52Z dc01_vlan WinRM to dc02_vlan file_server — ransom note created\n"
+                "2026-01-01T09:41:52Z dc01_vlan WinRM to workstation_vlan file_server — ransom note created\n"
             )
 
         runcmd = [

@@ -80,12 +80,12 @@ export function layoutTopology(assets: MapAsset[], networks: MapNetwork[]): Layo
     const meta = deviceMeta(asset);
     if (meta.cls === 'router') return 'transit';
     // A web host with a leg on the public network and another inside (a dual-homed DMZ host) stays in the DMZ column.
-    if (enterprise && (role.includes('dmz') || role.includes('web'))) return 'dmz';
+    if (enterprise && (role.includes('dmz') || role.includes('web') || (nets.length > 1 && nets[0].includes('public')))) return 'dmz';
     if (nets.length > 1) return 'transit';
     if (role.includes('red') || role.includes('attacker') || meta.cls === 'kali') return 'red';
     if (!enterprise) return 'blue';
     if (nets.some((n) => n.includes('dmz')) || role.includes('dmz') || role.includes('web')) return 'dmz';
-    if (role === 'dc01' || role === 'dc02' || nets.some((n) => n.includes('dc01') || n.includes('dc02'))) return 'identity';
+    if (role === 'dc01' || role === 'dc02' || nets.some((n) => n.includes('dc01') || n.includes('dc02') || n.includes('workstation'))) return 'identity';
     return 'protected';
   };
   rows.forEach((row) => groups[groupFor(row.asset)].push(row));
@@ -168,7 +168,7 @@ export function layoutTopology(assets: MapAsset[], networks: MapNetwork[]): Layo
         red: text(findNet(/red|public/i), 'red access'),
         dmz: text(findNet(/dmz/i), 'dmz'),
         transit: text({}, 'transit'),
-        identity: { title: 'identity', subtitle: vlans(/dc0[12]/i) },
+        identity: { title: 'identity', subtitle: vlans(/dc0[12]|workstation/i) },
         protected: { title: 'protected services', subtitle: vlans(/backup|security/i) },
       }
     : { red: text(findNet(/red/i), 'red segment'), transit: text(findNet(/dmz|wan|shared|transit/i), 'transit'), blue: text(findNet(/blue/i), 'blue segment') };
