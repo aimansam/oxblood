@@ -32,7 +32,7 @@ spec:
       - "From DMZ01, evil-winrm into DC01 (10.30.40.10:5985) then smbclient //FILE01/CompanyFiles -N to pull the file flag."
       - "From dc01_vlan, rsync rsync://BAK01/archives/ to list files and retrieve the backup flag."
     blue:
-      - "Open Wazuh on BLUE01; find the first HTTP request to DMZ01 from 10.30.10.x and submit blue-initial-source with that IP."
+      - "On BLUE01, work through the logs and evidence; find the first HTTP request to DMZ01 from 10.30.10.x and submit blue-initial-source with that IP."
       - "Look for WinRM (port 5985) inbound to DC01 from a DMZ address; submit blue-pivot-traced with source IP and timestamp."
       - "Check BAK01 or FW01 logs for rsync (873) from dc01_vlan; block or log the path and submit blue-backup-protected."
   vulnerabilities:
@@ -44,7 +44,7 @@ spec:
         GET /api/status/flag read and return /opt/oxblood/flags/red-dmz-foothold.txt (service runs as root).
         POST /api/exec runs arbitrary shell commands as root on the DMZ host, enabling lateral movement.
         GET /api/config returns the domain service-account credential (svc_app / AppSvc@2024!) used for
-        the next pivot. Wazuh ships all web access logs to the central event stream.
+        the next pivot. The web access log on DMZ01 records every request.
 
     - asset: dc01
       issue: "Domain service account svc_app is in Remote Management Users; WinRM enabled on port 5985."
@@ -52,7 +52,7 @@ spec:
         tpl-win2022-ad-auto creates svc_app@oxblood.lab with password AppSvc@2024! and adds it to
         Remote Management Users. Attackers who discover the credential on DMZ01 can evil-winrm into
         DC01 (10.30.40.10:5985) from any DMZ-segment host. No PSRemoting restriction is applied.
-        Windows Defender and sysmon log the inbound WinRM session, visible in Wazuh on BLUE01.
+        Windows Defender and sysmon log the inbound WinRM session.
 
     - asset: file_server
       issue: "Samba share CompanyFiles uses force user=root and guest ok=yes."
@@ -61,7 +61,6 @@ spec:
         path /opt/oxblood/flags, force user = root, guest ok = yes, read only = yes. Any host on
         dc01_vlan can retrieve flag files without credentials:
         smbclient //FILE01/CompanyFiles -N -c 'get red-file-access.txt /tmp/flag.txt'
-        Wazuh FIM on FILE01 fires on every file read in /opt/oxblood/flags.
 
     - asset: backup_server
       issue: "rsyncd exposes an unauthenticated read-only module that serves the flags directory."
@@ -71,7 +70,7 @@ spec:
         Any host on dc01_vlan (routed to backup_vlan on 873) can enumerate and pull flag files:
         rsync rsync://BAK01/archives/
         rsync rsync://BAK01/archives/red-backup-access.txt /tmp/
-        Wazuh on BAK01 logs the rsync daemon access.
+        rsyncd on BAK01 logs the access to syslog.
   provisioning:
     # Shared backing disks keep this seven-VM enterprise range inside the
     # available SSD capacity. Every run is still destroyed during cleanup.

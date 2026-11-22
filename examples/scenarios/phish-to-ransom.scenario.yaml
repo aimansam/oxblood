@@ -27,7 +27,7 @@ spec:
       - "WinRM into DC01 (10.30.40.10:5985) with svc_domain / DomainSvc@2024! and read the DCSync flag."
       - "From DC01, WinRM into FILE01 and a second PC; run the ransom simulation and collect the final flag."
     blue:
-      - "Open Wazuh on BLUE01; find the first RDP logon to dc02_vlan from 10.30.10.x and submit blue-foothold-detected."
+      - "On BLUE01, work through the logs and evidence; find the first RDP logon to dc02_vlan from 10.30.10.x and submit blue-foothold-detected."
       - "Look for WinRM to DC01 from a non-DC source (dc02_vlan); submit blue-dcsync-detected with source IP."
       - "Block dc02_vlan endpoints or log ransom-note creation on FILE01; submit blue-contained with evidence."
   vulnerabilities:
@@ -44,7 +44,7 @@ spec:
         tpl-win2022-ad-tools is promoted as the oxblood.lab domain controller. svc_domain@oxblood.lab
         (DomainSvc@2024!) is added to both Domain Admins and Remote Management Users. This over-
         privileged service account lets an attacker WinRM in from any dc02_vlan host and perform a
-        DCSync-equivalent operation. Sysmon and Wazuh log the inbound WinRM session.
+        DCSync-equivalent operation. Sysmon logs the inbound WinRM session.
     - asset: file_server
       issue: "Windows Server member reachable via WinRM from dc01_vlan with domain admin credentials."
       detail: >

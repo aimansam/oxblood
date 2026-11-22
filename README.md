@@ -107,7 +107,6 @@ After an API change, regenerate the typed client with `python3 tools/export_open
 | [Template attack chain](docs/template-attack-chain.md) | The enterprise file breach attack path |
 | [Enterprise file breach standard](docs/file-breach-enterprise-standard.md) | What the investigation scenario must provide |
 | [Ledger leak scenario](docs/scenario-ledger-leak.md) | A planned scenario: supplier portal leaks a ledger database |
-| [Wazuh retirement](docs/wazuh-retirement.md) | Why and how Wazuh was removed from the scenarios |
 | [Monorepo structure](docs/monorepo-structure.md) | Where things live |
 
 ## License

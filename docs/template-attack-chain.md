@@ -7,6 +7,10 @@ scenario attack chain works. The OxBlood runner plants flag files at drill start
 guest agent (`chmod -R 700 /opt/oxblood`). Every service here runs as root so it can read
 those root-only flag files without changing permissions.
 
+Template names ending in `-wazuh` are historical. They are the names of the Proxmox templates, so they stay as they
+are (renaming one in a scenario file alone would break cloning) and Wazuh itself is not used. If a template still
+has the `wazuh-agent` package, the runner removes it from the clone while seeding.
+
 ---
 
 ## DMZ01 — `tpl-debian-dmz-docker-wazuh`
@@ -30,8 +34,8 @@ The `/api/exec` endpoint simulates a "DevOps sysadmin API" that was never locked
 common misconfiguration in internal tooling. The API key in the HTML comment represents a
 hard-coded secret left by a developer.
 
-**Wazuh:** nginx or the Flask app writes access logs; Wazuh ships them to the central
-event stream. Blue sees every HTTP request with its source IP.
+**Logging:** nginx or the Flask app writes access logs. Blue sees every HTTP request with its
+source IP.
 
 ### Minimal Dockerfile
 
@@ -70,8 +74,8 @@ This account holds the fixed credential that red discovers from DMZ01's `/api/co
 a fixed password (not `{{domain_password}}`) keeps the attack chain deterministic — red can
 follow the play guide exactly.
 
-**Wazuh / sysmon:** sysmon config on DC01 logs Event ID 4624 (logon) for WinRM sessions.
-Wazuh ships those to the central event stream so blue can trace the pivot.
+**Sysmon:** sysmon config on DC01 logs Event ID 4624 (logon) for WinRM sessions, so blue can
+trace the pivot in the Windows event log.
 
 ---
 
@@ -99,9 +103,6 @@ Attack from dc01_vlan (after pivoting through DC01):
 smbclient //10.30.40.x/CompanyFiles -N -c 'ls'
 smbclient //10.30.40.x/CompanyFiles -N -c 'get red-file-access.txt /tmp/flag.txt'
 ```
-
-**Wazuh FIM:** configure Wazuh FIM to watch `/opt/oxblood/flags/` with `realtime=yes`.
-Every Samba read triggers a file-access event visible in blue's Wazuh dashboard.
 
 ---
 
@@ -133,9 +134,8 @@ rsync rsync://10.30.60.x/archives/red-backup-access.txt /tmp/
 
 Enable the daemon: `systemctl enable rsync && systemctl start rsync`.
 
-**Wazuh:** rsync daemon logs to syslog; Wazuh ships the access event (source IP, module
-accessed) to the central stream. Blue sees the dc01_vlan source IP hitting the archives
-module — the final detection in the chain.
+**Logging:** the rsync daemon logs to syslog (source IP, module accessed). Blue sees the
+dc01_vlan source IP hitting the archives module — the final detection in the chain.
 
 ---
 
@@ -154,4 +154,4 @@ module — the final detection in the chain.
 
 The runner already plants `/opt/oxblood/evidence/incident-timeline.log` on BLUE01 when blue
 flags are present. The timestamps in that file reference the attack path so blue has a
-starting point for the Wazuh investigation.
+starting point for the log investigation.
