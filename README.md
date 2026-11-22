@@ -39,13 +39,7 @@ Proxmox tab in Settings show Proxmox as unavailable. Everything else is the real
 
 ## How it fits together
 
-```
-Browser ──► API (FastAPI, :5000)
-              ├── /app/   React UI (built from apps/web, baked into the image)
-              └── /api/*  REST API
-                            ├── PostgreSQL   state and score ledger
-                            └── Proxmox VE   clones, boots and seeds the range
-```
+![OxBlood architecture: browser, one API container with the web UI, REST API and runner, PostgreSQL, and Proxmox VE](assets/diagrams/architecture.png)
 
 One service serves both the UI and the API, plus a PostgreSQL database. Rate limits and wizard job progress live in the API's memory, so it runs a single worker. The old `/`, `/login` and `/drill/` URLs redirect to `/app/`.
 
@@ -72,7 +66,7 @@ Proxmox credentials can also be entered in the web UI under Settings. A Proxmox 
 
 ## What you can do
 
-- **Scenarios.** Each is a YAML file validated against [schemas/scenario.schema.json](schemas/scenario.schema.json). Two ship in [examples/scenarios](examples/scenarios): an enterprise file breach and a phishing-to-ransomware attack.
+- **Scenarios.** Each is a YAML file validated against [schemas/scenario.schema.json](schemas/scenario.schema.json). Two ship in [examples/scenarios](examples/scenarios): an enterprise file breach ([range diagram](assets/diagrams/range-enterprise-file-breach.png)) and a phishing-to-ransomware attack ([range diagram](assets/diagrams/range-phish-to-ransom.png)). The diagrams are generated from the YAML.
 - **New exercise wizard.** Catalog, details, play format, setup checks, snapshots, then provisioning, with live progress.
 - **Free play or team competition.** Teams, rounds with the sides swapped, a score ledger and a scoreboard. See [docs/competition.md](docs/competition.md).
 - **Players.** Add them from a pasted list; each gets a generated password that must be replaced at first sign-in.

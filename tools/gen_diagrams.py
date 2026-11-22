@@ -1,1721 +1,419 @@
-"""Generate div:ide cyber drill architecture diagrams by phase.
+"""Draw the OxBlood diagrams in assets/diagrams/.
 
-Usage:
-    python3 tools/gen_diagrams.py
+    python3 tools/gen_diagrams.py        # needs matplotlib and PyYAML
 
 Outputs:
-    assets/diagrams/00-overview.png
-    assets/diagrams/01-phase0-foundations.png
-    assets/diagrams/02-phase1-one-vm-drill.png
-    assets/diagrams/03-phase2-multi-vm-sdn.png
-    assets/diagrams/04-phase3-telemetry-reports.png
-    assets/diagrams/05-phase4-polish.png
+    architecture.png          what runs and how the parts talk
+    exercise-lifecycle.png    plan, prepare, play, finish
+    range-<scenario>.png      one per file in examples/scenarios, drawn from the YAML
+
+The range diagrams read the scenario files, so they change when a scenario does. CI regenerates them and
+fails if a scenario has no committed diagram.
 """
 
+from __future__ import annotations
+
 import os
+import sys
+from pathlib import Path
 
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle
+import matplotlib
 
-# Resolve output dir relative to this script: tools/ -> ../assets/diagrams
-_HERE = os.path.dirname(os.path.abspath(__file__))
-OUT_DIR = os.path.normpath(os.path.join(_HERE, "..", "assets", "diagrams"))
-os.makedirs(OUT_DIR, exist_ok=True)
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle  # noqa: E402
 
-# ---------- Brand palette ----------
-BG = "#0f1117"
-PANEL = "#1a1f2b"
-BORDER = "#2a3142"
-TEXT = "#e6e9ef"
-MUTED = "#9aa3b2"
-OXBLOOD = "#5eead4"  # teal accent (div:ide brand)
-BLUE = "#60a5fa"
-RED = "#f87171"
-GREEN = "#34d399"
-AMBER = "#fbbf24"
-PURPLE = "#a78bfa"
-GREY = "#475569"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from diagram_data import Range, load_scenarios  # noqa: E402
+
+REPO = Path(__file__).resolve().parents[1]
+OUT_DIR = REPO / "assets" / "diagrams"
+
+# Palette: the app's light theme.
+BG = "#ffffff"
+PANEL = "#f5f7fa"
+BORDER = "#d3d9e3"
+TEXT = "#14161f"
+MUTED = "#5b6475"
+ACCENT = "#f20c35"  # the app's crimson
+RED, RED_TINT = "#dc2626", "#fdecec"
+BLUE, BLUE_TINT = "#2563eb", "#e8f0fe"
+GREEN, GREEN_TINT = "#15803d", "#e7f6ec"
+AMBER, AMBER_TINT = "#b45309", "#fdf3e3"
 
 
-def style_axes(ax, title, xlim=(0, 14), ylim=(0, 9.6)):
-    ax.set_xlim(*xlim)
-    ax.set_ylim(*ylim)
+def canvas(width: float, height: float, title: str, subtitle: str = ""):
+    fig, ax = plt.subplots(figsize=(width, height), facecolor=BG)
+    ax.set_xlim(0, width)
+    ax.set_ylim(0, height)
     ax.set_aspect("equal")
-    ax.set_facecolor(BG)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    for s in ax.spines.values():
-        s.set_visible(False)
-    # Title at very top
-    ax.text(
-        xlim[0] + 0.2,
-        ylim[1] - 0.35,
-        title,
-        fontsize=15,
-        fontweight="bold",
-        color=TEXT,
-        ha="left",
-        va="center",
-    )
-    # Accent underline just below title text — well above any bracket
+    ax.axis("off")
+    ax.text(0.3, height - 0.4, title, fontsize=17, fontweight="bold", color=TEXT, va="center")
+    ax.add_patch(Rectangle((0.3, height - 0.78), 1.4, 0.06, color=ACCENT, lw=0))
+    if subtitle:
+        ax.text(0.3, height - 1.05, subtitle, fontsize=10, color=MUTED, va="center")
+    return fig, ax
+
+
+def pill(
+    ax, x, y, w, h, text, *, edge=BORDER, face=PANEL, color=TEXT, size=9, bold=False, dashed=False
+):
+    """A rounded box centred on (x, y)."""
     ax.add_patch(
-        Rectangle((xlim[0] + 0.2, ylim[1] - 0.7), 2.4, 0.04, color=OXBLOOD, lw=0, zorder=5)
+        FancyBboxPatch(
+            (x - w / 2, y - h / 2),
+            w,
+            h,
+            boxstyle="round,pad=0.02,rounding_size=0.12",
+            linewidth=1.3,
+            edgecolor=edge,
+            facecolor=face,
+            linestyle="--" if dashed else "-",
+        )
     )
-
-
-def pill(ax, x, y, w, h, text, *, color=TEXT, edge=BORDER, face=PANEL, fontsize=9, weight="normal"):
-    box = FancyBboxPatch(
-        (x - w / 2, y - h / 2),
-        w,
-        h,
-        boxstyle="round,pad=0.02,rounding_size=0.12",
-        linewidth=1.3,
-        edgecolor=edge,
-        facecolor=face,
-    )
-    ax.add_patch(box)
     ax.text(
         x,
         y,
         text,
         ha="center",
         va="center",
-        fontsize=fontsize,
+        fontsize=size,
         color=color,
-        fontweight=weight,
-        wrap=True,
+        fontweight="bold" if bold else "normal",
+        linespacing=1.35,
     )
 
 
-def arrow(
-    ax,
-    x1,
-    y1,
-    x2,
-    y2,
-    *,
-    color=MUTED,
-    style="-|>",
-    lw=1.2,
-    ls="-",
-    label=None,
-    label_offset=(0, 0),
-    label_at="mid",
-):
-    arr = FancyArrowPatch(
-        (x1, y1),
-        (x2, y2),
-        arrowstyle=style,
-        mutation_scale=12,
-        color=color,
-        linewidth=lw,
-        linestyle=ls,
+def zone(ax, x0, y0, w, h, label, *, edge=BORDER, sub=""):
+    """A labelled region with its title in the top-left corner (x0, y0 is the bottom-left)."""
+    ax.add_patch(
+        FancyBboxPatch(
+            (x0, y0),
+            w,
+            h,
+            boxstyle="round,pad=0.0,rounding_size=0.15",
+            linewidth=1.4,
+            edgecolor=edge,
+            facecolor=BG,
+        )
     )
-    ax.add_patch(arr)
-    if label:
-        if label_at == "target":
-            # Label sits near the arrowhead end (useful for landing-zone clarity)
-            mx, my = x1 + (x2 - x1) * 0.55, y1 + (y2 - y1) * 0.55
-        elif label_at == "source":
-            mx, my = x1 + (x2 - x1) * 0.25, y1 + (y2 - y1) * 0.25
-        else:
-            mx, my = (x1 + x2) / 2, (y1 + y2) / 2
-        mx += label_offset[0]
-        my += label_offset[1]
-        ax.text(
-            mx,
-            my,
-            label,
-            fontsize=7.5,
+    ax.text(
+        x0 + 0.2, y0 + h - 0.28, label, fontsize=10.5, fontweight="bold", color=edge, va="center"
+    )
+    if sub:
+        ax.text(x0 + 0.2, y0 + h - 0.62, sub, fontsize=8.5, color=MUTED, va="center")
+
+
+def arrow(ax, x1, y1, x2, y2, *, color=MUTED, dashed=False, both=False, label="", at=(0, 0.18)):
+    ax.add_patch(
+        FancyArrowPatch(
+            (x1, y1),
+            (x2, y2),
+            arrowstyle="<|-|>" if both else "-|>",
+            mutation_scale=13,
             color=color,
+            linewidth=1.4,
+            linestyle="--" if dashed else "-",
+            shrinkA=0,
+            shrinkB=0,
+        )
+    )
+    if label:
+        ax.text(
+            (x1 + x2) / 2 + at[0],
+            (y1 + y2) / 2 + at[1],
+            label,
+            fontsize=8,
+            color=MUTED,
             ha="center",
             va="center",
-            bbox=dict(boxstyle="round,pad=0.18", fc=BG, ec=color, lw=0.6),
         )
 
 
-def bracket(ax, x, y, w, h, label, *, color=BORDER, face="#161b25", text_color=MUTED):
-    box = FancyBboxPatch(
-        (x, y),
-        w,
-        h,
-        boxstyle="round,pad=0.02,rounding_size=0.18",
-        linewidth=1.3,
-        edgecolor=color,
-        facecolor=face,
-    )
-    ax.add_patch(box)
-    # Label sits well below the top edge to avoid clashing with rounded corner
-    ax.text(
-        x + 0.18,
-        y + h - 0.45,
-        label,
-        fontsize=8.5,
-        color=text_color,
-        ha="left",
-        va="top",
-        fontweight="bold",
-    )
-
-
-def header_band(ax, x, y, w, h, label, *, color=BORDER, face="#161b25", text_color=MUTED):
-    """Header band that sits ABOVE the bracket box it labels — no overlap."""
-    bar = FancyBboxPatch(
-        (x, y),
-        w,
-        h,
-        boxstyle="round,pad=0.02,rounding_size=0.12",
-        linewidth=1.3,
-        edgecolor=color,
-        facecolor=face,
-    )
-    ax.add_patch(bar)
-    ax.text(
-        x + w / 2,
-        y + h / 2,
-        label,
-        fontsize=9.5,
-        color=text_color,
-        ha="center",
-        va="center",
-        fontweight="bold",
-    )
-
-
-# ============================================================
-# 0. Top-level architecture overview
-# ============================================================
-def fig_overview():
-    fig, ax = plt.subplots(figsize=(14, 10.5), facecolor=BG)
-    style_axes(ax, "div:ide — Architecture Overview", xlim=(0, 14), ylim=(0, 10.5))
-
-    # Outer Proxmox host frame — full canvas
-    bracket(
-        ax,
-        0.3,
-        0.4,
-        13.4,
-        9.7,
-        "  Proxmox VE host  ·  all phases",
-        color=OXBLOOD,
-        face="#0d1b22",
-        text_color=OXBLOOD,
-    )
-
-    # === CONTROL PLANE (top section) ===
-    bracket(
-        ax,
-        0.5,
-        4.3,
-        13.0,
-        5.6,
-        "  Control plane  ·  mgmt VLAN 192.168.0.0/24  ·  Docker Compose",
-        color=BLUE,
-        face="#0e1726",
-        text_color=BLUE,
-    )
-
-    # Row 1: services
-    pill(
-        ax,
-        1.7,
-        8.7,
-        2.0,
-        0.7,
-        "web UI\n(React)",
-        edge=OXBLOOD,
-        face="#11242b",
-        color=OXBLOOD,
-        weight="bold",
-    )
-    pill(
-        ax,
-        4.0,
-        8.7,
-        2.0,
-        0.7,
-        "div:ide-api\n(FastAPI)",
-        edge=OXBLOOD,
-        face="#11242b",
-        color=OXBLOOD,
-        weight="bold",
-    )
-    pill(
-        ax,
-        6.3,
-        8.7,
-        2.0,
-        0.7,
-        "orchestrator\n(RQ workers)",
-        edge=OXBLOOD,
-        face="#11242b",
-        color=OXBLOOD,
-        weight="bold",
-    )
-    pill(ax, 8.6, 8.7, 1.6, 0.7, "postgres", edge=BORDER)
-    pill(ax, 10.4, 8.7, 1.6, 0.7, "in-memory", edge=BORDER)
-    pill(ax, 12.2, 8.7, 1.4, 0.7, "artifacts", edge=BORDER)
-
-    # Row 2: identity / edge / observability
-    pill(
-        ax,
-        1.7,
-        7.4,
-        2.0,
-        0.7,
-        "keycloak\n(OIDC)",
-        edge=PURPLE,
-        face="#1a1330",
-        color=PURPLE,
-        weight="bold",
-    )
-    pill(
-        ax,
-        4.0,
-        7.4,
-        2.0,
-        0.7,
-        "traefik\n(TLS, :443)",
-        edge=BLUE,
-        face="#0e1726",
-        color=BLUE,
-        weight="bold",
-    )
-    pill(
-        ax,
-        6.3,
-        7.4,
-        2.0,
-        0.7,
-        "guacamole\n+ noVNC",
-        edge=BLUE,
-        face="#0e1726",
-        color=BLUE,
-        weight="bold",
-    )
-    pill(
-        ax,
-        8.6,
-        7.4,
-        3.4,
-        0.7,
-        "native logs + artifacts",
-        edge=GREY,
-        face="#161b25",
-        color=MUTED,
-        weight="bold",
-    )
-    pill(
-        ax,
-        12.2,
-        7.4,
-        1.4,
-        0.7,
-        "trainee\nbrowser",
-        edge=MUTED,
-        face="#1d2533",
-        color=MUTED,
-        weight="bold",
-    )
-
-    # Row 3: integration legend (compact)
-    pill(
-        ax,
-        4.0,
-        6.2,
-        6.0,
-        0.55,
-        "metrics + logs",
-        edge=GREEN,
-        face="#0e1f1a",
-        color=GREEN,
-        fontsize=9,
-    )
-    pill(
-        ax,
-        10.0,
-        6.2,
-        2.4,
-        0.55,
-        "SOPS · age secrets",
-        edge=GREY,
-        face="#161b25",
-        color=MUTED,
-        fontsize=9,
-    )
-
-    # === DRILL SDN ZONES (bottom-left) ===
-    bracket(
-        ax,
-        0.5,
-        0.6,
-        6.4,
-        3.5,
-        "  Drill SDN zones  ·  VxLAN, one per drill",
-        color=AMBER,
-        face="#1f1a0d",
-        text_color=AMBER,
-    )
-    pill(
-        ax,
-        2.0,
-        2.9,
-        1.9,
-        0.7,
-        "drill-001\n10.110.0.0/24",
-        edge=AMBER,
-        face="#1f1a0d",
-        color=AMBER,
-        weight="bold",
-    )
-    pill(
-        ax,
-        4.3,
-        2.9,
-        1.9,
-        0.7,
-        "drill-002\n10.120.0.0/24",
-        edge=AMBER,
-        face="#1f1a0d",
-        color=AMBER,
-        weight="bold",
-    )
-    pill(
-        ax,
-        6.6,
-        2.9,
-        1.9,
-        0.7,
-        "drill-003\n10.130.0.0/24",
-        edge=AMBER,
-        face="#1f1a0d",
-        color=AMBER,
-        weight="bold",
-    )
-    pill(
-        ax,
-        3.7,
-        1.8,
-        6.0,
-        0.5,
-        "isolated L2  ·  no cross-drill reachability",
-        edge=BORDER,
-        color=MUTED,
-        fontsize=8,
-    )
-    pill(
-        ax,
-        3.7,
-        1.05,
-        6.0,
-        0.4,
-        "linked clone VMs cloned from templates on the right",
-        edge=BORDER,
-        color=MUTED,
-        fontsize=8,
-    )
-
-    # === PROXMOX VM INVENTORY (bottom-right) ===
-    bracket(
-        ax,
-        7.1,
-        0.6,
-        6.4,
-        3.5,
-        "  Proxmox VM inventory  ·  one-time templates",
-        color=GREEN,
-        face="#0e1f1a",
-        text_color=GREEN,
-    )
-    pill(
-        ax,
-        8.8,
-        2.9,
-        1.8,
-        0.7,
-        "tpl-kali\ntpl-win2022",
-        edge=GREEN,
-        face="#0e1f1a",
-        color=GREEN,
-        weight="bold",
-    )
-    pill(
-        ax,
-        10.8,
-        2.9,
-        1.8,
-        0.7,
-        "tpl-ubuntu\ntpl-pfsense",
-        edge=GREEN,
-        face="#0e1f1a",
-        color=GREEN,
-        weight="bold",
-    )
-    pill(
-        ax,
-        12.7,
-        2.9,
-        1.4,
-        0.7,
-        "tpl-pcap\ncollector",
-        edge=GREEN,
-        face="#0e1f1a",
-        color=GREEN,
-        weight="bold",
-    )
-    pill(
-        ax,
-        10.3,
-        1.8,
-        5.2,
-        0.5,
-        "linked clones per drill  ·  ephemeral",
-        edge=BORDER,
-        color=MUTED,
-        fontsize=8,
-    )
-    pill(
-        ax,
-        10.3,
-        1.05,
-        5.2,
-        0.4,
-        "cloud-init user-data injected per drill",
-        edge=BORDER,
-        color=MUTED,
-        fontsize=8,
-    )
-
-    # === ARROW: API -> SDN (one arrow showing provisioning) ===
-    arrow(ax, 4.0, 4.3, 4.0, 3.6, color=OXBLOOD, label="Provisioner API", lw=1.4)
-
-    # === LEGEND (top-left corner, below title) ===
-    legend_items = [
-        Line2D([0], [0], color=OXBLOOD, lw=2, label="div:ide control plane"),
-        Line2D([0], [0], color=AMBER, lw=2, label="Drill SDN zones"),
-        Line2D([0], [0], color=GREEN, lw=2, label="Proxmox templates"),
-        Line2D([0], [0], color=BLUE, lw=2, label="Existing infra"),
-        Line2D([0], [0], color=MUTED, lw=2, ls="--", label="Network traffic"),
-    ]
-    ax.legend(
-        handles=legend_items,
-        loc="lower left",
-        bbox_to_anchor=(0.32, 0.01),
-        facecolor=PANEL,
-        edgecolor=BORDER,
-        labelcolor=TEXT,
-        fontsize=8,
-        framealpha=0.95,
-        ncol=5,
-        columnspacing=1.2,
-        handlelength=1.6,
-    )
-
-    plt.tight_layout()
-    fig.savefig(
-        os.path.join(OUT_DIR, "00-overview.png"), facecolor=BG, dpi=160, bbox_inches="tight"
-    )
+def save(fig, name: str) -> None:
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    fig.savefig(OUT_DIR / name, dpi=150, facecolor=BG, bbox_inches="tight", pad_inches=0.25)
     plt.close(fig)
-    print("✓ 00-overview.png")
+    print(f"✓ {name}")
 
 
-# ============================================================
-# 1. Phase 0 — Foundations
-# ============================================================
-def fig_phase0():
-    fig, ax = plt.subplots(figsize=(14, 9.6), facecolor=BG)
-    style_axes(
-        ax,
-        "Phase 0 — Foundations  ·  control plane skeleton + Proxmox API client",
-        xlim=(0, 14),
-        ylim=(0, 9.6),
+# ---------------------------------------------------------------------------------------------------------
+# architecture
+# ---------------------------------------------------------------------------------------------------------
+
+
+def architecture() -> None:
+    fig, ax = canvas(
+        14,
+        9.2,
+        "OxBlood architecture",
+        "One API service serves the web UI and the REST API, runs the exercises, and drives Proxmox.",
     )
 
-    # Three brackets (no inline labels)
-    bracket(ax, 0.5, 0.6, 13.0, 7.6, "", color=OXBLOOD, face="#0e1e26")  # whole proxmox host
-    bracket(ax, 0.7, 4.4, 6.3, 4.7, "", color=AMBER, face="#1f1a0d")  # control plane
-    bracket(ax, 7.2, 4.4, 6.1, 4.7, "", color=BLUE, face="#0e1726")  # existing infra
-    bracket(ax, 0.7, 0.9, 6.3, 3.2, "", color=OXBLOOD, face="#0e1e26")  # services
-    bracket(ax, 7.2, 0.9, 6.1, 3.2, "", color=GREY, face="#161b25")  # trainee/operator
-
-    # Section labels (placed in their own bands, not inside the brackets)
-    header_band(
-        ax,
-        0.7,
-        8.5,
-        6.3,
-        0.5,
-        "Control plane  ·  Docker Compose stack",
-        color=OXBLOOD,
-        face="#0e1e26",
-        text_color=OXBLOOD,
-    )
-    header_band(
-        ax,
-        7.2,
-        8.5,
-        6.1,
-        0.5,
-        "Existing infra (preview)",
-        color=BLUE,
-        face="#0e1726",
-        text_color=BLUE,
-    )
-
+    pill(ax, 1.55, 5.3, 2.5, 1.5, "Browser\noperators, red and\nblue players", bold=True)
+    arrow(ax, 2.8, 5.55, 5.15, 5.55, color=TEXT, label="http :5000", at=(0, 0.2))
     pill(
         ax,
-        3.85,
-        3.7,
-        4.0,
-        0.4,
-        "Proxmox VE host (out of band)",
-        edge=AMBER,
-        face="#1f1a0d",
-        color=AMBER,
-        fontsize=9.5,
-        weight="bold",
-    )
-    pill(
-        ax,
-        10.25,
-        3.7,
-        4.0,
-        0.4,
-        "Trainee / operator",
-        edge=GREY,
-        face="#161b25",
-        color=MUTED,
-        fontsize=9.5,
-        weight="bold",
-    )
-
-    # === Control plane content ===
-    pill(
-        ax,
-        2.0,
-        7.7,
-        2.0,
-        0.7,
-        "div:ide-api\n(FastAPI)",
-        edge=OXBLOOD,
-        face="#11242b",
-        color=OXBLOOD,
-        weight="bold",
-        fontsize=10,
-    )
-    pill(ax, 4.5, 7.7, 1.6, 0.7, "postgres 16", edge=BORDER, fontsize=10)
-    pill(ax, 6.5, 7.7, 1.6, 0.7, "in-memory", edge=BORDER, fontsize=10)
-    pill(ax, 2.0, 6.6, 2.0, 0.55, "main.py + routers/", edge=BORDER, color=MUTED, fontsize=9)
-    pill(
-        ax, 4.5, 6.6, 1.6, 0.55, "drills, scenarios,\nusers", edge=BORDER, color=MUTED, fontsize=8.5
-    )
-    pill(ax, 6.5, 6.6, 1.6, 0.55, "RQ queue\nprovisioner", edge=BORDER, color=MUTED, fontsize=8.5)
-    pill(
-        ax,
-        4.0,
-        5.6,
-        5.6,
-        0.55,
-        "GET /healthz  ·  POST /drills (stub)  ·  Proxmox smoke",
-        edge=GREEN,
-        face="#0e1f1a",
-        color=GREEN,
-        fontsize=9.5,
-    )
-
-    # === Existing infra preview (Phase 0) ===
-    pill(
-        ax,
-        8.5,
-        7.7,
-        1.6,
-        0.7,
-        "traefik\n(TLS :443)",
-        edge=BLUE,
-        face="#0e1726",
-        color=BLUE,
-        fontsize=10,
-    )
-    pill(ax, 10.4, 7.7, 1.6, 0.7, "artifacts\n(local disk)", edge=BORDER, fontsize=10)
-    pill(ax, 8.5, 6.6, 1.6, 0.55, "self-signed\ndev cert", edge=BORDER, color=MUTED, fontsize=8.5)
-    pill(ax, 10.4, 6.6, 1.6, 0.55, "drill-001/\nPCAP, logs", edge=BORDER, color=MUTED, fontsize=8.5)
-    pill(
-        ax,
-        9.7,
-        5.6,
-        3.0,
-        0.55,
-        "Makefile:  make up · logs · drill-smoke",
-        edge=GREY,
-        face="#161b25",
-        color=MUTED,
-        fontsize=9,
-    )
-
-    # === Proxmox target ===
-    pill(
-        ax,
-        3.85,
-        2.6,
-        4.0,
-        0.85,
-        "Proxmox VE 8.x\nhttps://pve.local:8006",
-        edge=AMBER,
-        face="#1f1a0d",
-        color=AMBER,
-        weight="bold",
-        fontsize=10,
-    )
-    pill(
-        ax,
-        3.85,
-        1.55,
-        4.0,
-        0.5,
-        "PVE token  ·  oxblood@pve  (PVEVMAdmin)",
-        edge=BORDER,
-        color=MUTED,
-        fontsize=8.5,
-    )
-
-    # === Trainee ===
-    pill(
-        ax,
-        10.25,
-        2.6,
-        2.4,
-        0.85,
-        "operator browser",
-        edge=MUTED,
-        face="#1d2533",
-        color=MUTED,
-        fontsize=10,
-    )
-    pill(
-        ax,
-        10.25,
-        1.55,
-        2.4,
-        0.5,
-        "logs only  ·  no drills yet",
-        edge=BORDER,
-        color=MUTED,
-        fontsize=8.5,
-    )
-
-    # === Arrows ===
-    arrow(ax, 2.0, 5.3, 3.85, 3.0, color=AMBER, label="REST  /api2/json", lw=1.3)
-    arrow(ax, 10.25, 2.55, 8.5, 7.4, color=MUTED, ls="--", label="HTTPS")
-
-    plt.tight_layout()
-    fig.savefig(
-        os.path.join(OUT_DIR, "01-phase0-foundations.png"),
-        facecolor=BG,
-        dpi=160,
-        bbox_inches="tight",
-    )
-    plt.close(fig)
-    print("✓ 01-phase0-foundations.png")
-
-
-# ============================================================
-# 2. Phase 1 — One-VM drill end-to-end
-# ============================================================
-def fig_phase1():
-    fig, ax = plt.subplots(figsize=(14, 9.6), facecolor=BG)
-    style_axes(
-        ax,
-        "Phase 1 — One-VM drill end-to-end  ·  vsftpd 2.3.4 scenario",
-        xlim=(0, 14),
-        ylim=(0, 9.6),
-    )
-
-    # Section brackets (no inline labels)
-    bracket(ax, 0.5, 4.6, 13.0, 3.6, "", color=OXBLOOD, face="#0e1e26")  # control plane
-    bracket(ax, 0.5, 0.6, 13.0, 3.7, "", color=MUTED, face="#161b25")  # trainee/infra row
-    # drill VM bracket
-    bracket(ax, 8.5, 5.0, 5.1, 4.3, "", color=AMBER, face="#1f1a0d")
-
-    # Header bands identifying each region
-    header_band(
-        ax,
-        0.5,
-        8.8,
-        13.0,
-        0.5,
-        "Proxmox host  ·  mgmt VLAN 192.168.0.0/24",
-        color=OXBLOOD,
-        face="#0d1b22",
-        text_color=OXBLOOD,
-    )
-    header_band(
-        ax,
-        0.5,
-        8.2,
-        7.9,
-        0.45,
-        "Control plane  ·  Docker Compose stack",
-        color=OXBLOOD,
-        face="#0e1e26",
-        text_color=OXBLOOD,
-    )
-    header_band(
-        ax,
-        8.5,
-        8.2,
-        5.1,
-        0.45,
-        "Drill network (single VxLAN)",
-        color=AMBER,
-        face="#1f1a0d",
-        text_color=AMBER,
-    )
-    header_band(ax, 0.5, 4.1, 7.9, 0.4, "Trainee view", color=BLUE, face="#0e1726", text_color=BLUE)
-    header_band(
-        ax,
-        8.5,
-        4.1,
-        5.1,
-        0.4,
-        "Investigation evidence",
-        color=GREY,
-        face="#161b25",
-        text_color=MUTED,
-    )
-
-    # === Control plane pills ===
-    pill(
-        ax,
-        1.7,
-        7.5,
-        1.8,
-        0.7,
-        "web UI",
-        edge=OXBLOOD,
-        face="#11242b",
-        color=OXBLOOD,
-        weight="bold",
-    )
-    pill(
-        ax,
+        3.95,
         3.9,
-        7.5,
-        1.8,
-        0.7,
-        "div:ide-api",
-        edge=OXBLOOD,
-        face="#11242b",
-        color=OXBLOOD,
-        weight="bold",
+        1.9,
+        0.95,
+        "Traefik\nHTTPS, production only",
+        edge=MUTED,
+        color=MUTED,
+        size=8,
+        dashed=True,
     )
-    pill(
-        ax,
-        6.1,
-        7.5,
-        1.6,
-        0.7,
-        "orchestrator",
-        edge=OXBLOOD,
-        face="#11242b",
-        color=OXBLOOD,
-        weight="bold",
-    )
-    pill(ax, 2.5, 6.4, 1.6, 0.55, "postgres", edge=BORDER, color=MUTED, fontsize=9)
-    pill(ax, 4.5, 6.4, 1.6, 0.55, "in-memory", edge=BORDER, color=MUTED, fontsize=9)
-    pill(ax, 6.5, 6.4, 1.6, 0.55, "artifacts", edge=BORDER, color=MUTED, fontsize=9)
-    pill(ax, 2.0, 5.4, 1.6, 0.5, "scenarios\nlist", edge=BORDER, color=MUTED, fontsize=8.5)
-    pill(ax, 4.0, 5.4, 1.6, 0.5, "POST /drills", edge=BORDER, color=MUTED, fontsize=8.5)
-    pill(ax, 6.0, 5.4, 1.6, 0.5, "provisioner\n+ ansible", edge=BORDER, color=MUTED, fontsize=8.5)
+    arrow(ax, 2.2, 4.55, 3.2, 4.15, color=MUTED, dashed=True)
+    arrow(ax, 4.9, 3.95, 5.15, 4.2, color=MUTED, dashed=True)
 
-    # === Drill VM ===
+    zone(ax, 5.2, 2.75, 5.5, 4.9, "API container  (FastAPI, one worker)", edge=ACCENT)
+    pill(ax, 6.6, 6.35, 2.45, 1.0, "Web UI  /app/\nReact, baked into the image", size=8.5)
+    pill(ax, 9.3, 6.35, 2.45, 1.0, "REST API  /api/\nauth · exercises · scoring", size=8.5)
     pill(
         ax,
-        10.0,
-        7.5,
-        2.6,
+        7.95,
+        4.95,
+        5.0,
+        1.25,
+        "Runner and competition\nprepare · start · stop an exercise\nflags · score ledger · referee",
+        edge=ACCENT,
+        face=RED_TINT,
+        bold=True,
+        size=9,
+    )
+    pill(ax, 6.6, 3.55, 2.45, 1.0, "Scenario catalog\nYAML, read-only,\nsynced on start", size=8)
+    pill(ax, 9.3, 3.55, 2.45, 1.0, "In memory\nrate limits · job progress\nevent bus", size=8)
+
+    pill(
+        ax,
+        12.45,
+        6.2,
+        2.5,
+        1.5,
+        "PostgreSQL\nexercises · players\nscore ledger · audit log",
+        bold=True,
+        size=8.5,
+    )
+    arrow(ax, 10.7, 6.2, 11.2, 6.2, color=TEXT, both=True)
+    pill(
+        ax,
+        12.45,
+        3.9,
+        2.5,
         0.9,
-        "tpl-ubuntu-2204\n(linked clone)",
-        edge=AMBER,
-        face="#1f1a0d",
-        color=AMBER,
-        weight="bold",
-        fontsize=10,
-    )
-    pill(
-        ax,
-        10.0,
-        6.4,
-        2.6,
-        0.55,
-        "vsftpd 2.3.4\n(scenario patch)",
-        edge=BORDER,
+        "your own scraper\n(optional)",
+        edge=MUTED,
         color=MUTED,
-        fontsize=8.5,
+        size=8,
+        dashed=True,
     )
-    pill(ax, 10.0, 5.6, 2.6, 0.55, "qemu-guest-agent", edge=BORDER, color=MUTED, fontsize=8.5)
-    pill(
-        ax,
-        12.0,
-        5.0,
-        1.4,
-        0.5,
-        "~ 3 min\nboot -> ready",
-        edge=GREEN,
-        face="#0e1f1a",
-        color=GREEN,
-        fontsize=8.5,
-    )
+    arrow(ax, 10.7, 3.2, 11.2, 3.65, color=MUTED, dashed=True, label="/metrics", at=(0.55, -0.3))
 
-    # === Existing infra ===
-    pill(
+    zone(
         ax,
-        10.0,
-        2.7,
-        2.6,
-        0.85,
-        "Log aggregator",
-        edge=GREY,
-        face="#161b25",
-        color=MUTED,
-        weight="bold",
-    )
-    pill(
-        ax,
-        10.0,
-        1.6,
-        2.6,
-        0.55,
-        "auto-create drill-<id>\nagent group",
-        edge=BORDER,
-        color=MUTED,
-        fontsize=8.5,
-    )
-
-    # === Trainee view ===
-    pill(
-        ax,
-        2.0,
-        2.7,
-        2.6,
-        0.85,
-        "noVNC console\n(Guacamole)",
-        edge=BLUE,
-        face="#0e1726",
-        color=BLUE,
-        weight="bold",
-    )
-    pill(
-        ax,
-        5.0,
-        2.7,
-        2.6,
-        0.85,
-        "live artifacts\npanel",
-        edge=BLUE,
-        face="#0e1726",
-        color=BLUE,
-        weight="bold",
-    )
-    pill(ax, 2.0, 1.6, 2.6, 0.55, "Start / Stop drill", edge=BORDER, color=MUTED, fontsize=8.5)
-    pill(ax, 5.0, 1.6, 2.6, 0.55, "PCAP viewer", edge=BORDER, color=MUTED, fontsize=8.5)
-
-    # === Arrows ===
-    # Short control-plane flow (left to right)
-    arrow(ax, 1.7, 7.15, 3.9, 7.15, color=OXBLOOD, label="REST")
-    arrow(ax, 3.9, 7.15, 6.1, 7.15, color=OXBLOOD, label="queue")
-    arrow(ax, 6.1, 7.15, 10.0, 7.15, color=AMBER, label="clone + boot", label_offset=(-1.0, 0.45))
-    # cloud-init: short diagonal from provisioner area to qemu-guest-agent pill only
-    # (origin moved LEFT and DOWN to avoid crossing vsftpd pill)
-    arrow(
-        ax,
-        7.0,
-        5.4,
-        10.0,
-        5.6,
-        color=AMBER,
-        ls="--",
-        label="cloud-init",
-        label_offset=(0.7, -0.4),
-        label_at="source",
-    )
-    # Syslog: vertical, well below the header band
-    arrow(ax, 11.3, 4.9, 11.3, 2.7, color=GREEN, label="Linux syslog", label_offset=(-0.7, -0.4))
-
-    # VNC: right-angle path. Horizontal segment BELOW the trainee header band.
-    arrow(ax, 10.0, 7.5, 10.0, 3.4, color=MUTED, ls=":")
-    arrow(ax, 10.0, 3.4, 2.0, 3.4, color=MUTED, ls=":", label="VNC", label_offset=(0, 0.5))
-    arrow(ax, 2.0, 3.4, 2.0, 3.1, color=MUTED, ls=":")
-
-    # artifacts: same pattern but on a different y to avoid VNC label collision
-    arrow(ax, 10.0, 7.5, 10.0, 3.2, color=MUTED, ls=":")
-    arrow(ax, 10.0, 3.2, 5.0, 3.2, color=MUTED, ls=":", label="artifacts", label_offset=(0, 0.5))
-    arrow(ax, 5.0, 3.2, 5.0, 3.1, color=MUTED, ls=":")
-
-    plt.tight_layout()
-    fig.savefig(
-        os.path.join(OUT_DIR, "02-phase1-one-vm-drill.png"),
-        facecolor=BG,
-        dpi=160,
-        bbox_inches="tight",
-    )
-    plt.close(fig)
-    print("✓ 02-phase1-one-vm-drill.png")
-
-
-# ============================================================
-# 3. Phase 2 — Multi-VM + SDN
-# ============================================================
-def fig_phase2():
-    fig, ax = plt.subplots(figsize=(14, 9.6), facecolor=BG)
-    style_axes(
-        ax, "Phase 2 — Multi-VM + SDN  ·  isolated VxLAN per drill", xlim=(0, 14), ylim=(0, 9.6)
-    )
-
-    # Brackets (no labels)
-    bracket(ax, 0.4, 7.1, 13.2, 2.0, "", color=OXBLOOD, face="#0e1e26")  # control plane band
-    bracket(ax, 0.4, 4.1, 6.4, 2.7, "", color=AMBER, face="#1f1a0d")  # Drill A
-    bracket(ax, 7.2, 4.1, 6.4, 2.7, "", color=AMBER, face="#1f1a0d")  # Drill B
-    bracket(ax, 0.4, 1.5, 6.4, 2.3, "", color=GREEN, face="#0e1f1a")  # telemetry / egress
-    bracket(ax, 7.2, 1.5, 6.4, 2.3, "", color=GREEN, face="#0e1f1a")  # pcap tap
-    bracket(ax, 0.4, 0.1, 13.2, 1.2, "", color=GREY, face="#161b25")  # existing infra row
-
-    # Header bands
-    header_band(
-        ax,
-        0.4,
-        8.85,
-        13.2,
-        0.5,
-        "Proxmox host  ·  mgmt VLAN",
-        color=OXBLOOD,
-        face="#0d1b22",
-        text_color=OXBLOOD,
-    )
-    header_band(
-        ax,
-        0.4,
-        8.20,
-        13.2,
-        0.5,
-        "Control plane  ·  mgmt VLAN",
-        color=OXBLOOD,
-        face="#0e1e26",
-        text_color=OXBLOOD,
-    )
-    header_band(
-        ax,
-        0.4,
-        6.55,
-        6.4,
-        0.4,
-        "Drill A  ·  VxLAN vni 10001",
-        color=AMBER,
-        face="#1f1a0d",
-        text_color=AMBER,
-    )
-    header_band(
-        ax,
-        7.2,
-        6.55,
-        6.4,
-        0.4,
-        "Drill B  ·  VxLAN vni 10002",
-        color=AMBER,
-        face="#1f1a0d",
-        text_color=AMBER,
-    )
-    header_band(
-        ax,
-        0.4,
-        3.45,
-        6.4,
-        0.4,
-        "Telemetry egress (egress-only)",
-        color=GREEN,
-        face="#0e1f1a",
-        text_color=GREEN,
-    )
-    header_band(
-        ax, 7.2, 3.45, 6.4, 0.4, "PCAP span-port tap", color=GREEN, face="#0e1f1a", text_color=GREEN
-    )
-    header_band(
-        ax, 0.4, 0.90, 13.2, 0.4, "Existing infra", color=GREY, face="#161b25", text_color=MUTED
-    )
-
-    # Control plane row
-    pill(ax, 1.7, 7.7, 1.6, 0.5, "web UI", edge=OXBLOOD, face="#11242b", color=OXBLOOD)
-    pill(ax, 3.5, 7.7, 1.6, 0.5, "api", edge=OXBLOOD, face="#11242b", color=OXBLOOD)
-    pill(ax, 5.3, 7.7, 1.6, 0.5, "orch.", edge=OXBLOOD, face="#11242b", color=OXBLOOD)
-    pill(ax, 7.1, 7.7, 1.4, 0.5, "postgres", edge=BORDER)
-    pill(ax, 8.7, 7.7, 1.4, 0.5, "in-memory", edge=BORDER)
-    pill(ax, 10.3, 7.7, 1.4, 0.5, "artifacts", edge=BORDER)
-    pill(ax, 12.0, 7.7, 1.4, 0.5, "guac/noVNC", edge=BLUE, face="#0e1726", color=BLUE)
-    pill(
-        ax,
-        3.5,
-        7.25,
-        5.4,
-        0.35,
-        "scenario engine  ·  inject runner",
-        edge=BORDER,
-        color=MUTED,
-        fontsize=8,
-    )
-
-    # Drill A
-    pill(
-        ax,
-        2.0,
-        5.7,
-        1.7,
-        0.7,
-        "Kali\n(red)",
-        edge=RED,
-        face="#260f12",
-        color=RED,
-        weight="bold",
-        fontsize=9.5,
-    )
-    pill(
-        ax,
-        4.0,
-        5.7,
-        1.7,
-        0.7,
-        "pfsense\n(fw)",
-        edge=GREEN,
-        face="#0e1f1a",
-        color=GREEN,
-        weight="bold",
-        fontsize=9.5,
-    )
-    pill(
-        ax,
-        6.0,
-        5.7,
-        1.7,
-        0.7,
-        "Win2022 DC\n(blue)",
-        edge=BLUE,
-        face="#0e1726",
-        color=BLUE,
-        weight="bold",
-        fontsize=9.5,
-    )
-    pill(
-        ax,
-        4.0,
-        4.55,
-        1.7,
-        0.45,
-        "Ubuntu web\n(dmz)",
-        edge=BLUE,
-        face="#0e1726",
-        color=BLUE,
-        weight="bold",
-        fontsize=8.5,
-    )
-    pill(
-        ax,
-        4.0,
-        4.20,
-        5.4,
-        0.35,
-        "VLAN 110 corp  ·  VLAN 120 dmz",
-        edge=BORDER,
-        color=MUTED,
-        fontsize=8,
-    )
-
-    # Drill B
-    pill(
-        ax,
-        8.7,
-        5.7,
-        1.7,
-        0.7,
-        "Kali",
-        edge=RED,
-        face="#260f12",
-        color=RED,
-        weight="bold",
-        fontsize=9.5,
-    )
-    pill(
-        ax,
-        10.7,
-        5.7,
-        1.7,
-        0.7,
-        "Win2022",
-        edge=BLUE,
-        face="#0e1726",
-        color=BLUE,
-        weight="bold",
-        fontsize=9.5,
-    )
-    pill(
-        ax,
-        12.5,
-        5.7,
-        1.7,
-        0.7,
-        "Ubuntu srv",
-        edge=BLUE,
-        face="#0e1726",
-        color=BLUE,
-        weight="bold",
-        fontsize=9.5,
-    )
-    pill(ax, 10.7, 4.20, 4.0, 0.35, "VLAN 130  ·  red", edge=BORDER, color=MUTED, fontsize=8)
-
-    # L2 isolation badge (between Drill A and Drill B) — pushed higher so it doesn't overlap Win2022
-    pill(
-        ax, 6.85, 4.55, 0.5, 0.4, "L2\nisolated", edge=RED, face="#260f12", color=RED, fontsize=7.5
-    )
-
-    # Telemetry / PCAP
-    pill(
-        ax,
-        3.6,
-        2.9,
-        4.0,
-        0.55,
-        "routed telemetry\n(egress-only firewall)",
-        edge=GREEN,
-        face="#0e1f1a",
-        color=GREEN,
-        fontsize=9.5,
-    )
-    pill(
-        ax,
-        10.4,
-        2.9,
-        4.0,
-        0.55,
-        "span port  ·  tcpdump\n-> artifacts",
-        edge=GREEN,
-        face="#0e1f1a",
-        color=GREEN,
-        fontsize=9.5,
-    )
-
-    # Existing infra row
-    pill(
-        ax,
-        4.0,
-        0.55,
-        2.0,
-        0.5,
-        "Guest logs",
-        edge=GREY,
-        face="#161b25",
-        color=MUTED,
-        weight="bold",
-        fontsize=9,
-    )
-    pill(
-        ax,
-        6.4,
-        0.55,
-        2.0,
-        0.5,
-        "MISP",
-        edge=GREY,
-        face="#161b25",
-        color=MUTED,
-        weight="bold",
-        fontsize=9,
-    )
-    pill(
-        ax,
-        8.8,
-        0.55,
-        2.0,
-        0.5,
-        "metrics + logs",
-        edge=GREY,
-        face="#161b25",
-        color=MUTED,
-        weight="bold",
-        fontsize=9,
-    )
-    pill(
-        ax,
-        11.2,
-        0.55,
-        2.0,
-        0.5,
-        "run reports",
-        edge=GREY,
-        face="#161b25",
-        color=MUTED,
-        weight="bold",
-        fontsize=9,
-    )
-
-    # Arrows — labels pushed away from header bands
-    # clone arrows: shorter, label pushed left/up
-    arrow(
-        ax,
-        3.5,
-        7.45,
-        2.0,
-        6.1,
-        color=AMBER,
-        label="clone",
-        label_offset=(-0.5, 0.3),
-        label_at="source",
-    )
-    arrow(
-        ax,
-        5.3,
-        7.45,
-        10.7,
-        6.1,
-        color=AMBER,
-        label="clone",
-        label_offset=(0.5, 0.3),
-        label_at="source",
-    )
-    # syslog/agent: arrow goes from VM down to telemetry box.
-    # Place label at TARGET (top of telemetry box) — clear of the header band.
-    arrow(
-        ax,
-        4.0,
-        4.0,
-        3.6,
-        3.25,
-        color=GREEN,
-        label="syslog",
-        label_offset=(-0.5, 0.5),
-        label_at="target",
-    )
-    # PCAP: label at target
-    arrow(
-        ax,
-        10.7,
-        4.0,
-        10.4,
-        3.25,
-        color=GREEN,
-        label="PCAP",
-        label_offset=(0.5, 0.5),
-        label_at="target",
-    )
-    # Events: label at target
-    arrow(
-        ax,
-        3.6,
-        2.6,
-        4.0,
-        0.85,
-        color=GREEN,
-        label="alerts",
-        label_offset=(-0.5, -0.4),
-        label_at="source",
-    )
-    # IOCs: label at target
-    arrow(
-        ax,
-        10.4,
-        2.6,
-        6.4,
-        0.85,
-        color=GREEN,
-        label="IOCs",
-        label_offset=(0.5, -0.4),
-        label_at="source",
-    )
-
-    plt.tight_layout()
-    fig.savefig(
-        os.path.join(OUT_DIR, "03-phase2-multi-vm-sdn.png"),
-        facecolor=BG,
-        dpi=160,
-        bbox_inches="tight",
-    )
-    plt.close(fig)
-    print("✓ 03-phase2-multi-vm-sdn.png")
-
-
-# ============================================================
-# 4. Phase 3 — Telemetry & reports
-# ============================================================
-def fig_phase3():
-    fig, ax = plt.subplots(figsize=(14, 9.6), facecolor=BG)
-    style_axes(ax, "Phase 3 — Telemetry & after-action reports", xlim=(0, 14), ylim=(0, 9.6))
-
-    # Brackets (no labels)
-    bracket(ax, 0.3, 4.8, 4.0, 4.2, "", color=AMBER, face="#1f1a0d")  # Drill VMs
-    bracket(ax, 4.6, 4.8, 4.6, 4.2, "", color=BLUE, face="#0e1726")  # Evidence
-    bracket(ax, 9.5, 6.4, 4.2, 2.6, "", color=GREEN, face="#0e1f1a")  # PCAP tap
-    bracket(ax, 4.6, 0.4, 9.1, 4.0, "", color=OXBLOOD, face="#0e1e26")  # report builder
-
-    # Header bands
-    header_band(
-        ax,
+        3.3,
         0.3,
-        8.6,
-        4.0,
-        0.4,
-        "Drill VMs  ·  per-drill agents",
-        color=AMBER,
-        face="#1f1a0d",
-        text_color=AMBER,
+        10.2,
+        1.95,
+        "Proxmox VE",
+        edge=BLUE,
+        sub="the only thing the runner talks to besides the database",
     )
-    header_band(
-        ax,
-        4.6,
-        8.6,
-        4.6,
-        0.4,
-        "Guest evidence  ·  drill-<id>",
-        color=BLUE,
-        face="#0e1726",
-        text_color=BLUE,
-    )
-    header_band(
-        ax, 9.5, 8.6, 4.2, 0.4, "PCAP / artifact tap", color=GREEN, face="#0e1f1a", text_color=GREEN
-    )
-    header_band(
-        ax,
-        4.6,
-        4.0,
-        9.1,
-        0.4,
-        "div:ide report builder  ·  on drill teardown",
-        color=OXBLOOD,
-        face="#0e1e26",
-        text_color=OXBLOOD,
-    )
+    for x, text in zip(
+        (4.35, 6.35, 8.35, 10.35, 12.35),
+        (
+            "clone, or restore\na clean snapshot",
+            "bridges and\nSDN networks",
+            "guest agent\nseeds files, flags",
+            "console tickets\nfor VM access",
+            "drill VMs\n(Linux, Windows,\nOPNsense)",
+        ),
+        strict=True,
+    ):
+        pill(ax, x, 0.9, 1.8, 0.8, text, edge=BLUE, face=BLUE_TINT, size=7.8)
+    arrow(ax, 7.95, 2.75, 7.95, 2.25, color=BLUE, label="Proxmox API token", at=(1.2, 0))
+    save(fig, "architecture.png")
 
-    # Drill VMs
-    pill(ax, 2.3, 7.9, 1.7, 0.55, "kali", edge=RED, face="#260f12", color=RED, weight="bold")
-    pill(ax, 2.3, 7.1, 1.7, 0.55, "win2022", edge=BLUE, face="#0e1726", color=BLUE, weight="bold")
-    pill(
-        ax, 2.3, 6.3, 1.7, 0.55, "ubuntu srv", edge=BLUE, face="#0e1726", color=BLUE, weight="bold"
-    )
-    pill(ax, 2.3, 5.5, 1.7, 0.55, "pfsense", edge=GREEN, face="#0e1f1a", color=GREEN, weight="bold")
-    pill(ax, 2.3, 4.95, 1.7, 0.4, "Native guest logs", edge=BORDER, color=MUTED, fontsize=8)
 
-    # Evidence collection
-    pill(ax, 6.9, 7.9, 1.8, 0.6, "manager", edge=BLUE, face="#0e1726", color=BLUE, weight="bold")
-    pill(ax, 6.9, 7.0, 1.8, 0.55, "rules + decoders", edge=BORDER, color=MUTED, fontsize=8.5)
-    pill(ax, 6.9, 6.1, 1.8, 0.55, "alerts index", edge=BORDER, color=MUTED, fontsize=8.5)
-    pill(ax, 6.9, 5.2, 1.8, 0.55, "drill-<id>\nagent group", edge=BORDER, color=MUTED, fontsize=8.5)
+# ---------------------------------------------------------------------------------------------------------
+# lifecycle
+# ---------------------------------------------------------------------------------------------------------
 
-    # PCAP tap
-    pill(
-        ax,
-        11.6,
+
+def lifecycle() -> None:
+    fig, ax = canvas(
+        16,
         7.6,
-        1.8,
-        0.6,
-        "tpl-tinycore\ntcpdump",
-        edge=GREEN,
-        face="#0e1f1a",
-        color=GREEN,
-        weight="bold",
+        "Life of an exercise",
+        "From a scenario file to a scored, cleaned-up exercise. Statuses are the API's (the UI shows active as Live).",
     )
-    pill(
-        ax,
-        11.6,
-        6.7,
-        1.8,
-        0.55,
-        "rotated .pcap\n-> artifacts",
-        edge=BORDER,
-        color=MUTED,
-        fontsize=8.5,
+    top, bottom = 6.3, 0.55
+    stages = (
+        (0.3, 3.2, "1  Plan", "status: scheduled", TEXT),
+        (4.05, 4.4, "2  Prepare range", "status: provisioning → validating → ready", ACCENT),
+        (9.0, 3.2, "3  Play", "status: active ⇄ paused", GREEN),
+        (12.75, 3.0, "4  Finish", "status: completed", BLUE),
     )
-    pill(ax, 11.6, 5.5, 1.8, 0.4, "span port  ·  drill VNet", edge=BORDER, color=MUTED, fontsize=8)
+    for x0, w, label, sub, edge in stages:
+        zone(ax, x0, bottom, w, top - bottom, label, edge=edge, sub=sub)
+    mid = (top + bottom) / 2 - 0.4
+    for x1, x2 in ((3.5, 4.05), (8.45, 9.0), (12.2, 12.75)):
+        arrow(ax, x1, mid, x2, mid, color=TEXT)
 
-    # Report builder
+    pill(ax, 1.9, 4.85, 2.8, 0.9, "Scenario\nexamples/scenarios/*.yaml", size=8.2)
     pill(
         ax,
-        6.0,
+        1.9,
         3.3,
-        2.2,
-        0.7,
-        "extract IOCs\nfrom PCAP",
-        edge=OXBLOOD,
-        face="#11242b",
-        color=OXBLOOD,
-        fontsize=9.5,
-        weight="bold",
-    )
-    pill(
-        ax,
-        8.4,
-        3.3,
-        2.2,
-        0.7,
-        "review guest\nevidence",
-        edge=OXBLOOD,
-        face="#11242b",
-        color=OXBLOOD,
-        fontsize=9.5,
-        weight="bold",
-    )
-    pill(
-        ax,
-        10.8,
-        3.3,
-        2.2,
-        0.7,
-        "timeline + injects\ncorrelate",
-        edge=OXBLOOD,
-        face="#11242b",
-        color=OXBLOOD,
-        fontsize=9.5,
-        weight="bold",
-    )
-    pill(ax, 6.0, 2.3, 2.2, 0.55, "IPs, domains, URLs", edge=BORDER, color=MUTED, fontsize=8.5)
-    pill(ax, 8.4, 2.3, 2.2, 0.55, "MITRE TTP tags", edge=BORDER, color=MUTED, fontsize=8.5)
-    pill(ax, 10.8, 2.3, 2.2, 0.55, "detection deltas", edge=BORDER, color=MUTED, fontsize=8.5)
-    pill(
-        ax,
-        6.0,
-        1.4,
-        4.0,
-        0.6,
-        "-> MISP event  (drill:<id>, tlp:amber)",
-        edge=PURPLE,
-        face="#1a1330",
-        color=PURPLE,
-        weight="bold",
-        fontsize=9.5,
-    )
-    pill(
-        ax,
-        10.6,
-        1.4,
         2.8,
-        0.6,
-        "-> PDF AAR",
-        edge=OXBLOOD,
-        face="#11242b",
-        color=OXBLOOD,
-        weight="bold",
-        fontsize=9.5,
-    )
-
-    # Arrows (clean, no overlap with pills)
-    arrow(ax, 3.2, 7.9, 5.85, 7.9, color=BLUE, label="agents", label_offset=(0, 0.3))
-    arrow(ax, 11.6, 6.3, 7.2, 3.7, color=OXBLOOD, ls="--", label="PCAP meta", label_offset=(0.4, 0))
-    arrow(ax, 8.4, 6.95, 7.2, 3.7, color=OXBLOOD, label="alerts", label_offset=(0, 0.3))
-    arrow(ax, 11.6, 7.0, 5.85, 3.7, color=GREEN, ls=":", label="span", label_offset=(0, 0.3))
-    arrow(ax, 7.95, 1.4, 7.95, 1.0, color=PURPLE, label="publish", label_offset=(0.4, 0))
-    arrow(ax, 11.8, 1.4, 11.8, 1.0, color=OXBLOOD, label="store", label_offset=(0.4, 0))
-
-    plt.tight_layout()
-    fig.savefig(
-        os.path.join(OUT_DIR, "04-phase3-telemetry-reports.png"),
-        facecolor=BG,
-        dpi=160,
-        bbox_inches="tight",
-    )
-    plt.close(fig)
-    print("✓ 04-phase3-telemetry-reports.png")
-
-
-# ============================================================
-# 5. Phase 4 — Polish
-# ============================================================
-def fig_phase4():
-    fig, ax = plt.subplots(figsize=(14, 9.6), facecolor=BG)
-    style_axes(
-        ax,
-        "Phase 4 — Polish  ·  RBAC, scheduling, scenarios marketplace",
-        xlim=(0, 14),
-        ylim=(0, 9.6),
-    )
-
-    # Brackets (no labels)
-    bracket(ax, 0.3, 6.4, 13.4, 2.6, "", color=PURPLE, face="#1a1330")  # identity band
-    bracket(ax, 0.3, 3.5, 4.4, 2.6, "", color=AMBER, face="#1f1a0d")  # scheduled drills
-    bracket(ax, 5.0, 3.5, 4.4, 2.6, "", color=OXBLOOD, face="#0e1e26")  # marketplace
-    bracket(ax, 9.7, 3.5, 4.0, 2.6, "", color=GREEN, face="#0e1f1a")  # observability
-    bracket(ax, 0.3, 0.4, 13.4, 2.9, "", color=OXBLOOD, face="#0e1e26")  # lifecycle strip
-
-    # Header bands
-    header_band(
-        ax,
-        0.3,
-        8.6,
-        13.4,
-        0.4,
-        "Identity & access  ·  Keycloak realm: oxblood",
-        color=PURPLE,
-        face="#1a1330",
-        text_color=PURPLE,
-    )
-    header_band(
-        ax, 0.3, 5.85, 4.4, 0.4, "Scheduled drills", color=AMBER, face="#1f1a0d", text_color=AMBER
-    )
-    header_band(
-        ax,
-        5.0,
-        5.85,
-        4.4,
-        0.4,
-        "Scenarios marketplace",
-        color=OXBLOOD,
-        face="#0e1e26",
-        text_color=OXBLOOD,
-    )
-    header_band(
-        ax, 9.7, 5.85, 4.0, 0.4, "Observability", color=GREEN, face="#0e1f1a", text_color=GREEN
-    )
-    header_band(
-        ax,
-        0.3,
-        2.85,
-        13.4,
-        0.4,
-        "div:ide — full lifecycle",
-        color=OXBLOOD,
-        face="#0e1e26",
-        text_color=OXBLOOD,
-    )
-
-    # Roles row
-    roles = [
-        ("admin", PURPLE),
-        ("drill-lead", BLUE),
-        ("blue team", GREEN),
-        ("red team", RED),
-        ("observer", MUTED),
-    ]
-    for i, (name, col) in enumerate(roles):
-        x = 1.4 + i * 2.5
-        pill(ax, x, 7.8, 2.0, 0.55, name, edge=col, face="#0e1e26", color=col, weight="bold")
-    pill(
-        ax,
-        7.0,
-        7.2,
-        6.0,
-        0.4,
-        "OIDC  ·  SSO  ·  scoped Proxmox tokens",
-        edge=BORDER,
-        color=MUTED,
-        fontsize=8.5,
-    )
-
-    # Scheduled drills
-    pill(ax, 2.5, 5.05, 3.6, 0.55, "RQ scheduler  ·  cron", edge=BORDER, color=MUTED)
-    pill(ax, 2.5, 4.30, 3.6, 0.55, "scenario catalog", edge=BORDER, color=MUTED)
-    pill(ax, 2.5, 3.55, 3.6, 0.55, "TTL / capacity guard", edge=BORDER, color=MUTED)
-
-    # Marketplace
-    pill(
-        ax,
-        7.2,
-        5.05,
-        3.6,
-        0.55,
-        "import / export YAML",
-        edge=OXBLOOD,
-        face="#11242b",
-        color=OXBLOOD,
+        1.6,
+        "New exercise wizard\n1 Catalog   2 Details\n3 Format   4 Setup\n5 Snapshots   6 Provision",
+        size=8.5,
     )
     pill(
-        ax, 7.2, 4.30, 3.6, 0.55, "versioned + signed", edge=OXBLOOD, face="#11242b", color=OXBLOOD
-    )
-    pill(ax, 7.2, 3.55, 3.6, 0.55, "multi-tenant orgs", edge=OXBLOOD, face="#11242b", color=OXBLOOD)
-
-    # Observability
-    pill(
         ax,
-        11.7,
-        5.05,
-        3.2,
-        0.55,
-        "/metrics",
-        edge=GREEN,
-        face="#0e1f1a",
-        color=GREEN,
-        weight="bold",
+        1.9,
+        1.5,
+        2.8,
+        1.05,
+        "Snapshots (optional)\nbuild clean ones once,\nrestore them every time",
+        size=8,
+        edge=AMBER,
+        face=AMBER_TINT,
     )
-    pill(ax, 11.7, 4.30, 3.2, 0.55, "logs", edge=GREEN, face="#0e1f1a", color=GREEN, weight="bold")
-    pill(
-        ax,
-        11.7,
-        3.55,
-        3.2,
-        0.55,
-        "run reports",
-        edge=GREEN,
-        face="#0e1f1a",
-        color=GREEN,
-        weight="bold",
+    arrow(ax, 1.9, 4.4, 1.9, 4.1, color=MUTED)
+    arrow(ax, 1.9, 2.5, 1.9, 2.03, color=AMBER, dashed=True)
+
+    steps = (
+        "Preflight\ntemplates, RAM, storage",
+        "Networks\nbridges and SDN",
+        "Clone, or restore\nthe clean snapshot",
+        "Boot\nwait for the guest agent",
+        "Seed\nfiles, flags, static IPs",
+        "Validate\nports, services, objectives",
+    )
+    ys = [5.1 - i * 0.82 for i in range(len(steps))]
+    for y, text in zip(ys, steps, strict=True):
+        pill(ax, 6.25, y, 3.8, 0.62, text, size=8.3, edge=ACCENT, face=RED_TINT)
+    for a, b in zip(ys, ys[1:], strict=False):
+        arrow(ax, 6.25, a - 0.31, 6.25, b + 0.31, color=ACCENT)
+
+    play = (
+        ("Start", 5.1, 0.55, True),
+        ("Active ⇄ Paused", 4.3, 0.55, False),
+        (
+            "Rounds: red and blue swap\nsides; players submit flags,\nscored in the ledger",
+            3.2,
+            0.95,
+            False,
+        ),
+        ("Referee: awards, penalties,\nfreeze the scoreboard", 2.15, 0.78, False),
+        ("Live map and scoreboard", 1.25, 0.55, False),
+    )
+    for text, y, h, bold in play:
+        pill(ax, 10.6, y, 2.8, h, text, size=8.2, edge=GREEN, face=GREEN_TINT, bold=bold)
+    for (_, ya, ha, _), (_, yb, hb, _) in zip(play, play[1:], strict=False):
+        arrow(ax, 10.6, ya - ha / 2, 10.6, yb + hb / 2, color=GREEN)
+
+    finish = (
+        ("Stop", 5.1, 0.55),
+        ("Cleaning\ndestroy clones and bridges", 4.0, 0.78),
+        ("Delete exercise accounts\nkeep a final roster", 2.9, 0.78),
+        ("Report and debrief", 1.9, 0.55),
+    )
+    for text, y, h in finish:
+        pill(ax, 14.25, y, 2.6, h, text, size=8.2, edge=BLUE, face=BLUE_TINT, bold=text == "Stop")
+    for (_, ya, ha), (_, yb, hb) in zip(finish, finish[1:], strict=False):
+        arrow(ax, 14.25, ya - ha / 2, 14.25, yb + hb / 2, color=BLUE)
+    save(fig, "exercise-lifecycle.png")
+
+
+# ---------------------------------------------------------------------------------------------------------
+# one range per scenario
+# ---------------------------------------------------------------------------------------------------------
+
+SIDE_STYLE = {
+    "red": (RED, RED_TINT),
+    "blue": (BLUE, BLUE_TINT),
+    "neutral": (BORDER, PANEL),
+}
+
+
+def range_diagram(r: Range) -> None:
+    n = len(r.networks)
+    width = max(14.0, 2.75 * n + 1.0)
+    stack = max(len(r.assets_in(net.name)) for net in r.networks)
+    zone_h = 1.15 + 1.0 * stack
+    height = zone_h + 3.7
+    subtitle = f"{r.organization} · " if r.organization else ""
+    fig, ax = canvas(
+        width,
+        height,
+        r.title,
+        subtitle + f"{len(r.networks)} networks, {sum(a.count for a in r.assets)} machines",
     )
 
-    # Lifecycle strip
-    states = [
-        "DRAFT",
-        "SCHEDULED",
-        "PROVISIONING",
-        "LIVE",
-        "PAUSED",
-        "TEARING_DOWN",
-        "REPORTED",
-        "ARCHIVED",
-    ]
-    for i, s in enumerate(states):
-        x = 1.0 + i * 1.6
-        col = (
-            AMBER
-            if s == "LIVE"
-            else BLUE
-            if s in ("PROVISIONING", "REPORTED")
-            else OXBLOOD
-            if s in ("DRAFT", "SCHEDULED", "ARCHIVED")
-            else MUTED
+    # legend
+    lx = width - 7.2
+    for i, (label, (edge, face)) in enumerate(
+        (
+            ("red team machine", SIDE_STYLE["red"]),
+            ("blue team machine", SIDE_STYLE["blue"]),
+            ("other", SIDE_STYLE["neutral"]),
         )
+    ):
+        pill(ax, lx + i * 2.4 + 1.0, height - 0.55, 2.0, 0.42, label, edge=edge, face=face, size=8)
+
+    col_w = (width - 0.6) / n
+    router = r.router
+    router_y = zone_h + 1.6
+    if router is not None:
         pill(
             ax,
-            x,
-            1.95,
-            1.4,
-            0.55,
-            s,
-            edge=col,
-            face="#0e1e26",
-            color=col,
-            weight="bold",
-            fontsize=9,
+            width / 2,
+            router_y,
+            width - 1.2,
+            0.85,
+            f"{router.role}   ·   {router.template}\nrouter and firewall: joins every network below",
+            edge=AMBER,
+            face=AMBER_TINT,
+            bold=True,
+            size=9.5,
         )
-        if i < len(states) - 1:
-            arrow(ax, x + 0.75, 1.95, x + 1.45, 1.95, color=MUTED, lw=1.0)
 
-    pill(
-        ax,
-        7.0,
-        1.05,
-        10.0,
-        0.5,
-        "audit_log  ·  Proxmox events  ·  Guest evidence  ·  AAR PDF",
-        edge=BORDER,
-        color=MUTED,
-        fontsize=9,
-    )
+    for i, net in enumerate(r.networks):
+        x0 = 0.3 + i * col_w + 0.12
+        w = col_w - 0.24
+        cx = x0 + w / 2
+        vlan = f"VLAN {net.vlan_id} · " if net.vlan_id is not None else ""
+        zone(ax, x0, 0.4, w, zone_h, net.name, edge=MUTED, sub=f"{vlan}{net.cidr}")
+        if router is not None:
+            arrow(ax, cx, router_y - 0.43, cx, 0.4 + zone_h, color=AMBER, both=True)
+        for j, asset in enumerate(r.assets_in(net.name)):
+            edge, face = SIDE_STYLE[asset.side]
+            label = asset.role + (f"  ×{asset.count}" if asset.count > 1 else "")
+            pill(
+                ax,
+                cx,
+                0.4 + zone_h - 1.25 - j * 1.0,
+                w - 0.3,
+                0.78,
+                f"{label}\n{asset.template}",
+                edge=edge,
+                face=face,
+                size=7.6,
+            )
+    save(fig, r.filename)
 
-    plt.tight_layout()
-    fig.savefig(
-        os.path.join(OUT_DIR, "05-phase4-polish.png"), facecolor=BG, dpi=160, bbox_inches="tight"
-    )
-    plt.close(fig)
-    print("✓ 05-phase4-polish.png")
+
+def main() -> None:
+    architecture()
+    lifecycle()
+    for r in load_scenarios(REPO / "examples" / "scenarios"):
+        range_diagram(r)
+    print("Done.")
 
 
 if __name__ == "__main__":
-    fig_overview()
-    fig_phase0()
-    fig_phase1()
-    fig_phase2()
-    fig_phase3()
-    fig_phase4()
-    print("\nDone.")
+    main()

@@ -1,5 +1,7 @@
 # Enterprise File Breach — Template Attack Chain
 
+![The enterprise file breach range: four networks joined by one router](../assets/diagrams/range-enterprise-file-breach.png)
+
 This describes what each VM template must have pre-baked so the `enterprise-file-breach`
 scenario attack chain works. The OxBlood runner plants flag files at drill start via the
 guest agent (`chmod -R 700 /opt/oxblood`). Every service here runs as root so it can read

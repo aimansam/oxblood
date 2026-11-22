@@ -130,8 +130,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: Install matplotlib
-        run: pip install matplotlib
+      - name: Install matplotlib and PyYAML
+        run: pip install matplotlib pyyaml
       - name: Regenerate architecture diagrams
         run: python tools/gen_diagrams.py
       - name: Verify diagrams committed

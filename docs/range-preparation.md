@@ -2,6 +2,8 @@
 
 ## Lifecycle
 
+![Life of an exercise: plan, prepare the range, play, finish](../assets/diagrams/exercise-lifecycle.png)
+
 1. **Prepare range** reserves the shared environment and provisions the machines.
    The drill remains `scheduled`; `actual_start_at` stays empty.
 2. The runner checks template availability, boot-disk presence, conservative RAM
