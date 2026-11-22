@@ -628,12 +628,12 @@ class AssetSeedingMixin(RunnerBase):
         for nic_id, net_name in enumerate(asset_networks):
             bridge = bridges_by_name.get(net_name)
             if bridge is None:
-                log.warning(
-                    "runner.networks.unknown_network role=%s network=%s (bridge not found)",
-                    asset.role,
-                    net_name,
+                # A host that bridges two networks (a pivot) is useless with one
+                # leg missing, so fail the run instead of cloning a broken range.
+                raise RunnerError(
+                    f"asset {asset.role!r} declares network {net_name!r} but no bridge "
+                    "exists for it; refusing to attach fewer NICs than declared"
                 )
-                continue
             await self._adapter.attach_network(
                 asset.pve_vmid,  # type: ignore[arg-type]
                 node,

@@ -187,6 +187,34 @@ async def test_runner_uses_bridge_plan_not_sdn_inventory(
 
 
 @pytest.mark.asyncio
+async def test_pivot_host_gets_one_nic_per_declared_network(session: AsyncSession) -> None:
+    """A dual-homed host (the way in) must end up with a NIC on each of its networks."""
+    adapter = MockProxmoxAdapter(templates={"tpl-x": 9000})
+    runner = Runner(adapter=adapter)
+    await session.merge(
+        _scenario(
+            name="pivot-host",
+            networks_spec=[
+                _network("public_vlan", "10.30.10.0/24"),
+                _network("internal_vlan", "10.30.40.0/24"),
+            ],
+            assets_spec=[_asset("dmz_gateway", ["public_vlan", "internal_vlan"])],
+        )
+    )
+    await session.commit()
+
+    await runner.start_run(RunRequest(scenario_id=1), session=session)
+
+    assert len(adapter.cloned) == 1
+    vmid = adapter.cloned[0].new_vmid
+    nics = sorted((nic_id, bridge) for v, bridge, nic_id in adapter.nic_attached if v == vmid)
+    assert [nic_id for nic_id, _ in nics] == [0, 1]
+    assert len({bridge for _, bridge in nics}) == 2, "each leg is on its own network"
+    assert dict(adapter.started_with_nics)[vmid] == nics, "the VM boots with both NICs"
+    assert sorted(adapter.cloned[0].ip_configs) == [0, 1], "and both legs get an address"
+
+
+@pytest.mark.asyncio
 async def test_bridge_creation_carries_cidr(session: AsyncSession) -> None:
     """Bridge creation passes the CIDR + isolation through to the adapter
     so the real adapter can use it (e.g. for documentation, IP
