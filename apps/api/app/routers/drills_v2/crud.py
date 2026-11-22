@@ -132,7 +132,7 @@ async def get_drills(
 )
 async def get_environment_lock(
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     """Return the owner of the single shared drill environment."""
     return await environment_lock_status(db)
@@ -469,7 +469,7 @@ async def create_drill_console(
     # Operators may open a machine in any match; players only in their own team's range copy.
     is_operator = token is not None and str(token.role or "").lower() in {
         "admin",
-        "lead",
+        "leader",
     }
     allowed_runs = list(run_ids(drill).values()) if is_operator else [run_id]
     asset = (
@@ -504,7 +504,7 @@ async def create_drill_console(
         raise HTTPException(status_code=403, detail="You are not assigned to this drill")
     drill_status = drill.status.value if hasattr(drill.status, "value") else str(drill.status)
     operator_preparing = (
-        token.role in {Role.ADMIN, Role.LEAD}
+        token.role in {Role.ADMIN, Role.LEADER}
         and drill_status == "scheduled"
         and (drill.environment_config or {}).get("provision_status")
         in {"starting", "waiting", "validating", "validation_failed", "started"}

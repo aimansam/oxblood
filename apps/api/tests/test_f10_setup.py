@@ -13,7 +13,7 @@ These tests pin the contract:
     * 409 on duplicate sub.
     * 422 on bad role.
     * 401 for anonymous.
-    * 403 for non-admin (red/blue/lead).
+    * 403 for non-admin (red/blue/leader).
 
 The setup endpoint is public so the chicken-and-egg cycle
 breaks: the first admin can't have a token yet. The

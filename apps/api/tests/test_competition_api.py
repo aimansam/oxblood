@@ -60,7 +60,7 @@ def tok(sub, role):
 
 # Tokens are signed when used: another test may change the signing key after import.
 def ref():
-    return tok("referee", "lead")
+    return tok("referee", "leader")
 
 
 def ana():  # enrolled player
@@ -372,8 +372,8 @@ def test_players_see_their_matchs_range_and_operators_can_pick_one(api):
 
     assert run(pick("ana", "red")) == 6
     assert run(pick("ben", "blue")) == 5
-    assert run(pick("referee", "lead")) == 5
-    assert run(pick("referee", "lead", 2)) == 6
+    assert run(pick("referee", "leader")) == 5
+    assert run(pick("referee", "leader", 2)) == 6
 
     _set_env(maker, match_mode="shared")
     assert run(pick("ana", "red")) == 5  # one shared range: everybody sees the primary run

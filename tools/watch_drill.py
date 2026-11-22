@@ -12,10 +12,10 @@ Two modes:
   --cancel-after N
       Cancel the run N seconds after it starts. Used to exercise the
       /drills/{id}/cancel endpoint mid-flight. Requires a token with
-      role in {admin, lead, red} -- see ``--token`` below.
+      role in {admin, leader, red} -- see ``--token`` below.
 
 Auth (L2 2.9): /api/v1/drills/{id}/cancel is now gated on
-``require_role(ADMIN, LEAD, RED)``. Anonymous calls return 401.
+``require_role(ADMIN, LEADER, RED)``. Anonymous calls return 401.
 Pass the token via ``--token`` (highest priority) or
 ``OXBLOOD_TOKEN`` env var (default). The ``/drills`` list endpoint
 remains anonymous, so only the cancel call needs the header.
@@ -25,7 +25,7 @@ Typical usage:
   python tools/watch_drill.py
 
   # Cancel any drill that starts, after 30s:
-  OXBLOOD_TOKEN=$(python tools/issue_token.py --user watch-bot --role lead)
+  OXBLOOD_TOKEN=$(python tools/issue_token.py --user watch-bot --role leader)
   python tools/watch_drill.py --cancel-after 30 --token "$OXBLOOD_TOKEN"
 
   # Wait for a specific scenario to succeed:
@@ -76,7 +76,7 @@ def _latest_run_id(api_base, scenario=None):
 def _cancel(api_base, run_id, token=None):
     """POST /api/v1/drills/{id}/cancel with an auth header.
 
-    The endpoint is gated on ``require_role(ADMIN, LEAD, RED)`` since
+    The endpoint is gated on ``require_role(ADMIN, LEADER, RED)`` since
     L2 2.9. Without a token, the call returns 401 and the cancel
     does nothing. The caller logs the HTTP code so the operator
     notices.
@@ -105,7 +105,7 @@ def main():
         default=DEFAULT_TOKEN,
         help=(
             "X-Oxblood-Token for the /drills/{id}/cancel call "
-            "(role must be admin/lead/red). Falls back to the "
+            "(role must be admin/leader/red). Falls back to the "
             "$OXBLOOD_TOKEN env var. Read paths don't need a token."
         ),
     )
@@ -152,7 +152,7 @@ def main():
         print(f"-> will cancel at t+{args.cancel_after}s")
         if not args.token:
             print(
-                "WARN: --cancel-after requires an admin/lead/red token; "
+                "WARN: --cancel-after requires an admin/leader/red token; "
                 "set --token or $OXBLOOD_TOKEN. The cancel call will "
                 "return 401 without it."
             )

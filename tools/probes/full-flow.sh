@@ -114,7 +114,7 @@ echo "===== 5.3 GET /v1/admin/probe - non-admin role tries ====="
 non_admin=$(docker exec oxblood-api python3 -c "
 import sys; sys.path.insert(0, '/app')
 from app.core import auth
-print(auth.sign_token('analyst', 'lead', 3600))
+print(auth.sign_token('analyst', 'leader', 3600))
 ")
 out=$(curl -s -w "\n__HTTP__%{http_code}" "$API/api/v1/admin/probe" \
     -H "X-Oxblood-Token: $non_admin" --max-time 5 2>&1)

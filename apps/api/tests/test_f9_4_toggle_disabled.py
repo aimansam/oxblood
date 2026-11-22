@@ -7,7 +7,7 @@ These tests pin the contract:
   * 200 + UserPublic when admin toggles again (true -> false).
   * 404 when the user doesn't exist.
   * 401 anonymous.
-  * 403 for non-admin (red/blue/lead).
+  * 403 for non-admin (red/blue/leader).
 
 We seed one admin + one red user per test (per-test DB cleanup
 autouse fixture, mirroring the F10 / F11 pattern).
@@ -37,7 +37,7 @@ def _blue_token(sub: str = "blue-1") -> str:
 
 
 def _lead_token(sub: str = "lead-1") -> str:
-    return sign_token(sub, "lead", 3600)
+    return sign_token(sub, "leader", 3600)
 
 
 def _run_async(coro):
@@ -188,9 +188,9 @@ def test_toggle_blue_cannot_returns_403(client):
 
 
 def test_toggle_lead_cannot_returns_403(client):
-    """Lead isn't admin -- the toggle is admin-only."""
+    """A leader isn't admin -- the toggle is admin-only."""
     _run_async(_seed_user("admin-1", role="admin"))
-    _run_async(_seed_user("lead-1", role="lead"))
+    _run_async(_seed_user("lead-1", role="leader"))
     r = client.post(
         "/api/v1/auth/users/lead-1/toggle-disabled",
         headers={"X-Oxblood-Token": _lead_token("lead-1")},

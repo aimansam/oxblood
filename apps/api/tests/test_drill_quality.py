@@ -152,4 +152,4 @@ def test_report_reads_timings_difficulty_and_balance(client):
 
 def test_only_operators_may_read_it(client):
     assert client.get("/api/v2/drills/1/quality", headers=headers("red")).status_code == 403
-    assert client.get("/api/v2/drills/9/quality", headers=headers("lead")).status_code == 404
+    assert client.get("/api/v2/drills/9/quality", headers=headers("leader")).status_code == 404

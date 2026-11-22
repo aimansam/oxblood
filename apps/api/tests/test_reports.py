@@ -205,11 +205,11 @@ def test_report_200_admin_can_see_any_run(client):
 
 
 def test_report_200_lead_can_see_any_run(client):
-    """Lead sees any run."""
+    """Leader sees any run."""
     run_id, _ = asyncio.run(_seed_terminal_run(started_by="bob"))
     r = client.get(
         f"/api/v1/drills/{run_id}/report",
-        headers={"X-Oxblood-Token": _token("ops", "lead")},
+        headers={"X-Oxblood-Token": _token("ops", "leader")},
     )
     assert r.status_code == 200
 

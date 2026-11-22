@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.pool import NullPool
 
 from .pgutil import db_url, reset_database, sync_url
@@ -152,5 +152,24 @@ def test_unused_tables_are_gone_after_upgrade(db) -> None:
     engine = db.engine()
     try:
         assert "exercise_id" not in {c["name"] for c in inspect(engine).get_columns("runs")}
+    finally:
+        engine.dispose()
+
+
+def test_lead_accounts_become_leaders(db) -> None:
+    """0044 renames the stored role; other roles are left alone."""
+    db.alembic("upgrade", "0043_drop_unused_tables")
+    engine = db.engine()
+    try:
+        with engine.begin() as conn:
+            for sub, role in (("ann", "lead"), ("bob", "red"), ("cy", "admin")):
+                conn.execute(
+                    text("INSERT INTO users (sub, password_hash, role) VALUES (:s, 'x', :r)"),
+                    {"s": sub, "r": role},
+                )
+        db.alembic("upgrade", "head")
+        with engine.connect() as conn:
+            roles = dict(conn.execute(text("SELECT sub, role FROM users")).all())
+        assert roles == {"ann": "leader", "bob": "red", "cy": "admin"}
     finally:
         engine.dispose()

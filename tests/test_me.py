@@ -52,7 +52,7 @@ def test_me_admin_returns_full_payload(client: TestClient, admin_token: str):
 
 @pytest.mark.parametrize(
     "role_value",
-    ["admin", "lead", "red", "blue"],
+    ["admin", "leader", "red", "blue"],
 )
 def test_me_every_role_returns_correct_role_string(client: TestClient, role_value: str):
     """All four roles from the Role enum round-trip through /me.

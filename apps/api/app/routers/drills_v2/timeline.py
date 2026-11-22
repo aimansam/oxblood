@@ -73,7 +73,7 @@ async def post_timeline_note(
     data: TimelineNote,
     db: AsyncSession = Depends(get_session),
 ):
-    """Lead appends an exercise note to the drill timeline."""
+    """A leader appends an exercise note to the drill timeline."""
     drill = await get_drill(db, drill_id)
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")

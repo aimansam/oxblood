@@ -72,7 +72,7 @@ def test_prepared_range_reserves_environment_without_timer(sessionmaker, phase):
             assert not state["available"]
             assert state["drill_id"] == drill.id
             with pytest.raises(HTTPException) as exc:
-                await acquire_environment_lock(db, owner_sub="other", owner_role="lead")
+                await acquire_environment_lock(db, owner_sub="other", owner_role="leader")
             assert exc.value.status_code == 409
 
     _run(case())
@@ -84,9 +84,9 @@ def test_unbound_claim_cannot_be_overwritten(sessionmaker):
 
     async def case():
         async with sessionmaker() as db:
-            await acquire_environment_lock(db, owner_sub="first", owner_role="lead")
+            await acquire_environment_lock(db, owner_sub="first", owner_role="leader")
             with pytest.raises(HTTPException) as exc:
-                await acquire_environment_lock(db, owner_sub="second", owner_role="lead")
+                await acquire_environment_lock(db, owner_sub="second", owner_role="leader")
             assert exc.value.status_code == 409
 
     _run(case())
@@ -117,7 +117,7 @@ def test_prepare_is_idempotent_and_does_not_start_exercise(sessionmaker, monkeyp
             )
             await db.flush()
             drill = await create_drill(db, title="Prepare", scenario_id=1)
-            token = TokenData(sub="operator", role="lead", iat=0, exp=9999999999)
+            token = TokenData(sub="operator", role="leader", iat=0, exp=9999999999)
             tasks = BackgroundTasks()
             result = await drills_v2.prepare_drill_endpoint(drill.id, tasks, db, token)
             assert result["status"] == "scheduled"
@@ -172,7 +172,7 @@ def test_start_requires_fresh_readiness(sessionmaker, monkeypatch, ready):
                 scenario_id=1,
                 environment_config={"provision_status": "validation_failed"},
             )
-            token = TokenData(sub="operator", role="lead", iat=0, exp=9999999999)
+            token = TokenData(sub="operator", role="leader", iat=0, exp=9999999999)
             if ready:
                 result = await drills_v2.start_drill_endpoint(drill.id, db, token)
                 assert result["status"] == "active"
@@ -590,7 +590,7 @@ def test_v2_prepare_provisions_without_starting_scenario_backed_drill(sessionmak
         client = TestClient(app)
         response = client.post(
             f"/api/v2/drills/{drill_id}/prepare",
-            headers={"X-Oxblood-Token": sign_token("operator", "lead", 60)},
+            headers={"X-Oxblood-Token": sign_token("operator", "leader", 60)},
         )
         body = client.get(f"/api/v2/drills/{drill_id}").json()
     finally:
@@ -662,7 +662,7 @@ def test_v2_start_retries_failed_provision_for_active_drill(sessionmaker, monkey
         client = TestClient(app)
         response = client.post(
             f"/api/v2/drills/{drill_id}/prepare",
-            headers={"X-Oxblood-Token": sign_token("operator", "lead", 60)},
+            headers={"X-Oxblood-Token": sign_token("operator", "leader", 60)},
         )
         body = client.get(f"/api/v2/drills/{drill_id}").json()
     finally:
@@ -981,7 +981,7 @@ def test_v2_failed_provision_retry_cleans_previous_run_first(sessionmaker, monke
         client = TestClient(app)
         response = client.post(
             f"/api/v2/drills/{drill_id}/prepare",
-            headers={"X-Oxblood-Token": sign_token("operator", "lead", 60)},
+            headers={"X-Oxblood-Token": sign_token("operator", "leader", 60)},
         )
         body = client.get(f"/api/v2/drills/{drill_id}").json()
     finally:
@@ -1038,7 +1038,7 @@ def test_v2_stop_cleans_up_provision_run(sessionmaker, monkeypatch, status, expe
         client = TestClient(app)
         response = client.post(
             f"/api/v2/drills/{drill_id}/stop",
-            headers={"X-Oxblood-Token": sign_token("operator", "lead", 60)},
+            headers={"X-Oxblood-Token": sign_token("operator", "leader", 60)},
         )
         body = client.get(f"/api/v2/drills/{drill_id}").json()
     finally:
@@ -1340,7 +1340,7 @@ def test_v2_prepare_builds_one_range_copy_per_match_and_stop_removes_all(session
         client = TestClient(app)
         response = client.post(
             f"/api/v2/drills/{drill_id}/prepare",
-            headers={"X-Oxblood-Token": sign_token("operator", "lead", 60)},
+            headers={"X-Oxblood-Token": sign_token("operator", "leader", 60)},
         )
         env = client.get(f"/api/v2/drills/{drill_id}").json()["environment_config"]
     finally:
@@ -1409,7 +1409,7 @@ def test_v2_refused_preflight_does_not_keep_the_environment_locked(sessionmaker,
     app.dependency_overrides[get_session] = _override_session
     _patch(monkeypatch, "_get_runner", lambda: fake_runner)
     _patch(monkeypatch, "get_sessionmaker", lambda: sessionmaker)
-    headers = {"X-Oxblood-Token": sign_token("operator", "lead", 60)}
+    headers = {"X-Oxblood-Token": sign_token("operator", "leader", 60)}
     try:
         client = TestClient(app)
         assert client.post(f"/api/v2/drills/{first_id}/prepare", headers=headers).status_code == 200

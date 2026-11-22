@@ -24,7 +24,7 @@ router = APIRouter(dependencies=[Depends(require_role(Role.ADMIN))])
 #
 # Aggregates PVE / disk / audit recency into a
 # single read-only snapshot for the Config tab's "Deployment status"
-# panel. Authenticated (admin or lead) so we don't leak env-derived
+# panel. Authenticated (admin or leader) so we don't leak env-derived
 # signals to anonymous callers, but no role gate beyond login -- the
 # existing probe endpoints have the same posture.
 

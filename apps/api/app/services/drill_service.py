@@ -689,7 +689,7 @@ async def set_objective_status(
     objective_id: int,
     status: str,
 ) -> DrillObjective:
-    """Lead marks an objective pending / in-progress / completed."""
+    """A leader marks an objective pending / in-progress / completed."""
     status = (status or "").strip().lower()
     if status not in OBJECTIVE_STATUSES:
         raise ValueError("Invalid objective status: %r" % (status,))

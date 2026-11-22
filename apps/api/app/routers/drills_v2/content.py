@@ -251,7 +251,7 @@ async def patch_objective_status(
     data: ObjectiveStatusUpdate,
     db: AsyncSession = Depends(get_session),
 ):
-    """Lead marks an objective pending / in-progress / completed."""
+    """A leader marks an objective pending / in-progress / completed."""
     drill = await get_drill(db, drill_id)
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")

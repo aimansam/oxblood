@@ -294,7 +294,7 @@ class DrillEvent(Base):
     """Unified per-drill exercise timeline.
 
     One chronological feed for the active view: lifecycle transitions,
-    correct flag captures, announcements, and lead notes. Stored
+    correct flag captures, announcements, and leader notes. Stored
     Drill-side so the portal never stitches audit + announcements
     client-side.
     """

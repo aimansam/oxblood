@@ -54,7 +54,7 @@ def admin():
 
 
 def lead():
-    return {"X-Oxblood-Token": sign_token("lead", "lead", 3600)}
+    return {"X-Oxblood-Token": sign_token("leader", "leader", 3600)}
 
 
 def test_names_become_enrolled_accounts_with_one_time_passwords(world):
@@ -94,7 +94,7 @@ def test_it_refuses_what_does_not_fit_and_who_may_not(world):
     )  # players cannot make accounts
     assert (
         client.post(url, json={"names": ["lead.made"]}, headers=lead()).status_code == 201
-    )  # a lead can
+    )  # a leader can
     too_many = client.post(url, json={"names": [f"p{i}" for i in range(6)]}, headers=admin())
     assert too_many.status_code == 409 and "seats" in too_many.json()["detail"]
     assert (

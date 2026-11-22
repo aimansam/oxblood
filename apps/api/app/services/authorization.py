@@ -9,7 +9,7 @@ audit endpoints, and the future report endpoint. The matrix:
     | Role       | Visibility                       |
     +============+==================================+
     | admin      | All runs                         |
-    | lead       | All runs                         |
+    | leader     | All runs                         |
     | red        | Only runs where started_by == sub |
     | blue       | Only runs where started_by == sub |
     | (anon)     | None (depends on endpoint gate)   |
@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 SEE_ALL_ROLES: frozenset[str] = frozenset(
     {
         Role.ADMIN.value,
-        Role.LEAD.value,
+        Role.LEADER.value,
     }
 )
 

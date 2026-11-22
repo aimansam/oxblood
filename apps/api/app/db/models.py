@@ -85,7 +85,7 @@ class AuditAction(str, enum.Enum):
     RUN_COMPLETED = "run.completed"
     RUN_FAILED = "run.failed"
     RUN_CANCELLED = "run.cancelled"
-    RUN_STOPPED = "run.stopped"  # Q17: operator-initiated stop (admin/lead
+    RUN_STOPPED = "run.stopped"  # Q17: operator-initiated stop (admin/leader
     # POST /drills/{id}/stop). Distinct from RUN_CANCELLED
     # which is trainee-initiated (POST /drills/{id}/cancel).
     RUN_TIMEOUT = "run.timeout"  # auto-cancelled by the watchdog (L2 2.8)
@@ -646,7 +646,7 @@ class TelemetryEvent(Base, TimestampMixin):
       * Flag-capture emits flag.* events (captured, rejected,
         expired).
       * Manual injection via ``POST /runs/{id}/events`` (admin /
-        lead only) lets an operator surface a custom kill-chain
+        leader only) lets an operator surface a custom kill-chain
         signal -- e.g. "blue team noticed port 22 bruteforce".
 
     Lifecycle:

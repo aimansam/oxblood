@@ -15,7 +15,7 @@ team attacks once and defends once; points from all rounds are added up.
 2. **Add players while the range builds.** The Provision step shows the build progress and, beside it,
    the same *Add players* tools as the **Players** page, which also shows how many seats are filled and
    what Start still needs. There are no invitation links: players are created for you.
-   - **Paste names** (admins and leads): one name per line. Put a team after a comma to place people,
+   - **Paste names** (admins and leaders): one name per line. Put a team after a comma to place people,
      like `Ana Smith, Bravo` (a tab works too, so a spreadsheet column pastes cleanly); lines without a team
      go to the team picked above the box. Each person gets an account with a generated password and is
      enrolled at once. A mistyped team is named before anything is created, and a list longer than the
@@ -23,7 +23,7 @@ team attacks once and defends once; points from all rounds are added up.
      because the passwords are not shown again. Hand each player their username and password. **The
      first time they sign in they must choose their own password** (at least 10 characters, not their
      username); until they do, nothing else in the app is available to them.
-   - **Test players** (admins and leads): one Red and one Blue test account for a dry run.
+   - **Test players** (admins and leaders): one Red and one Blue test account for a dry run.
    Existing accounts can still be added from the team cards.
 3. **Competition → Rounds**: *Plan 2 rounds*. Round 1 has the first half of the teams as red and the
    second half as blue; round 2 swaps them. Optionally set a **freeze time** for each round.

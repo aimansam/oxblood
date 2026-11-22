@@ -708,7 +708,7 @@ export interface paths {
         get: operations["list_users_endpoint_api_v1_auth_users_get"];
         put?: never;
         /**
-         * F10.2: admin creates a user (red/blue/lead/etc.)
+         * F10.2: admin creates a user (red/blue/leader/etc.)
          * @description Insert a new user. Mirrors the login path's error codes.
          *
          *     Status codes:
@@ -805,7 +805,7 @@ export interface paths {
          * List drills (visibility-filtered by token role)
          * @description List runs, scoped to what the caller's role can see.
          *
-         *     admin / lead → all runs.
+         *     admin / leader → all runs.
          *     red / blue              → only runs where ``started_by == token.sub``.
          *
          *     The visibility filter is applied at the SQL layer (see
@@ -977,16 +977,16 @@ export interface paths {
          *     Status codes:
          *       * 200 — run cancelled; assets best-effort torn down.
          *       * 401 — no token (require_token under require_role).
-         *       * 403 — token role is not in {admin, lead, red}, or red is
+         *       * 403 — token role is not in {admin, leader, red}, or red is
          *         trying to cancel a run they didn't start.
          *       * 404 — run not found.
          *       * 409 — run is already in a terminal state (succeeded / failed /
          *         cancelled / timeout). Caller must check the run state first.
          *
          *     RBAC: the route-level ``require_role`` gate passes for admin,
-         *     lead, and red. After that, an additional check rejects red
+         *     leader, and red. After that, an additional check rejects red
          *     callers attempting to cancel a run that wasn't started by
-         *     them (``run.started_by != token.sub``). Admins and leads can
+         *     them (``run.started_by != token.sub``). Admins and leaders can
          *     cancel any run.
          */
         post: operations["cancel_drill_api_v1_drills__run_id__cancel_post"];
@@ -1028,7 +1028,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Extend the auto-timeout deadline of an active drill (admin/lead/red) */
+        /** Extend the auto-timeout deadline of an active drill (admin/leader/red) */
         post: operations["extend_drill_timeout_api_v1_drills__run_id__extend_timeout_post"];
         delete?: never;
         options?: never;
@@ -1986,7 +1986,7 @@ export interface paths {
         head?: never;
         /**
          * Patch Objective Status
-         * @description Lead marks an objective pending / in-progress / completed.
+         * @description A leader marks an objective pending / in-progress / completed.
          */
         patch: operations["patch_objective_status_api_v2_drills__drill_id__objectives__objective_id__patch"];
         trace?: never;
@@ -2610,7 +2610,7 @@ export interface paths {
         put?: never;
         /**
          * Post Timeline Note
-         * @description Lead appends an exercise note to the drill timeline.
+         * @description A leader appends an exercise note to the drill timeline.
          */
         post: operations["post_timeline_note_api_v2_drills__drill_id__timeline_post"];
         delete?: never;

@@ -61,7 +61,7 @@ async def prepare_drill_endpoint(
     drill_id: int,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     """Prepare the range without starting the participant exercise or timer."""
     try:
@@ -217,7 +217,7 @@ async def prepare_drill_endpoint(
 async def start_drill_endpoint(
     drill_id: int,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     """Start the exercise only after preparation and fresh readiness checks."""
     drill = await get_drill(db, drill_id)
@@ -297,7 +297,7 @@ async def start_drill_endpoint(
 async def scenario_preflight(
     scenario_id: int,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     scenario = await db.get(catalog_models.Scenario, scenario_id)
     if scenario is None or scenario.archived_at is not None:
@@ -332,7 +332,7 @@ async def start_from_scenario(
     data: ScenarioStartRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     """Create a lobby and prepare its range; the operator starts play separately."""
     scenario = (
@@ -408,7 +408,7 @@ async def start_from_scenario(
 async def pause_drill_endpoint(
     drill_id: int,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     """Pause a drill."""
     try:
@@ -433,7 +433,7 @@ async def pause_drill_endpoint(
 async def resume_drill_endpoint(
     drill_id: int,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     """Resume a paused drill."""
     try:
@@ -458,7 +458,7 @@ async def resume_drill_endpoint(
 async def stop_drill_endpoint(
     drill_id: int,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     """Stop a drill."""
     try:

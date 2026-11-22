@@ -83,7 +83,7 @@ def _can_view_asset(side: str, token: TokenData | None) -> bool:
     if token is None:
         return True
     role = str(token.role or "").lower()
-    if role in {"admin", "lead"}:
+    if role in {"admin", "leader"}:
         return True
     if role == "red":
         return side == "red"
@@ -96,7 +96,7 @@ def _can_view_credentials(side: str, token: TokenData | None) -> bool:
     if token is None:
         return False
     role = str(token.role or "").lower()
-    if role in {"admin", "lead"}:
+    if role in {"admin", "leader"}:
         return True
     return role == side and side in {"red", "blue"}
 
@@ -115,7 +115,7 @@ async def _participant_can_access(
     if token is None:
         return False
     role = str(token.role or "").lower()
-    if role in {"admin", "lead"}:
+    if role in {"admin", "leader"}:
         return True
     if role not in {"red", "blue"}:
         return False

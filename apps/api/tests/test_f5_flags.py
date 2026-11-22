@@ -413,7 +413,7 @@ async def _seed_terminal_run():
 
 
 def test_submit_flag_403_for_unauthorized_submitter():
-    """Someone not the run owner (and not admin/lead) -> 403."""
+    """Someone not the run owner (and not admin/leader) -> 403."""
     run_id = asyncio.run(_seed_scenario_with_flag())
     from app.main import app
 

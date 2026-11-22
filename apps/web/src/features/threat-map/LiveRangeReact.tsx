@@ -24,7 +24,7 @@ export function LiveRangeReact({ drill, user }: { drill: Drill; user: { sub: str
   const navigate = useNavigate();
   const qc = useQueryClient();
   const now = useNow();
-  const operator = ['admin', 'lead'].includes(String(user.role).toLowerCase());
+  const operator = ['admin', 'leader'].includes(String(user.role).toLowerCase());
   const [match, setMatch] = useState(1); // operators: which match's range copy to show
   const [readiness, setReadiness] = useState(false);
   const [busy, setBusy] = useState(false);

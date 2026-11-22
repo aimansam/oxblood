@@ -10,9 +10,9 @@ The DB is persistent. State is read from Postgres, not from in-memory
 process state, so the API can be restarted without losing runs.
 
 RBAC (L2 2.9):
-  * POST   /drills                  → admin, lead, red (start a run)
-  * POST   /drills/{id}/stop        → admin, lead (force-stop any run)
-  * POST   /drills/{id}/cancel      → admin, lead, red (red: own runs only)
+  * POST   /drills                  → admin, leader, red (start a run)
+  * POST   /drills/{id}/stop        → admin, leader (force-stop any run)
+  * POST   /drills/{id}/cancel      → admin, leader, red (red: own runs only)
   * GET    /drills                  → any role; red/blue filtered to own
   * GET    /drills/{id}             → any role; red/blue see only own
   * GET    /drills/{id}/audit       → any role; red/blue see only own
@@ -69,7 +69,7 @@ def _get_runner() -> Runner:
     # directly so we have access to the verified subject. Keeping it out
     # of ``dependencies=`` also means the 429 detail can name the subject,
     # which the UI surfaces in a toast.
-    dependencies=[Depends(require_role(Role.ADMIN, Role.LEAD, Role.RED))],
+    dependencies=[Depends(require_role(Role.ADMIN, Role.LEADER, Role.RED))],
 )
 async def start_drill(
     body: dict,
@@ -235,7 +235,7 @@ async def start_drill(
 @router.post(
     "/{run_id}/stop",
     summary="Stop a drill",
-    dependencies=[Depends(require_role(Role.ADMIN, Role.LEAD))],
+    dependencies=[Depends(require_role(Role.ADMIN, Role.LEADER))],
 )
 async def stop_drill(
     run_id: int,
@@ -274,7 +274,7 @@ async def stop_drill(
 @router.post(
     "/{run_id}/cancel",
     summary="Cancel a running drill (trainee-initiated abort)",
-    dependencies=[Depends(require_role(Role.ADMIN, Role.LEAD, Role.RED))],
+    dependencies=[Depends(require_role(Role.ADMIN, Role.LEADER, Role.RED))],
 )
 async def cancel_drill(
     run_id: int,
@@ -293,16 +293,16 @@ async def cancel_drill(
     Status codes:
       * 200 — run cancelled; assets best-effort torn down.
       * 401 — no token (require_token under require_role).
-      * 403 — token role is not in {admin, lead, red}, or red is
+      * 403 — token role is not in {admin, leader, red}, or red is
         trying to cancel a run they didn't start.
       * 404 — run not found.
       * 409 — run is already in a terminal state (succeeded / failed /
         cancelled / timeout). Caller must check the run state first.
 
     RBAC: the route-level ``require_role`` gate passes for admin,
-    lead, and red. After that, an additional check rejects red
+    leader, and red. After that, an additional check rejects red
     callers attempting to cancel a run that wasn't started by
-    them (``run.started_by != token.sub``). Admins and leads can
+    them (``run.started_by != token.sub``). Admins and leaders can
     cancel any run.
     """
     body = body or {}
@@ -378,7 +378,7 @@ async def cancel_drill(
         Depends(
             require_role(
                 Role.ADMIN,
-                Role.LEAD,
+                Role.LEADER,
                 Role.RED,
                 Role.BLUE,
             )
@@ -391,7 +391,7 @@ async def list_drills(
 ) -> dict:
     """List runs, scoped to what the caller's role can see.
 
-    admin / lead → all runs.
+    admin / leader → all runs.
     red / blue              → only runs where ``started_by == token.sub``.
 
     The visibility filter is applied at the SQL layer (see
@@ -428,7 +428,7 @@ async def list_drills(
         Depends(
             require_role(
                 Role.ADMIN,
-                Role.LEAD,
+                Role.LEADER,
                 Role.RED,
                 Role.BLUE,
             )
@@ -524,7 +524,7 @@ async def get_drill(
         Depends(
             require_role(
                 Role.ADMIN,
-                Role.LEAD,
+                Role.LEADER,
             )
         )
     ],
@@ -644,7 +644,7 @@ async def sync_asset_status(
         Depends(
             require_role(
                 Role.ADMIN,
-                Role.LEAD,
+                Role.LEADER,
             )
         )
     ],
@@ -766,7 +766,7 @@ async def delete_asset(
         Depends(
             require_role(
                 Role.ADMIN,
-                Role.LEAD,
+                Role.LEADER,
                 Role.RED,
                 Role.BLUE,
             )
@@ -851,7 +851,7 @@ async def get_drill_audit(
         Depends(
             require_role(
                 Role.ADMIN,
-                Role.LEAD,
+                Role.LEADER,
                 Role.RED,
                 Role.BLUE,
             )
@@ -920,12 +920,12 @@ async def submit_flag(
             detail=f"run id={run_id} not found",
         )
     _run_id, run_status, started_at, started_by, spec, scenario_name = row
-    # RBAC for submit-flag: admin/lead, or the run's owner.
+    # RBAC for submit-flag: admin/leader, or the run's owner.
     role = token.role if hasattr(token, "role") else None
     role_value = role.value if hasattr(role, "value") else role  # type: ignore[union-attr]
-    is_admin_or_lead = role_value in ("admin", "lead")
+    is_admin_or_leader = role_value in ("admin", "leader")
     is_owner = started_by == getattr(token, "sub", None)
-    if not (is_admin_or_lead or is_owner):
+    if not (is_admin_or_leader or is_owner):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="you do not have access to submit flags for this run",
@@ -1055,7 +1055,7 @@ async def submit_flag(
 @router.post(
     "/{run_id}/reset",
     summary="Reset a Run to its template snapshot",
-    dependencies=[Depends(require_role(Role.ADMIN, Role.LEAD))],
+    dependencies=[Depends(require_role(Role.ADMIN, Role.LEADER))],
 )
 async def reset_run(
     run_id: int,
@@ -1312,8 +1312,8 @@ async def _build_template_snapshot_from_live(run, scenario, session) -> dict:
 
 @router.post(
     "/{run_id}/extend-timeout",
-    summary="Extend the auto-timeout deadline of an active drill (admin/lead/red)",
-    dependencies=[Depends(require_role(Role.ADMIN, Role.LEAD, Role.RED))],
+    summary="Extend the auto-timeout deadline of an active drill (admin/leader/red)",
+    dependencies=[Depends(require_role(Role.ADMIN, Role.LEADER, Role.RED))],
 )
 async def extend_drill_timeout(
     run_id: int,

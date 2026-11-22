@@ -482,7 +482,7 @@ class CreateUserRequest(BaseModel):
 
 @router.post(
     "/users",
-    summary="F10.2: admin creates a user (red/blue/lead/etc.)",
+    summary="F10.2: admin creates a user (red/blue/leader/etc.)",
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_role(Role.ADMIN))],
 )

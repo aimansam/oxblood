@@ -49,7 +49,7 @@ log = logging.getLogger("app.routers.drills_v2")
 async def get_participants(
     drill_id: int,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     """Get all participants in a drill."""
     drill = await get_drill(db, drill_id)
@@ -91,7 +91,7 @@ async def get_participants(
 async def get_roster_candidates(
     drill_id: int,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     """Return eligible Red/Blue accounts for the operator roster."""
     drill = await get_drill(db, drill_id)
@@ -139,7 +139,7 @@ async def post_participant(
     drill_id: int,
     data: ParticipantAdd,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     """Add a participant to a drill."""
     drill = await get_drill(db, drill_id)
@@ -244,7 +244,7 @@ async def _enroll_new(
 async def post_test_players(
     drill_id: int,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     """One Red and one Blue throwaway account for a dry run. They are destroyed after cleanup."""
     drill = await get_drill(db, drill_id)
@@ -282,7 +282,7 @@ async def put_keep_accounts(
     drill_id: int,
     data: KeepAccounts,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     """Keep (or destroy, the default) the accounts created for this exercise after its range is cleaned up."""
     drill = await get_drill(db, drill_id)
@@ -330,7 +330,7 @@ async def post_participants_bulk(
     drill_id: int,
     data: BulkPlayers,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     """Create accounts from a pasted list of names and enroll them. Passwords are returned once."""
     drill = await get_drill(db, drill_id)
@@ -377,7 +377,7 @@ async def delete_participant(
     drill_id: int,
     user_id: int,
     db: AsyncSession = Depends(get_session),
-    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEAD)),
+    token: TokenData = Depends(require_role(Role.ADMIN, Role.LEADER)),
 ):
     """Remove a participant from a drill."""
     drill = await get_drill(db, drill_id)

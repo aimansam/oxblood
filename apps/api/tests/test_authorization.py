@@ -64,7 +64,7 @@ class _Cell(NamedTuple):
 
 
 # The matrix. Each tuple is one (endpoint, role) cell.
-# We deliberately skip the "happy path" cells (admin/lead/red on
+# We deliberately skip the "happy path" cells (admin/leader/red on
 # the endpoints they CAN call) because those need a scenario row,
 # a runner, or a mocked PVE probe -- they're already covered by
 # test_routers.py + test_admin_router.py. This matrix's job is to
@@ -75,19 +75,19 @@ MATRIX: list = [
     _Cell("GET", "/api/v1/admin/probe", None, 401),
     _Cell("GET", "/api/v1/admin/probe", Role.RED, 403),
     _Cell("GET", "/api/v1/admin/probe", Role.BLUE, 403),
-    _Cell("GET", "/api/v1/admin/probe", Role.LEAD, 403),
+    _Cell("GET", "/api/v1/admin/probe", Role.LEADER, 403),
     _Cell("GET", "/api/v1/admin/drill-template-status", None, 401),
-    _Cell("GET", "/api/v1/admin/drill-template-status", Role.LEAD, 403),
+    _Cell("GET", "/api/v1/admin/drill-template-status", Role.LEADER, 403),
     _Cell("GET", "/api/v1/admin/storage", None, 401),
-    _Cell("GET", "/api/v1/admin/storage", Role.LEAD, 403),
-    # --- POST /api/v1/drills (admin, lead, red) ------------------------
+    _Cell("GET", "/api/v1/admin/storage", Role.LEADER, 403),
+    # --- POST /api/v1/drills (admin, leader, red) ------------------------
     _Cell("POST", "/api/v1/drills", None, 401),
     _Cell("POST", "/api/v1/drills", Role.BLUE, 403),
-    # --- POST /api/v1/drills/{id}/stop (admin, lead) --------------------
+    # --- POST /api/v1/drills/{id}/stop (admin, leader) --------------------
     _Cell("POST", "/api/v1/drills/999999/stop", None, 401),
     _Cell("POST", "/api/v1/drills/999999/stop", Role.RED, 403),
     _Cell("POST", "/api/v1/drills/999999/stop", Role.BLUE, 403),
-    # --- POST /api/v1/drills/{id}/cancel (admin, lead, red) -------------
+    # --- POST /api/v1/drills/{id}/cancel (admin, leader, red) -------------
     _Cell("POST", "/api/v1/drills/999999/cancel", None, 401),
     _Cell("POST", "/api/v1/drills/999999/cancel", Role.BLUE, 403),
     # --- GET /api/v1/drills (any role; visibility filter) ---------------
@@ -131,7 +131,7 @@ def test_rbac_authorization_service_see_all_roles():
     """
     from app.services.authorization import SEE_ALL_ROLES, SEE_OWN_ROLES
 
-    assert frozenset({"admin", "lead"}) == SEE_ALL_ROLES
+    assert frozenset({"admin", "leader"}) == SEE_ALL_ROLES
     assert frozenset({"red", "blue"}) == SEE_OWN_ROLES
 
 
@@ -158,7 +158,7 @@ def test_rbac_authorization_service_can_view_run_own():
 
 def test_rbac_visible_runs_query_filters_for_red_and_blue():
     """The SELECT built for a red token must include a WHERE on
-    started_by; the SELECT for admin/lead must not
+    started_by; the SELECT for admin/leader must not
     (no WHERE clause at all, so it returns every row).
 
     We check the WHERE clause specifically because ``started_by``

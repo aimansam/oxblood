@@ -14,7 +14,7 @@ template's snapshot.  See F7.2 for the reset endpoint.
 
 RBAC:
   * create / delete -> admin only
-  * read -> any role (admin / lead / red / blue /
+  * read -> any role (admin / leader / red / blue /
     and players)
 
 The "team members" filter is intentionally NOT applied to
@@ -192,7 +192,7 @@ async def create_template(
         Depends(
             require_role(
                 Role.ADMIN,
-                Role.LEAD,
+                Role.LEADER,
                 Role.RED,
                 Role.BLUE,
             )
@@ -221,7 +221,7 @@ async def list_templates(
         Depends(
             require_role(
                 Role.ADMIN,
-                Role.LEAD,
+                Role.LEADER,
                 Role.RED,
                 Role.BLUE,
             )

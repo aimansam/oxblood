@@ -129,7 +129,7 @@ function UsersTab() {
           <Field label="Password"><Input type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete="new-password" /></Field>
           <Field label="Role">
             <Select value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}>
-              {['red', 'blue', 'lead', 'admin'].map((r) => <option key={r} value={r}>{r}</option>)}
+              {['red', 'blue', 'leader', 'admin'].map((r) => <option key={r} value={r}>{r}</option>)}
             </Select>
           </Field>
           <Button className="w-full" disabled={busy || !f.sub.trim() || !f.password} onClick={create}>Create user</Button>

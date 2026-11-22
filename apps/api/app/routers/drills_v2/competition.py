@@ -39,13 +39,13 @@ from .schemas import (
 
 router = APIRouter()
 
-_OPERATORS = (Role.ADMIN, Role.LEAD)
+_OPERATORS = (Role.ADMIN, Role.LEADER)
 # What a referee may record by hand. Flag and first-blood points come from the submission flow.
 _MANUAL_KINDS = {"award", "penalty", "report", "detection"}
 
 
 def _is_operator(token: TokenData | None) -> bool:
-    return token is not None and str(token.role or "").lower() in {"admin", "lead"}
+    return token is not None and str(token.role or "").lower() in {"admin", "leader"}
 
 
 async def _drill_or_404(db: AsyncSession, drill_id: int):

@@ -5480,7 +5480,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "F10.2: admin creates a user (red/blue/lead/etc.)",
+        "summary": "F10.2: admin creates a user (red/blue/leader/etc.)",
         "tags": [
           "auth"
         ]
@@ -5606,7 +5606,7 @@
     },
     "/api/v1/drills": {
       "get": {
-        "description": "List runs, scoped to what the caller's role can see.\n\nadmin / lead \u2192 all runs.\nred / blue              \u2192 only runs where ``started_by == token.sub``.\n\nThe visibility filter is applied at the SQL layer (see\n:func:`app.services.authorization.visible_runs_query`), so the\nresponse shape doesn't change role-to-role -- only the rows\nreturned. The UI is the same code path for every persona; it\njust sees a shorter list when the caller is a participant.",
+        "description": "List runs, scoped to what the caller's role can see.\n\nadmin / leader \u2192 all runs.\nred / blue              \u2192 only runs where ``started_by == token.sub``.\n\nThe visibility filter is applied at the SQL layer (see\n:func:`app.services.authorization.visible_runs_query`), so the\nresponse shape doesn't change role-to-role -- only the rows\nreturned. The UI is the same code path for every persona; it\njust sees a shorter list when the caller is a participant.",
         "operationId": "list_drills_api_v1_drills_get",
         "parameters": [
           {
@@ -5993,7 +5993,7 @@
     },
     "/api/v1/drills/{run_id}/cancel": {
       "post": {
-        "description": "Abort a run mid-flight.\n\nBody is optional; only ``reason`` and ``actor`` are read:\n  * ``reason`` (str, default \"user-requested\") \u2014 recorded on the\n    Run row + audit entry. Surfaces in the UI as the cancel cause.\n  * ``actor`` (str, optional) \u2014 who cancelled (e.g. \"trainee-7\").\n    Defaults to the token subject if a token was supplied.\n\nStatus codes:\n  * 200 \u2014 run cancelled; assets best-effort torn down.\n  * 401 \u2014 no token (require_token under require_role).\n  * 403 \u2014 token role is not in {admin, lead, red}, or red is\n    trying to cancel a run they didn't start.\n  * 404 \u2014 run not found.\n  * 409 \u2014 run is already in a terminal state (succeeded / failed /\n    cancelled / timeout). Caller must check the run state first.\n\nRBAC: the route-level ``require_role`` gate passes for admin,\nlead, and red. After that, an additional check rejects red\ncallers attempting to cancel a run that wasn't started by\nthem (``run.started_by != token.sub``). Admins and leads can\ncancel any run.",
+        "description": "Abort a run mid-flight.\n\nBody is optional; only ``reason`` and ``actor`` are read:\n  * ``reason`` (str, default \"user-requested\") \u2014 recorded on the\n    Run row + audit entry. Surfaces in the UI as the cancel cause.\n  * ``actor`` (str, optional) \u2014 who cancelled (e.g. \"trainee-7\").\n    Defaults to the token subject if a token was supplied.\n\nStatus codes:\n  * 200 \u2014 run cancelled; assets best-effort torn down.\n  * 401 \u2014 no token (require_token under require_role).\n  * 403 \u2014 token role is not in {admin, leader, red}, or red is\n    trying to cancel a run they didn't start.\n  * 404 \u2014 run not found.\n  * 409 \u2014 run is already in a terminal state (succeeded / failed /\n    cancelled / timeout). Caller must check the run state first.\n\nRBAC: the route-level ``require_role`` gate passes for admin,\nleader, and red. After that, an additional check rejects red\ncallers attempting to cancel a run that wasn't started by\nthem (``run.started_by != token.sub``). Admins and leaders can\ncancel any run.",
         "operationId": "cancel_drill_api_v1_drills__run_id__cancel_post",
         "parameters": [
           {
@@ -6201,7 +6201,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Extend the auto-timeout deadline of an active drill (admin/lead/red)",
+        "summary": "Extend the auto-timeout deadline of an active drill (admin/leader/red)",
         "tags": [
           "drills"
         ]
@@ -8992,7 +8992,7 @@
     },
     "/api/v2/drills/{drill_id}/objectives/{objective_id}": {
       "patch": {
-        "description": "Lead marks an objective pending / in-progress / completed.",
+        "description": "A leader marks an objective pending / in-progress / completed.",
         "operationId": "patch_objective_status_api_v2_drills__drill_id__objectives__objective_id__patch",
         "parameters": [
           {
@@ -11319,7 +11319,7 @@
         ]
       },
       "post": {
-        "description": "Lead appends an exercise note to the drill timeline.",
+        "description": "A leader appends an exercise note to the drill timeline.",
         "operationId": "post_timeline_note_api_v2_drills__drill_id__timeline_post",
         "parameters": [
           {

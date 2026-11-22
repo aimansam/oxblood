@@ -226,7 +226,7 @@ def test_issue_token_cli_outputs_a_valid_token(tmp_path, monkeypatch):
             "--user",
             "alice",
             "--role",
-            "red",  # L2 2.9: role must be one of {admin,lead,red,blue}
+            "red",  # L2 2.9: role must be one of {admin,leader,red,blue}
             "--ttl",
             "1h",
         ],
@@ -345,7 +345,7 @@ def test_role_enum_has_expected_wire_values():
 
     assert {r.value for r in Role} == {
         "admin",
-        "lead",
+        "leader",
         "red",
         "blue",
     }
@@ -367,7 +367,7 @@ def _role_app():
 
     @app.get(
         "/lead-or-admin",
-        dependencies=[Depends(require_role(Role.LEAD, Role.ADMIN))],
+        dependencies=[Depends(require_role(Role.LEADER, Role.ADMIN))],
     )
     async def lead_or_admin():
         return {"ok": True}
@@ -411,15 +411,15 @@ def test_require_role_returns_401_when_no_token():
 
 
 def test_require_role_multi_role_accepts_any_listed():
-    """The same ``require_role(LEAD, ADMIN)`` gate should accept a
-    LEAD token as readily as an ADMIN token. Catches accidental
+    """The same ``require_role(LEADER, ADMIN)`` gate should accept a
+    LEADER token as readily as an ADMIN token. Catches accidental
     "first wins" logic in the factory.
     """
     from app.core.auth import Role, sign_token
 
     app = _role_app()
     client = TestClient(app)
-    for role in (Role.LEAD, Role.ADMIN):
+    for role in (Role.LEADER, Role.ADMIN):
         tok = sign_token("bob", role.value, 3600)
         r = client.get("/lead-or-admin", headers={"X-Oxblood-Token": tok})
         assert r.status_code == 200, f"{role.value} should be allowed"

@@ -31,7 +31,7 @@ Whether anonymous is allowed depends on the endpoint:
     require any identified caller.
   * :func:`require_role` — active; returns ``HTTP 401`` (no token)
     or ``HTTP 403`` (token role not in the allow-list). Use this on
-    routes that require a *specific persona* (admin / lead / red /
+    routes that require a *specific persona* (admin / leader / red /
     blue).
 
 The role taxonomy lives in :class:`Role`. ``tools/issue_token.py``
@@ -79,7 +79,7 @@ class Role(str, Enum):
 
     Mapping to the USER-REQUIREMENTS.md persona matrix:
       * ADMIN     — Platform Admin (operator + full powers)
-      * LEAD      — Drill Lead (instructor, run lifecycle owner)
+      * LEADER    — Drill Leader (instructor, run lifecycle owner)
       * RED       — Red Team participant (offensive side)
       * BLUE      — Blue Team participant (defensive side)
 
@@ -89,7 +89,7 @@ class Role(str, Enum):
     """
 
     ADMIN = "admin"
-    LEAD = "lead"
+    LEADER = "leader"
     RED = "red"
     BLUE = "blue"
 
@@ -339,7 +339,7 @@ async def require_token(
 def require_role(*allowed: Role) -> Callable:
     """Build a FastAPI dependency that gates a route on token role.
 
-    Use as ``token=Depends(require_role(Role.ADMIN, Role.LEAD))``.
+    Use as ``token=Depends(require_role(Role.ADMIN, Role.LEADER))``.
     Composes with :func:`require_token` (i.e. a missing header is a
     401, not a 403). The 401 / 403 split lets the wizard + curl
     scripts distinguish "I forgot to attach the token" from "I am

@@ -21,9 +21,9 @@ M5 in the post-L1 plan owns the full ``/api/v1/proxmox/*``
 hardening pass. The intended gating is:
 
   * GET /proxmox/health       → public (wizard dep; trivially safe)
-  * GET /proxmox/nodes        → admin, lead
-  * GET /proxmox/storage      → admin, lead
-  * GET /proxmox/templates    → admin, lead
+  * GET /proxmox/nodes        → admin, leader
+  * GET /proxmox/storage      → admin, leader
+  * GET /proxmox/templates    → admin, leader
   * GET /proxmox/acl          → admin
   * GET /proxmox/permissions  → admin
 

@@ -1,7 +1,7 @@
 # Database
 
 PostgreSQL holds everything the API keeps: 27 tables, created by the Alembic migrations in
-`apps/api/alembic/versions/` (head: `0043_drop_unused_tables`) and described by the SQLAlchemy models in
+`apps/api/alembic/versions/` (head: `0044_role_lead_to_leader`) and described by the SQLAlchemy models in
 `apps/api/app/db/models.py` (the first "v1" tables) and `models_drill.py` (the "v2" drill tables). The diagrams below
 are drawn from those models by `tools/gen_diagrams.py`, so they follow the schema; each box lists a table's primary key
 (PK) and foreign keys (FK, with the table each points at), not every column.

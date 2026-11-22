@@ -90,7 +90,7 @@ ANA, BEN, CY, DEE = (
     _User("cy", "red"),
     _User("dee", "red"),
 )
-REF = _User("referee", "lead")
+REF = _User("referee", "leader")
 
 
 def submit(client, headers, value):

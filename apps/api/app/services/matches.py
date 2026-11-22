@@ -71,7 +71,7 @@ async def match_for_viewer(
     """Which range copy this viewer sees. Operators may ask for any; players get their team's."""
     if not is_separate(drill):
         return 1
-    if token is not None and str(token.role or "").lower() in {"admin", "lead"}:
+    if token is not None and str(token.role or "").lower() in {"admin", "leader"}:
         return requested or 1
     if token is None:
         return 1

@@ -8,10 +8,10 @@ caller identity (rate limiting, audit attribution, RBAC).
 Usage:
     python tools/issue_token.py --user alice --role red --ttl 24h
     python tools/issue_token.py --user bob --role admin --ttl 7d
-    python tools/issue_token.py --user charlie --role lead --ttl 12h
+    python tools/issue_token.py --user charlie --role leader --ttl 12h
 
 The ``--role`` choices are the four :class:`app.core.auth.Role`
-enum values: ``admin``, ``lead``, ``red``, ``blue``.
+enum values: ``admin``, ``leader``, ``red``, ``blue``.
 Anything else is rejected at the CLI (L2 2.9).
 
 The token is signed with the same secret the API uses to verify

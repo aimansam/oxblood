@@ -2,7 +2,7 @@
 
 Endpoints:
 
-  POST /runs/{run_id}/events                admin/lead -> inject a custom event
+  POST /runs/{run_id}/events                admin/leader -> inject a custom event
   GET  /runs/{run_id}/events                any role   -> recent events (history)
   GET  /runs/{run_id}/events/recent         any role   -> recent events (alias)
   GET  /runs/{run_id}/events/stream         any role   -> SSE live stream
@@ -65,7 +65,7 @@ async def _load_run_or_404(session: AsyncSession, run_id: int) -> Run:
 @router.post(
     "/runs/{run_id}/events",
     summary="Inject a TelemetryEvent for a run",
-    dependencies=[Depends(require_role(Role.ADMIN, Role.LEAD))],
+    dependencies=[Depends(require_role(Role.ADMIN, Role.LEADER))],
 )
 async def ingest_event(
     run_id: int,
@@ -159,7 +159,7 @@ async def ingest_event(
         Depends(
             require_role(
                 Role.ADMIN,
-                Role.LEAD,
+                Role.LEADER,
                 Role.RED,
                 Role.BLUE,
             )
@@ -218,7 +218,7 @@ async def list_events(
         Depends(
             require_role(
                 Role.ADMIN,
-                Role.LEAD,
+                Role.LEADER,
                 Role.RED,
                 Role.BLUE,
             )
@@ -287,7 +287,7 @@ async def recent_events(
         Depends(
             require_role(
                 Role.ADMIN,
-                Role.LEAD,
+                Role.LEADER,
                 Role.RED,
                 Role.BLUE,
             )
