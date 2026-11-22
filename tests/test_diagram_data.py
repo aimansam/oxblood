@@ -55,4 +55,5 @@ def test_side_comes_from_the_role_prefix():
 
 def test_machine_counts_are_kept():
     phish = next(r for r in RANGES if r.name == "phish-to-ransom")
-    assert next(a for a in phish.assets if a.role == "victim_workstation").count == 3
+    assert next(a for a in phish.assets if a.role == "victim_workstation").count == 2
+    assert next(a for a in phish.assets if a.role == "entry_workstation").count == 1

@@ -4,8 +4,8 @@ metadata:
   name: phish-to-ransom
   title: "Phishing to Ransomware"
   organization: "Hospital Pantai Damai"
-  summary: "Red follows a phishing-to-ransomware simulation while Blue detects the foothold and contains affected endpoints."
-  version: 3
+  summary: "Red phishes its way onto an entry workstation, pivots through it into the domain, and Blue detects the foothold and contains affected endpoints."
+  version: 4
   difficulty: intermediate
   duration_min: 90
   tags:
@@ -15,29 +15,30 @@ metadata:
 
 spec:
   attack_path:
-    - asset: victim_workstation
+    - asset: entry_workstation
       goal: "Phishing foothold via planted victim credentials"
     - asset: dc_server
-      goal: "Escalate to Domain Admin via over-privileged service account"
+      goal: "Pivot from the entry workstation and escalate to Domain Admin"
     - asset: file_server
       goal: "Deploy ransomware simulation on two endpoints"
   play_guide:
     red:
-      - "RDP into a PC workstation (dc02_vlan) as j.smith / Welcome2024!; find credentials.txt on the desktop."
-      - "WinRM into DC01 (10.30.40.10:5985) with svc_domain / DomainSvc@2024! and read the DCSync flag."
+      - "RDP to the entry PC (10.30.10.30) as j.smith / Welcome2024!; find credentials.txt on the desktop."
+      - "Red has no route inside, so pivot from the entry PC: WinRM to DC01 (10.30.40.10:5985) as svc_domain / DomainSvc@2024!."
       - "From DC01, WinRM into FILE01 and a second PC; run the ransom simulation and collect the final flag."
     blue:
-      - "On BLUE01, work through the logs and evidence; find the first RDP logon to dc02_vlan from 10.30.10.x and submit blue-foothold-detected."
+      - "On BLUE01, work through the logs and evidence; find the first RDP logon to the entry PC from 10.30.10.x and submit blue-foothold-detected."
       - "Look for WinRM to DC01 from a non-DC source (dc02_vlan); submit blue-dcsync-detected with source IP."
       - "Block dc02_vlan endpoints or log ransom-note creation on FILE01; submit blue-contained with evidence."
   vulnerabilities:
-    - asset: victim_workstation
+    - asset: entry_workstation
       issue: "Local account j.smith uses a guessable password; domain creds stored in plaintext on the desktop."
       detail: >
         tpl-win11-enterprise is seeded with local user j.smith / Welcome2024! added to Remote Desktop
         Users. C:\Users\j.smith\Desktop\credentials.txt contains the domain service account
         (svc_domain / DomainSvc@2024!) — simulating a phishing document that exposed domain credentials.
-        RDP is enabled; any host on red_vlan (routed to dc02_vlan on 3389) can authenticate directly.
+        RDP is enabled; any host on public_vlan can authenticate directly. This PC is dual-homed (public_vlan and
+        dc02_vlan), so it is the only way from the public network into the domain.
     - asset: dc_server
       issue: "Service account svc_domain is a Domain Admin member with WinRM enabled on port 5985."
       detail: >
@@ -63,7 +64,7 @@ spec:
       - "Escalate to Domain Admin using the credential found on the workstation."
       - "Deploy the ransomware simulation on two endpoints and collect the final flag."
     blue:
-      - "Identify the initial RDP source from red_vlan to dc02_vlan within 10 minutes."
+      - "Identify the initial RDP source (10.30.10.x) on the entry workstation within 10 minutes."
       - "Detect WinRM or unusual AD replication from a non-DC source."
       - "Block or isolate affected endpoints before the ransom simulation reaches FILE01."
       - "Submit all three detection flags with supporting log evidence."
@@ -73,7 +74,7 @@ spec:
       vm_name: RED01
       kind: vm
       template: tpl-kali-gui-xrdp
-      networks: [red_vlan]
+      networks: [public_vlan]
       exposed: true
       resources:
         cores: 4
@@ -85,25 +86,27 @@ spec:
       kind: vm
       template: tpl-opnsense
       network_mode: trunk
-      networks: [red_vlan, dmz_vlan, dc01_vlan, dc02_vlan, backup_vlan, security_vlan]
+      networks: [public_vlan, dc01_vlan, dc02_vlan, backup_vlan, security_vlan]
       resources:
         cores: 2
         ram_mb: 2048
         disk_gb: 16
 
-    - role: victim_workstation
-      vm_name: PC
+    # The phished entry host: on the public network with red, and also inside the domain network.
+    # The only way from the public network into the domain.
+    - role: entry_workstation
+      vm_name: ENTRY01
       kind: vm
       template: tpl-win11-enterprise
-      count: 3
-      networks: [dc02_vlan]
+      networks: [public_vlan, dc02_vlan]
       resources:
         cores: 2
         ram_mb: 4096
         disk_gb: 60
       windows_setup:
         phases:
-          - name: configure-workstation
+          - &configure_workstation
+            name: configure-workstation
             timeout_seconds: 300
             commands:
               - "$ErrorActionPreference = 'SilentlyContinue'"
@@ -114,6 +117,32 @@ spec:
               - "Add-LocalGroupMember -Group 'Remote Desktop Users' -Member 'j.smith'"
               - "New-Item -Path 'C:\\Users\\j.smith\\Desktop' -ItemType Directory -Force | Out-Null"
               - "Set-Content -Path 'C:\\Users\\j.smith\\Desktop\\credentials.txt' -Value \"Domain: oxblood.lab`r`nUser: svc_domain`r`nPassword: DomainSvc@2024!\""
+          - name: configure-entry-network
+            timeout_seconds: 300
+            commands:
+              - "$ErrorActionPreference = 'Stop'"
+              - "$inside = $null; for ($i = 0; $i -lt 60 -and -not $inside; $i++) { $inside = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -like '10.30.50.*' } | Select-Object -First 1; if (-not $inside) { Start-Sleep -Seconds 5 } }"
+              - "if (-not $inside) { throw 'The internal NIC (dc02_vlan) never got a 10.30.50.x address' }"
+              - "$outside = Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' -and $_.ifIndex -ne $inside.InterfaceIndex } | Sort-Object ifIndex | Select-Object -First 1"
+              - "if (-not $outside) { throw 'The public NIC is not up' }"
+              - "Set-NetIPInterface -InterfaceIndex $outside.ifIndex -Dhcp Disabled"
+              - "Get-NetIPAddress -InterfaceIndex $outside.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue"
+              - "New-NetIPAddress -InterfaceIndex $outside.ifIndex -IPAddress 10.30.10.30 -PrefixLength 24 | Out-Null"
+              - "Set-NetConnectionProfile -InterfaceIndex $outside.ifIndex -NetworkCategory Private -ErrorAction SilentlyContinue"
+
+    - role: victim_workstation
+      vm_name: PC
+      kind: vm
+      template: tpl-win11-enterprise
+      count: 2
+      networks: [dc02_vlan]
+      resources:
+        cores: 2
+        ram_mb: 4096
+        disk_gb: 60
+      windows_setup:
+        phases:
+          - *configure_workstation
 
     - role: dc_server
       vm_name: DC01
@@ -212,17 +241,12 @@ spec:
         disk_gb: 24
 
   networks:
-    - name: red_vlan
+    # The public network: the red attacker and the entry workstation share it.
+    - name: public_vlan
       cidr: 10.30.10.0/24
       vlan_id: 230
       isolation: loose
       egress: restricted
-      dhcp: true
-    - name: dmz_vlan
-      cidr: 10.30.20.0/24
-      vlan_id: 231
-      isolation: tight
-      egress: blocked
       dhcp: true
     - name: dc01_vlan
       cidr: 10.30.40.0/24
@@ -251,8 +275,8 @@ spec:
 
   routing_policy:
     default_forward: drop
+    # No rule joins public_vlan to the internal networks: the entry workstation is the only way in.
     rules:
-      - {from: red_vlan,      to: dc02_vlan,  protocol: tcp, ports: [3389]}
       - {from: dc02_vlan,     to: dc01_vlan,  protocol: tcp, ports: [88, 389, 445, 5985]}
       - {from: dc01_vlan,     to: dc02_vlan,  protocol: tcp, ports: [445, 3389, 5985]}
       - {from: security_vlan, to: dc02_vlan,  protocol: tcp, ports: [443, 9200]}
@@ -262,7 +286,7 @@ spec:
     - id: red-initial-access
       side: red
       value: "FLAG{phish_initial_access}"
-      planted_on_role: victim_workstation
+      planted_on_role: entry_workstation
       objective: "Gain a foothold on a victim workstation via the phishing credential."
       decay_window_seconds: 5400
       base_points: 100
@@ -318,7 +342,7 @@ spec:
 
   artifacts:
     sink_to: local
-    required_pcaps: [red_vlan, dc01_vlan, dc02_vlan, security_vlan]
+    required_pcaps: [public_vlan, dc01_vlan, dc02_vlan, security_vlan]
     retention_days: 30
 
   win_conditions:

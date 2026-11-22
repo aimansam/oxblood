@@ -384,8 +384,8 @@ class AssetSeedingMixin(RunnerBase):
             str(flag.get("side") or "") == "blue" for flag in matched_flags
         ):
             files["/opt/oxblood/evidence/incident-timeline.log"] = (
-                "2026-01-01T09:12:44Z red_vlan workstation RDP to dc02_vlan (victim_workstation)\n"
-                "2026-01-01T09:21:03Z dc02_vlan workstation WinRM to dc01_vlan (dc_server)\n"
+                "2026-01-01T09:12:44Z public_vlan workstation RDP to entry_workstation (10.30.10.30)\n"
+                "2026-01-01T09:21:03Z entry_workstation WinRM to dc01_vlan (dc_server)\n"
                 "2026-01-01T09:33:17Z dc_server DCSync-equivalent request observed\n"
                 "2026-01-01T09:41:52Z dc01_vlan WinRM to dc02_vlan file_server — ransom note created\n"
             )
