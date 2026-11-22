@@ -74,9 +74,19 @@ def _create_tables():
         from app.db import session as session_module
         from app.services import db as db_module
 
+        # Each test drives its own event loop, and an asyncpg connection is bound to the loop
+        # that opened it, so a pooled one fails in the next test. Production keeps its pool;
+        # only the test engine skips pooling (aiosqlite gets the same treatment in the app).
+        from sqlalchemy.pool import NullPool
+
+        real_create_engine = db_module.create_async_engine
+        db_module.create_async_engine = lambda *a, **k: real_create_engine(
+            *a, **{**k, "poolclass": NullPool}
+        )
         db_module._engine = None
         session_module._session_maker = None
         yield
+        db_module.create_async_engine = real_create_engine
         return
 
     db_path = Path(__file__).resolve().parents[1] / "_pytest_state" / "test.sqlite"
@@ -166,6 +176,55 @@ def client() -> TestClient:
     from app.main import app
 
     return TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _reset_live_pg_between_tests():
+    """Live-Postgres mode only: start every test on empty tables.
+
+    SQLite ignores foreign keys, so the suite's best-effort per-test cleanups quietly work there.
+    Postgres enforces them, a cleanup that deletes in the wrong order fails silently, and rows then
+    leak into the next test. Truncating everything (except the migration marker) is the same
+    isolation the throwaway SQLite file gives. Refuses any database whose name does not end in
+    ``_test``, so it can never empty a real one.
+    """
+    url = _live_pg_url()
+    if not url:
+        yield
+        return
+    assert url.rsplit("/", 1)[-1].split("?", 1)[0].endswith("_test"), (
+        "refusing to truncate a database whose name does not end in _test"
+    )
+    import asyncio
+
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy.pool import NullPool
+
+    async def _truncate() -> None:
+        engine = create_async_engine(url, poolclass=NullPool)
+        try:
+            async with engine.begin() as conn:
+                names = (
+                    (
+                        await conn.execute(
+                            text(
+                                "select tablename from pg_tables "
+                                "where schemaname = 'public' and tablename <> 'alembic_version'"
+                            )
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                if names:
+                    quoted = ", ".join(f'"{n}"' for n in names)
+                    await conn.execute(text(f"truncate {quoted} restart identity cascade"))
+        finally:
+            await engine.dispose()
+
+    asyncio.run(_truncate())
+    yield
 
 
 @pytest.fixture
