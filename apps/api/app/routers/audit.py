@@ -5,7 +5,7 @@ Exposed at ``/api/v1/audit/*``. Q21 added a single endpoint:
   * ``GET /audit``                         -- cross-run audit search
 
 Unlike ``GET /drills/{id}/audit`` (which scopes to a single run),
-this endpoint lets admins/leads/observers search the entire
+this endpoint lets admins and leads search the entire
 ``audit_log`` table. Filters: ``action`` (substring), ``actor``
 (exact), ``run_id`` (exact), ``since`` (ISO), ``until`` (ISO),
 ``limit`` (default 200, capped at 1000).
@@ -19,7 +19,7 @@ Q21 deliberately keeps the result list the same shape as the
 per-run audit endpoint so the portal's existing row renderer
 can be reused with minor refactoring.
 
-RBAC: admin, lead, observer. Red/blue can read their own drill
+RBAC: admin, lead. Red/blue can read their own drill
 audits via the per-run endpoint but not the global feed -- they
 shouldn't see other trainees' events.
 """
@@ -40,12 +40,12 @@ from app.db.session import get_session
 
 log = structlog.get_logger()
 
-# Q21: admin/lead/observer get the global audit feed. Red/blue
+# Q21: admin/lead get the global audit feed. Red/blue
 # are explicitly excluded -- they can read their own drill's
 # audit via ``GET /api/v1/drills/{id}/audit`` but never the
 # cross-tenant stream.
 router = APIRouter(
-    dependencies=[Depends(require_role(Role.ADMIN, Role.LEAD, Role.OBSERVER))],
+    dependencies=[Depends(require_role(Role.ADMIN, Role.LEAD))],
 )
 
 

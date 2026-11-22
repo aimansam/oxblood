@@ -75,7 +75,6 @@ MATRIX: list = [
     _Cell("GET", "/api/v1/admin/probe", None, 401),
     _Cell("GET", "/api/v1/admin/probe", Role.RED, 403),
     _Cell("GET", "/api/v1/admin/probe", Role.BLUE, 403),
-    _Cell("GET", "/api/v1/admin/probe", Role.OBSERVER, 403),
     _Cell("GET", "/api/v1/admin/probe", Role.LEAD, 403),
     _Cell("GET", "/api/v1/admin/drill-template-status", None, 401),
     _Cell("GET", "/api/v1/admin/drill-template-status", Role.LEAD, 403),
@@ -84,16 +83,13 @@ MATRIX: list = [
     # --- POST /api/v1/drills (admin, lead, red) ------------------------
     _Cell("POST", "/api/v1/drills", None, 401),
     _Cell("POST", "/api/v1/drills", Role.BLUE, 403),
-    _Cell("POST", "/api/v1/drills", Role.OBSERVER, 403),
     # --- POST /api/v1/drills/{id}/stop (admin, lead) --------------------
     _Cell("POST", "/api/v1/drills/999999/stop", None, 401),
     _Cell("POST", "/api/v1/drills/999999/stop", Role.RED, 403),
     _Cell("POST", "/api/v1/drills/999999/stop", Role.BLUE, 403),
-    _Cell("POST", "/api/v1/drills/999999/stop", Role.OBSERVER, 403),
     # --- POST /api/v1/drills/{id}/cancel (admin, lead, red) -------------
     _Cell("POST", "/api/v1/drills/999999/cancel", None, 401),
     _Cell("POST", "/api/v1/drills/999999/cancel", Role.BLUE, 403),
-    _Cell("POST", "/api/v1/drills/999999/cancel", Role.OBSERVER, 403),
     # --- GET /api/v1/drills (any role; visibility filter) ---------------
     _Cell("GET", "/api/v1/drills", None, 401),
     # --- GET /api/v1/drills/{id} (any role; visibility filter) ----------
@@ -135,13 +131,13 @@ def test_rbac_authorization_service_see_all_roles():
     """
     from app.services.authorization import SEE_ALL_ROLES, SEE_OWN_ROLES
 
-    assert frozenset({"admin", "lead", "observer"}) == SEE_ALL_ROLES
+    assert frozenset({"admin", "lead"}) == SEE_ALL_ROLES
     assert frozenset({"red", "blue"}) == SEE_OWN_ROLES
 
 
 def test_rbac_authorization_service_can_view_run_own():
     """Red user can view a run they started; blue cannot see red's;
-    admin/observer can see any run; anon can see nothing.
+    admin can see any run; anon can see nothing.
     """
     from app.core.auth import TokenData
     from app.db import models as db_models
@@ -152,19 +148,17 @@ def test_rbac_authorization_service_can_view_run_own():
     red_tok = TokenData(sub="alice", role="red", iat=0, exp=10**10)
     blue_tok = TokenData(sub="bob", role="blue", iat=0, exp=10**10)
     admin_tok = TokenData(sub="root", role="admin", iat=0, exp=10**10)
-    observer_tok = TokenData(sub="eve", role="observer", iat=0, exp=10**10)
     anon = None
 
     assert can_view_run(red_tok, run) is True
     assert can_view_run(blue_tok, run) is False
     assert can_view_run(admin_tok, run) is True
-    assert can_view_run(observer_tok, run) is True
     assert can_view_run(anon, run) is False
 
 
 def test_rbac_visible_runs_query_filters_for_red_and_blue():
     """The SELECT built for a red token must include a WHERE on
-    started_by; the SELECT for admin/lead/observer must not
+    started_by; the SELECT for admin/lead must not
     (no WHERE clause at all, so it returns every row).
 
     We check the WHERE clause specifically because ``started_by``

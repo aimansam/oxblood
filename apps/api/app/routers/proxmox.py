@@ -21,11 +21,11 @@ M5 in the post-L1 plan owns the full ``/api/v1/proxmox/*``
 hardening pass. The intended gating is:
 
   * GET /proxmox/health       → public (wizard dep; trivially safe)
-  * GET /proxmox/nodes        → admin, lead, observer
-  * GET /proxmox/storage      → admin, lead, observer
-  * GET /proxmox/templates    → admin, lead, observer
-  * GET /proxmox/acl          → admin, observer (lead is not auditor)
-  * GET /proxmox/permissions  → admin, observer
+  * GET /proxmox/nodes        → admin, lead
+  * GET /proxmox/storage      → admin, lead
+  * GET /proxmox/templates    → admin, lead
+  * GET /proxmox/acl          → admin
+  * GET /proxmox/permissions  → admin
 
 Until M5 lands, treat this whole module as LAN-public. The
 disclosure is limited to: PVE version, node names, storage pool

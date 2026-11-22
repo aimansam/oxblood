@@ -470,7 +470,6 @@ async def create_drill_console(
     is_operator = token is not None and str(token.role or "").lower() in {
         "admin",
         "lead",
-        "observer",
     }
     allowed_runs = list(run_ids(drill).values()) if is_operator else [run_id]
     asset = (

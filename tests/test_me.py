@@ -52,10 +52,10 @@ def test_me_admin_returns_full_payload(client: TestClient, admin_token: str):
 
 @pytest.mark.parametrize(
     "role_value",
-    ["admin", "lead", "red", "blue", "observer"],
+    ["admin", "lead", "red", "blue"],
 )
 def test_me_every_role_returns_correct_role_string(client: TestClient, role_value: str):
-    """All five roles from the Role enum round-trip through /me.
+    """All four roles from the Role enum round-trip through /me.
     Catches typos and rollouts where the server returns a different
     case or value than the Role enum.
     """

@@ -54,7 +54,6 @@ router = APIRouter()
             require_role(
                 Role.ADMIN,
                 Role.LEAD,
-                Role.OBSERVER,
                 Role.RED,
                 Role.BLUE,
             )

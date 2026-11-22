@@ -160,7 +160,6 @@ async def ingest_event(
             require_role(
                 Role.ADMIN,
                 Role.LEAD,
-                Role.OBSERVER,
                 Role.RED,
                 Role.BLUE,
             )
@@ -220,7 +219,6 @@ async def list_events(
             require_role(
                 Role.ADMIN,
                 Role.LEAD,
-                Role.OBSERVER,
                 Role.RED,
                 Role.BLUE,
             )
@@ -290,7 +288,6 @@ async def recent_events(
             require_role(
                 Role.ADMIN,
                 Role.LEAD,
-                Role.OBSERVER,
                 Role.RED,
                 Role.BLUE,
             )

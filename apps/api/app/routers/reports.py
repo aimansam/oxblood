@@ -132,7 +132,6 @@ def _metrics_summary(scenario_id: int | None, adapter: str) -> dict:
             require_role(
                 Role.ADMIN,
                 Role.LEAD,
-                Role.OBSERVER,
                 Role.RED,
                 Role.BLUE,
             )

@@ -32,7 +32,7 @@ Whether anonymous is allowed depends on the endpoint:
   * :func:`require_role` — active; returns ``HTTP 401`` (no token)
     or ``HTTP 403`` (token role not in the allow-list). Use this on
     routes that require a *specific persona* (admin / lead / red /
-    blue / observer).
+    blue).
 
 The role taxonomy lives in :class:`Role`. ``tools/issue_token.py``
 restricts ``--role`` to these values. Adding a new role is a
@@ -69,7 +69,7 @@ from app.core.config import settings
 
 
 class Role(str, Enum):
-    """The five persona roles on the OxBlood control plane.
+    """The four persona roles on the OxBlood control plane.
 
     The string values are the wire format — they appear in token
     payloads, in ``X-Oxblood-Token`` claim, in audit rows, and in
@@ -82,7 +82,6 @@ class Role(str, Enum):
       * LEAD      — Drill Lead (instructor, run lifecycle owner)
       * RED       — Red Team participant (offensive side)
       * BLUE      — Blue Team participant (defensive side)
-      * OBSERVER  — Read-only (watching but not acting)
 
     The wizard's PVE-side ACL role (``PVEDatastoreAdmin``) is a
     different concept — it's a Proxmox-side RBAC string, not a
@@ -93,7 +92,6 @@ class Role(str, Enum):
     LEAD = "lead"
     RED = "red"
     BLUE = "blue"
-    OBSERVER = "observer"
 
 
 # Per-process fallback secret cache (used when neither oxblood_token_secret

@@ -245,7 +245,7 @@ def _asset_visible_for_probe(side: str, token: TokenData | None) -> bool:
     if token is None:
         return True
     role = str(token.role or "").lower()
-    if role in {"admin", "lead", "observer"}:
+    if role in {"admin", "lead"}:
         return True
     if side in {"shared", role}:
         return True

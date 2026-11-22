@@ -83,7 +83,7 @@ def _can_view_asset(side: str, token: TokenData | None) -> bool:
     if token is None:
         return True
     role = str(token.role or "").lower()
-    if role in {"admin", "lead", "observer"}:
+    if role in {"admin", "lead"}:
         return True
     if role == "red":
         return side == "red"
@@ -106,7 +106,7 @@ async def _participant_can_access(
 ) -> bool:
     """Apply roster access after the broad role/side check.
 
-    Operators and observers can inspect every console. For red/blue users,
+    Operators can inspect every console. For red/blue users,
     a populated roster becomes the source of truth: an account must be on
     this drill, and an explicitly assigned side must match the asset side.
     The empty-roster fallback keeps the LAN bootstrap usable while an
@@ -115,7 +115,7 @@ async def _participant_can_access(
     if token is None:
         return False
     role = str(token.role or "").lower()
-    if role in {"admin", "lead", "observer"}:
+    if role in {"admin", "lead"}:
         return True
     if role not in {"red", "blue"}:
         return False
