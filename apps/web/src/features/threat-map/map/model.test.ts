@@ -103,6 +103,18 @@ describe('layout', () => {
     expect(zoneOf('victim_workstation')).toBe('identity');
     expect(zoneOf('router_fw')).toBe('transit');
   });
+  it('puts machines on an internal network in the identity column', () => {
+    const assets: MapAsset[] = [
+      { role: 'red_workstation', template: 'tpl-kali-gui-xrdp', networks: ['public_vlan'] },
+      { role: 'router_fw', template: 'tpl-opnsense', networks: ['public_vlan', 'internal_vlan'] },
+      { role: 'file_server', template: 'x', networks: ['internal_vlan'] },
+    ];
+    const layout = layoutTopology(assets, [{ name: 'public_vlan', vlan_id: 230 }, { name: 'internal_vlan', vlan_id: 234 }]);
+    const node = layout.nodes.find((n) => n.asset.role === 'file_server')!;
+    const zone = layout.zones.find((z) => node.x >= z.x && node.x <= z.x + z.w);
+    expect(zone?.key).toBe('identity');
+    expect(zone?.subtitle).toContain('VLAN 234');
+  });
   it('never lets two machine cards overlap, however many share a zone', () => {
     const many: MapAsset[] = Array.from({ length: 6 }, (_, i) => ({ role: `web_${i}`, template: 'x', networks: ['blue_vlan'] }));
     const layout = layoutTopology([simpleAssets[0], simpleAssets[1], ...many], simpleNets);

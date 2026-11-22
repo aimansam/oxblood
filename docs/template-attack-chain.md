@@ -13,8 +13,8 @@ those root-only flag files without changing permissions.
 
 **Attack surface:** HTTP port 80 (Docker Flask app)
 
-**Networks:** dual-homed. `net0` is on the public network (with the red workstation) and `net1` is on the
-internal `dc01_vlan`. This is the pivot point: red has no route to the internal network except through this
+**Networks:** dual-homed. `net0` is on the public network (with the red workstation) and `net1` is on
+`internal_vlan`. This is the pivot point: red has no route to the internal network except through this
 host. The runner gives each NIC a static address (10.30.10.40 and 10.30.40.40) and a default gateway on `net0`
 only, so the template must bring up both interfaces and must not hard-code a second default route.
 
@@ -99,7 +99,7 @@ trace the pivot in the Windows event log.
 `force user = root` makes the Samba daemon serve files as root, bypassing the `700`
 permissions on `/opt/oxblood/flags`. This is a classic real-world misconfiguration.
 
-Attack from dc01_vlan (after pivoting through DC01):
+Attack from internal_vlan (after pivoting through DC01):
 ```bash
 smbclient //10.30.40.x/CompanyFiles -N -c 'ls'
 smbclient //10.30.40.x/CompanyFiles -N -c 'get red-file-access.txt /tmp/flag.txt'
@@ -127,7 +127,7 @@ smbclient //10.30.40.x/CompanyFiles -N -c 'get red-file-access.txt /tmp/flag.txt
 No `auth users` or `secrets file` means the module is world-accessible. Running as root
 (`uid = root`) allows serving the `700`-permission flag files.
 
-Attack from dc01_vlan (routed to backup_vlan on 873):
+Attack from internal_vlan (routed to backup_vlan on 873):
 ```bash
 rsync rsync://10.30.60.x/archives/
 rsync rsync://10.30.60.x/archives/red-backup-access.txt /tmp/
@@ -136,7 +136,7 @@ rsync rsync://10.30.60.x/archives/red-backup-access.txt /tmp/
 Enable the daemon: `systemctl enable rsync && systemctl start rsync`.
 
 **Logging:** the rsync daemon logs to syslog (source IP, module accessed). Blue sees the
-dc01_vlan source IP hitting the archives module — the final detection in the chain.
+internal_vlan source IP hitting the archives module — the final detection in the chain.
 
 ---
 
@@ -146,8 +146,8 @@ dc01_vlan source IP hitting the archives module — the final detection in the c
 |------------|----------|----------|
 | API key `oxblood-admin-2024` | DMZ01 web API | HTML comment on `http://DMZ01/` |
 | `svc_app` / `AppSvc@2024!` | DC01 WinRM (port 5985) | DMZ01 `GET /api/config` |
-| Samba guest (no password) | FILE01 CompanyFiles share | Discovered via nmap/smbclient after reaching dc01_vlan |
-| rsync unauthenticated | BAK01 archives module | Discovered via port scan after reaching dc01_vlan |
+| Samba guest (no password) | FILE01 CompanyFiles share | Discovered via nmap/smbclient after reaching internal_vlan |
+| rsync unauthenticated | BAK01 archives module | Discovered via port scan after reaching internal_vlan |
 
 ---
 

@@ -70,7 +70,7 @@ type Row = { asset: MapAsset; key: string; x: number; y: number };
 
 /** Port of the classic topology layout: columns of zones, machines stacked in them, a hub per network. */
 export function layoutTopology(assets: MapAsset[], networks: MapNetwork[]): Layout {
-  const enterprise = networks.length > 3 || networks.some((n) => /dmz|dc0[12]|backup|security/i.test(String(n?.name)));
+  const enterprise = networks.length > 3 || networks.some((n) => /dmz|dc0[12]|internal|backup|security/i.test(String(n?.name)));
   const rows: Row[] = assets.map((asset, index) => ({ asset, key: String(asset.role || `asset_${index}`), x: 0, y: 0 }));
   const groups: Record<string, Row[]> = enterprise ? { red: [], dmz: [], transit: [], identity: [], protected: [] } : { red: [], transit: [], blue: [] };
   const netNames = (asset: MapAsset) => (asset.networks ?? []).map((n) => String(n).toLowerCase());
@@ -85,7 +85,7 @@ export function layoutTopology(assets: MapAsset[], networks: MapNetwork[]): Layo
     if (role.includes('red') || role.includes('attacker') || meta.cls === 'kali') return 'red';
     if (!enterprise) return 'blue';
     if (nets.some((n) => n.includes('dmz')) || role.includes('dmz') || role.includes('web')) return 'dmz';
-    if (role === 'dc01' || role === 'dc02' || nets.some((n) => n.includes('dc01') || n.includes('dc02') || n.includes('workstation'))) return 'identity';
+    if (role === 'dc01' || role === 'dc02' || nets.some((n) => n.includes('dc01') || n.includes('dc02') || n.includes('internal') || n.includes('workstation'))) return 'identity';
     return 'protected';
   };
   rows.forEach((row) => groups[groupFor(row.asset)].push(row));
@@ -168,7 +168,7 @@ export function layoutTopology(assets: MapAsset[], networks: MapNetwork[]): Layo
         red: text(findNet(/red|public/i), 'red access'),
         dmz: text(findNet(/dmz/i), 'dmz'),
         transit: text({}, 'transit'),
-        identity: { title: 'identity', subtitle: vlans(/dc0[12]|workstation/i) },
+        identity: { title: 'identity', subtitle: vlans(/dc0[12]|internal|workstation/i) },
         protected: { title: 'protected services', subtitle: vlans(/backup|security/i) },
       }
     : { red: text(findNet(/red/i), 'red segment'), transit: text(findNet(/dmz|wan|shared|transit/i), 'transit'), blue: text(findNet(/blue/i), 'blue segment') };

@@ -5,7 +5,7 @@ metadata:
   title: "Enterprise File Breach"
   organization: "Bank Harimau"
   summary: "Red attacks the public web host, then pivots through it into the internal network while Blue traces and contains the movement."
-  version: 8
+  version: 9
   difficulty: advanced
   duration_min: 120
   tags:
@@ -34,7 +34,7 @@ spec:
     blue:
       - "On BLUE01, work through the logs and evidence; find the first HTTP request to DMZ01 from 10.30.10.x and submit blue-initial-source with that IP."
       - "Look for WinRM (port 5985) inbound to DC01 from DMZ01's internal address (10.30.40.40); submit blue-pivot-traced with source IP and timestamp."
-      - "Check BAK01 or FW01 logs for rsync (873) from dc01_vlan; block or log the path and submit blue-backup-protected."
+      - "Check BAK01 or FW01 logs for rsync (873) from internal_vlan; block or log the path and submit blue-backup-protected."
   vulnerabilities:
     - asset: dmz_gateway
       issue: "Web admin API key embedded in HTML comment; privileged command-execution endpoint exposed."
@@ -59,7 +59,7 @@ spec:
       detail: >
         tpl-debian-file-server configures /etc/samba/smb.conf with a [CompanyFiles] share at
         path /opt/oxblood/flags, force user = root, guest ok = yes, read only = yes. Any host on
-        dc01_vlan can retrieve flag files without credentials:
+        internal_vlan can retrieve flag files without credentials:
         smbclient //FILE01/CompanyFiles -N -c 'get red-file-access.txt /tmp/flag.txt'
 
     - asset: backup_server
@@ -67,7 +67,7 @@ spec:
       detail: >
         tpl-debian-backup-server ships /etc/rsyncd.conf with module [archives] pointing to
         /opt/oxblood/flags, uid=root, gid=root, read only=yes, list=yes, no auth users set.
-        Any host on dc01_vlan (routed to backup_vlan on 873) can enumerate and pull flag files:
+        Any host on internal_vlan (routed to backup_vlan on 873) can enumerate and pull flag files:
         rsync rsync://BAK01/archives/
         rsync rsync://BAK01/archives/red-backup-access.txt /tmp/
         rsyncd on BAK01 logs the access to syslog.
@@ -97,7 +97,7 @@ spec:
       isolation: loose
       egress: restricted
       dhcp: true
-    - name: dc01_vlan
+    - name: internal_vlan
       cidr: 10.30.40.0/24
       vlan_id: 234
       isolation: tight
@@ -127,7 +127,7 @@ spec:
       kind: vm
       template: tpl-opnsense
       network_mode: trunk
-      networks: [public_vlan, dc01_vlan, backup_vlan]
+      networks: [public_vlan, internal_vlan, backup_vlan]
       resources:
         cores: 2
         ram_mb: 1024
@@ -138,7 +138,7 @@ spec:
       kind: vm
       template: tpl-debian-dmz-docker
       # Dual-homed: public side (net0) for red, internal side (net1) for the pivot.
-      networks: [public_vlan, dc01_vlan]
+      networks: [public_vlan, internal_vlan]
       resources:
         cores: 2
         ram_mb: 1024
@@ -148,7 +148,7 @@ spec:
       vm_name: DC01
       kind: vm
       template: tpl-win2022-ad-auto
-      networks: [dc01_vlan]
+      networks: [internal_vlan]
       resources:
         cores: 4
         ram_mb: 8192
@@ -211,7 +211,7 @@ spec:
       vm_name: FILE01
       kind: vm
       template: tpl-debian-file-server
-      networks: [dc01_vlan]
+      networks: [internal_vlan]
       resources:
         cores: 2
         ram_mb: 1024
@@ -231,7 +231,7 @@ spec:
       vm_name: BLUE01
       kind: vm
       template: tpl-debian-blue-gui-xrdp
-      networks: [dc01_vlan]
+      networks: [internal_vlan]
       exposed: true
       resources:
         cores: 2
@@ -242,7 +242,7 @@ spec:
     default_forward: drop
     # No rule joins public_vlan to the internal networks: DMZ01 is the only way in.
     rules:
-      - {from: dc01_vlan, to: backup_vlan, protocol: tcp, ports: [22, 443, 873]}
+      - {from: internal_vlan, to: backup_vlan, protocol: tcp, ports: [22, 443, 873]}
 
   flags:
     - id: red-dmz-foothold
@@ -309,7 +309,7 @@ spec:
 
   artifacts:
     sink_to: local
-    required_pcaps: [public_vlan, dc01_vlan, backup_vlan]
+    required_pcaps: [public_vlan, internal_vlan, backup_vlan]
     retention_days: 30
 
   win_conditions:
