@@ -129,7 +129,10 @@ def _static_ip_configs(asset: dict, scenario_spec: dict) -> dict[int, str]:
             else usable[min(max(0, host - 1), len(usable) - 1)]
         )
         configs[nic_index] = f"ip={address}/{subnet.prefixlen}"
-        if base_role != "router_fw":
+        # Only the first NIC gets a default gateway. A dual-homed host (a web
+        # server bridging two networks) with two default routes would send
+        # traffic out of whichever NIC the guest happens to prefer.
+        if base_role != "router_fw" and nic_index == 0:
             configs[nic_index] += f",gw={usable[0]}"
     return configs
 

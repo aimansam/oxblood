@@ -2,14 +2,15 @@
 
 ## Compact baseline
 
-- Seven disposable VMs across four VLANs, sized for a constrained host.
+- Seven disposable VMs across three VLANs, sized for a constrained host.
 - Red workstation, router, DMZ host, DC01, file server, backup server, and blue workstation.
+- Red and the DMZ host share one public network. The DMZ host also has a leg on the internal
+  network and is the only way in: no route joins the public network to the internal ones.
 - Static addresses and routed access are deterministic per run.
 - Flags and objectives are seeded from the scenario catalog.
 - Blue investigation evidence is seeded onto the blue workstation as a compact
   timeline bundle alongside native guest logs.
-- No external SIEM is required. Legacy template names are retained until
-  replacement images are certified; Linux clones remove the retired agent.
+- No external SIEM is required.
 - Generated VMs are stopped and destroyed during cleanup.
 
 ## Upgrade track

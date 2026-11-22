@@ -57,7 +57,7 @@ function laneSide(name: string): EdgeSide {
   const lower = String(name ?? '').toLowerCase();
   if (lower.includes('red')) return 'red';
   if (lower.includes('blue')) return 'blue';
-  if (lower.includes('dmz') || lower.includes('wan') || lower.includes('shared')) return 'shared';
+  if (lower.includes('dmz') || lower.includes('public') || lower.includes('wan') || lower.includes('shared')) return 'shared';
   return 'neutral';
 }
 
@@ -78,7 +78,10 @@ export function layoutTopology(assets: MapAsset[], networks: MapNetwork[]): Layo
     const role = String(asset.role ?? '').toLowerCase();
     const nets = netNames(asset);
     const meta = deviceMeta(asset);
-    if (meta.cls === 'router' || nets.length > 1) return 'transit';
+    if (meta.cls === 'router') return 'transit';
+    // A web host with a leg on the public network and another inside (a dual-homed DMZ host) stays in the DMZ column.
+    if (enterprise && (role.includes('dmz') || role.includes('web'))) return 'dmz';
+    if (nets.length > 1) return 'transit';
     if (role.includes('red') || role.includes('attacker') || meta.cls === 'kali') return 'red';
     if (!enterprise) return 'blue';
     if (nets.some((n) => n.includes('dmz')) || role.includes('dmz') || role.includes('web')) return 'dmz';
@@ -162,7 +165,7 @@ export function layoutTopology(assets: MapAsset[], networks: MapNetwork[]): Layo
       .join(' / ');
   const zoneText: Record<string, { title: string; subtitle: string }> = enterprise
     ? {
-        red: text(findNet(/red/i), 'red access'),
+        red: text(findNet(/red|public/i), 'red access'),
         dmz: text(findNet(/dmz/i), 'dmz'),
         transit: text({}, 'transit'),
         identity: { title: 'identity', subtitle: vlans(/dc0[12]/i) },

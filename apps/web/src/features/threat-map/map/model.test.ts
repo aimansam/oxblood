@@ -68,6 +68,23 @@ describe('layout', () => {
     expect(layout.width).toBe(1360);
     expect(layout.zones.find((z) => z.key === 'identity')?.subtitle).toContain('VLAN 234');
   });
+  it('keeps a dual-homed web host in the DMZ column, not with the router', () => {
+    const assets: MapAsset[] = [
+      { role: 'red_workstation', template: 'tpl-kali-gui-xrdp', networks: ['public_vlan'] },
+      { role: 'router_fw', template: 'tpl-opnsense', networks: ['public_vlan', 'dc01_vlan'] },
+      { role: 'dmz_gateway', template: 'x', networks: ['public_vlan', 'dc01_vlan'] },
+      { role: 'dc01', template: 'tpl-win2022', networks: ['dc01_vlan'] },
+    ];
+    const nets: MapNetwork[] = [{ name: 'public_vlan', vlan_id: 230 }, { name: 'dc01_vlan', vlan_id: 234 }];
+    const layout = layoutTopology(assets, nets);
+    const zoneOf = (role: string) => {
+      const node = layout.nodes.find((n) => n.asset.role === role)!;
+      return layout.zones.find((z) => node.x >= z.x && node.x <= z.x + z.w)?.key;
+    };
+    expect(zoneOf('dmz_gateway')).toBe('dmz');
+    expect(zoneOf('router_fw')).toBe('transit');
+    expect(layout.zones.find((z) => z.key === 'red')?.subtitle).toContain('VLAN 230');
+  });
   it('never lets two machine cards overlap, however many share a zone', () => {
     const many: MapAsset[] = Array.from({ length: 6 }, (_, i) => ({ role: `web_${i}`, template: 'x', networks: ['blue_vlan'] }));
     const layout = layoutTopology([simpleAssets[0], simpleAssets[1], ...many], simpleNets);

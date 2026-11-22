@@ -13,6 +13,11 @@ those root-only flag files without changing permissions.
 
 **Attack surface:** HTTP port 80 (Docker Flask app)
 
+**Networks:** dual-homed. `net0` is on the public network (with the red workstation) and `net1` is on the
+internal `dc01_vlan`. This is the pivot point: red has no route to the internal network except through this
+host. The runner gives each NIC a static address (10.30.10.40 and 10.30.40.40) and a default gateway on `net0`
+only, so the template must bring up both interfaces and must not hard-code a second default route.
+
 ### Services to bake in
 
 A Flask app in a Docker container (`/opt/oxblood-app/`), started by systemd unit `oxblood-webapp.service`, running as root (or the container privileged).

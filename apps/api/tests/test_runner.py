@@ -395,6 +395,19 @@ def test_static_ip_configs_use_declared_host_number() -> None:
     )
 
 
+def test_dual_homed_host_gets_one_default_gateway() -> None:
+    scenario = {
+        "networks": [
+            {"name": "public", "cidr": "10.30.10.0/24"},
+            {"name": "internal", "cidr": "10.30.40.0/24"},
+        ]
+    }
+    configs = _static_ip_configs(
+        {"role": "dmz_gateway", "networks": ["public", "internal"]}, scenario
+    )
+    assert configs == {0: "ip=10.30.10.40/24,gw=10.30.10.1", 1: "ip=10.30.40.40/24"}
+
+
 # --- happy path -------------------------------------------------------------
 
 

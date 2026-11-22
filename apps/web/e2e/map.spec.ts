@@ -23,7 +23,7 @@ test('the live range map: inspect, layers, zoom, pan, fit, story feed, keyboard'
   await expect(details).toHaveCount(0);
 
   // Inspect a link, then jump to one of its machines from the link panel.
-  await page.getByRole('button', { name: /Inspect red_vlan link/ }).dispatchEvent('click');
+  await page.getByRole('button', { name: /Inspect public_vlan link/ }).first().dispatchEvent('click');
   await expect(details.getByText('Link inspection')).toBeVisible();
   await details.getByRole('button').filter({ hasText: /red workstation/i }).first().click();
   await expect(details.getByText('Node inspection')).toBeVisible();

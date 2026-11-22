@@ -393,13 +393,15 @@ def range_diagram(r: Range) -> None:
         for j, asset in enumerate(r.assets_in(net.name)):
             edge, face = SIDE_STYLE[asset.side]
             label = asset.role + (f"  ×{asset.count}" if asset.count > 1 else "")
+            # A host that bridges networks (a dual-homed web server) names its other legs.
+            also = f"\nalso on {', '.join(asset.networks[1:])}" if len(asset.networks) > 1 else ""
             pill(
                 ax,
                 cx,
                 0.4 + zone_h - 1.25 - j * 1.0,
                 w - 0.3,
-                0.78,
-                f"{label}\n{asset.template}",
+                0.9 if also else 0.78,
+                f"{label}\n{asset.template}{also}",
                 edge=edge,
                 face=face,
                 size=7.6,

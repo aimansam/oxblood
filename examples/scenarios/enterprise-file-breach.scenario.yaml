@@ -4,8 +4,8 @@ metadata:
   name: enterprise-file-breach
   title: "Enterprise File Breach"
   organization: "Bank Harimau"
-  summary: "Red tests the DMZ-to-identity-to-backup path while Blue traces and contains the movement."
-  version: 7
+  summary: "Red attacks the public web host, then pivots through it into the internal network while Blue traces and contains the movement."
+  version: 8
   difficulty: advanced
   duration_min: 120
   tags:
@@ -18,9 +18,9 @@ metadata:
 spec:
   attack_path:
     - asset: dmz_gateway
-      goal: "Reach the exposed web service"
+      goal: "Compromise the web service on the public network"
     - asset: dc01
-      goal: "Pivot into the identity segment"
+      goal: "Pivot through DMZ01 into the internal network"
     - asset: file_server
       goal: "Access protected files"
     - asset: backup_server
@@ -29,11 +29,11 @@ spec:
     red:
       - "Browse http://DMZ01/ and read the page source for the API key; use it on GET /api/status/flag for the first capture."
       - "POST /api/exec to run commands on DMZ01; retrieve domain credentials from GET /api/config."
-      - "From DMZ01, evil-winrm into DC01 (10.30.40.10:5985) then smbclient //FILE01/CompanyFiles -N to pull the file flag."
-      - "From dc01_vlan, rsync rsync://BAK01/archives/ to list files and retrieve the backup flag."
+      - "Red has no route to the internal network; DMZ01 is the only bridge. From DMZ01 (or a tunnel through it), evil-winrm into DC01 (10.30.40.10:5985)."
+      - "From inside, smbclient //FILE01/CompanyFiles -N for the file flag, then rsync rsync://BAK01/archives/ for the backup flag."
     blue:
       - "On BLUE01, work through the logs and evidence; find the first HTTP request to DMZ01 from 10.30.10.x and submit blue-initial-source with that IP."
-      - "Look for WinRM (port 5985) inbound to DC01 from a DMZ address; submit blue-pivot-traced with source IP and timestamp."
+      - "Look for WinRM (port 5985) inbound to DC01 from DMZ01's internal address (10.30.40.40); submit blue-pivot-traced with source IP and timestamp."
       - "Check BAK01 or FW01 logs for rsync (873) from dc01_vlan; block or log the path and submit blue-backup-protected."
   vulnerabilities:
     - asset: dmz_gateway
@@ -51,7 +51,7 @@ spec:
       detail: >
         tpl-win2022-ad-auto creates svc_app@oxblood.lab with password AppSvc@2024! and adds it to
         Remote Management Users. Attackers who discover the credential on DMZ01 can evil-winrm into
-        DC01 (10.30.40.10:5985) from any DMZ-segment host. No PSRemoting restriction is applied.
+        DC01 (10.30.40.10:5985) from DMZ01, the only host with a leg in the internal network. No PSRemoting restriction is applied.
         Windows Defender and sysmon log the inbound WinRM session.
 
     - asset: file_server
@@ -90,17 +90,12 @@ spec:
       - "Submit the source, pivot, and containment flags with evidence."
 
   networks:
-    - name: red_vlan
+    # The public network: the red workstation and the exposed web host share it.
+    - name: public_vlan
       cidr: 10.30.10.0/24
       vlan_id: 230
       isolation: loose
       egress: restricted
-      dhcp: true
-    - name: dmz_vlan
-      cidr: 10.30.20.0/24
-      vlan_id: 231
-      isolation: tight
-      egress: blocked
       dhcp: true
     - name: dc01_vlan
       cidr: 10.30.40.0/24
@@ -120,7 +115,7 @@ spec:
       restore_commands: ["netplan apply"]
       kind: vm
       template: tpl-kali-gui-xrdp
-      networks: [red_vlan]
+      networks: [public_vlan]
       exposed: true
       resources:
         cores: 2
@@ -132,7 +127,7 @@ spec:
       kind: vm
       template: tpl-opnsense
       network_mode: trunk
-      networks: [red_vlan, dmz_vlan, dc01_vlan, backup_vlan]
+      networks: [public_vlan, dc01_vlan, backup_vlan]
       resources:
         cores: 2
         ram_mb: 1024
@@ -142,7 +137,8 @@ spec:
       vm_name: DMZ01
       kind: vm
       template: tpl-debian-dmz-docker
-      networks: [dmz_vlan]
+      # Dual-homed: public side (net0) for red, internal side (net1) for the pivot.
+      networks: [public_vlan, dc01_vlan]
       resources:
         cores: 2
         ram_mb: 1024
@@ -244,9 +240,8 @@ spec:
 
   routing_policy:
     default_forward: drop
+    # No rule joins public_vlan to the internal networks: DMZ01 is the only way in.
     rules:
-      - {from: red_vlan, to: dmz_vlan, protocol: tcp, ports: [80, 443]}
-      - {from: dmz_vlan, to: dc01_vlan, protocol: tcp, ports: [445, 5985, 5986]}
       - {from: dc01_vlan, to: backup_vlan, protocol: tcp, ports: [22, 443, 873]}
 
   flags:
@@ -314,7 +309,7 @@ spec:
 
   artifacts:
     sink_to: local
-    required_pcaps: [red_vlan, dmz_vlan, dc01_vlan, backup_vlan]
+    required_pcaps: [public_vlan, dc01_vlan, backup_vlan]
     retention_days: 30
 
   win_conditions:
