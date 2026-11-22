@@ -10,8 +10,6 @@ Checks (each one prints PASS / FAIL with a one-line reason):
   [4] Template `tpl-debian-cloudinit` exists on PVE (or --template)
   [5] Scenario `first-live-drill` in DB (or --scenario)
   [6] /metrics endpoint live
-  [7] Prometheus scraping oxblood-api
-  [8] Grafana dashboard loaded (UID oxblood-drill-platform)
 
 Each check is independent -- we run them all so you see every red flag,
 not just the first. The summary at the end tells you what to fix.
@@ -33,10 +31,6 @@ import httpx
 
 REPO = Path(__file__).resolve().parents[1]
 DEFAULT_API_BASE = os.environ.get("OXBLOOD_API_BASE", "http://localhost:8000")
-DEFAULT_PROM_BASE = os.environ.get("OXBLOOD_PROM_BASE", "http://localhost:9090")
-DEFAULT_GRAFANA_BASE = os.environ.get("OXBLOOD_GRAFANA_BASE", "http://localhost:3000")
-GRAFANA_USER = os.environ.get("GRAFANA_ADMIN_USER", "admin")
-GRAFANA_PASS = os.environ.get("GRAFANA_ADMIN_PASSWORD", "oxblood")
 
 
 @dataclass
@@ -409,93 +403,6 @@ def check_metrics_live(client, report):
         )
 
 
-def check_prometheus_scrape(report, target="oxblood-api"):
-    try:
-        with httpx.Client(timeout=5.0) as c:
-            r = c.get(f"{DEFAULT_PROM_BASE}/api/v1/targets?state=active")
-            if r.status_code != 200:
-                report.add(
-                    "Prometheus scraping oxblood-api",
-                    False,
-                    f"HTTP {r.status_code} from {DEFAULT_PROM_BASE}",
-                    f"Is Prometheus up? curl {DEFAULT_PROM_BASE}/-/ready",
-                )
-                return
-            data = r.json()
-            for t in data.get("data", {}).get("activeTargets", []):
-                if t.get("labels", {}).get("job") == target:
-                    if t.get("health") == "up":
-                        url = t.get("scrapeUrl", "?")
-                        report.add(
-                            "Prometheus scraping oxblood-api",
-                            True,
-                            f"{url} -> up",
-                        )
-                    else:
-                        last_err = (t.get("lastError") or "").strip()
-                        report.add(
-                            "Prometheus scraping oxblood-api",
-                            False,
-                            f"health={t.get('health')!r}, lastError={last_err[:80]}",
-                            "Check deploy/prometheus/prometheus.yml -- is api:8000 resolvable "
-                            "from the prometheus container?",
-                        )
-                    return
-            report.add(
-                "Prometheus scraping oxblood-api",
-                False,
-                f"target {target!r} not in active scrape list",
-                "deploy/prometheus/prometheus.yml must declare a job named 'oxblood-api'",
-            )
-    except Exception as exc:
-        report.add(
-            "Prometheus scraping oxblood-api",
-            False,
-            f"request failed: {exc}",
-            "Is Prometheus on :9090? Try: docker compose ps prometheus",
-        )
-
-
-def check_grafana_dashboard(report, uid="oxblood-drill-platform"):
-    try:
-        with httpx.Client(timeout=5.0) as c:
-            r = c.get(
-                f"{DEFAULT_GRAFANA_BASE}/api/dashboards/uid/{uid}",
-                auth=(GRAFANA_USER, GRAFANA_PASS),
-            )
-            if r.status_code == 200:
-                dash = r.json().get("dashboard", {})
-                panels = len(dash.get("panels", []))
-                report.add(
-                    f"Grafana dashboard {uid!r} loaded",
-                    True,
-                    f"title={dash.get('title', '?')!r}, panels={panels}",
-                )
-            elif r.status_code == 404:
-                report.add(
-                    f"Grafana dashboard {uid!r} loaded",
-                    False,
-                    "404 -- not provisioned",
-                    "Is deploy/grafana/provisioning/dashboards/oxblood.yml mounted into "
-                    "the grafana container?",
-                )
-            else:
-                report.add(
-                    f"Grafana dashboard {uid!r} loaded",
-                    False,
-                    f"HTTP {r.status_code}",
-                )
-    except Exception as exc:
-        report.add(
-            f"Grafana dashboard {uid!r} loaded",
-            False,
-            f"request failed: {exc}",
-        )
-
-
-# --- entrypoint ----------------------------------------------------------
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument("--api-base", default=DEFAULT_API_BASE)
@@ -531,9 +438,6 @@ def main():
             )
         check_scenario_in_db(client, args.scenario, report)
         check_metrics_live(client, report)
-
-    check_prometheus_scrape(report)
-    check_grafana_dashboard(report)
 
     report.print_summary()
     return 0 if report.all_passed else 1

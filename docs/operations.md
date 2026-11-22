@@ -10,11 +10,10 @@
 - **Web UI:** the API serves the React build at `/app/`. The build is baked into the API image (no bind
   mount), so a git checkout cannot break it; rebuild with `docker compose -f deploy/docker-compose.yml build api`
   to ship UI changes. If the build is missing, `/app/` answers 503.
-- **Metrics:** `/metrics` is open on the internal network. If the API port is reachable from outside, set
-  `OXBLOOD_METRICS_TOKEN` and give Prometheus the same value as a bearer token.
+- **Metrics:** the stack ships no monitoring servers. The API exposes Prometheus-format counters at `/metrics`
+  if you run your own scraper. It is open on the internal network; if the API port is reachable from outside,
+  set `OXBLOOD_METRICS_TOKEN` and send it as a bearer token. `/healthz` and `/readyz` are the health probes.
 - **Backups:** `scripts/backup_db.sh` (see `deploy/backup/README.md`). Test a restore occasionally.
-- **Alerts:** rules in `deploy/prometheus/alerts.yml`, routed by `deploy/alertmanager/alertmanager.yml`.
-  Edit the `default` receiver there to get Discord, Telegram or email notifications.
 
 ## Applying deploy changes
-    docker compose -f deploy/docker-compose.yml up -d prometheus alertmanager
+    docker compose -f deploy/docker-compose.yml up -d

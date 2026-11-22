@@ -1,6 +1,6 @@
 """Tests for tools/preflight.py (no live calls -- uses httpx MockTransport).
 
-We don't hit the real API / Prometheus / Grafana -- we use httpx's
+We don't hit the real API -- we use httpx's
 MockTransport to fake each endpoint and assert the report structure.
 """
 
@@ -82,28 +82,6 @@ def _metrics(r):
     )
 
 
-def _prom_targets_up(r):
-    return httpx.Response(
-        200,
-        json={
-            "data": {
-                "activeTargets": [
-                    {
-                        "labels": {"job": "oxblood-api"},
-                        "scrapeUrl": "http://api:8000/metrics",
-                        "health": "up",
-                        "lastError": "",
-                    }
-                ]
-            }
-        },
-    )
-
-
-def _grafana_ok(r):
-    return httpx.Response(200, json={"dashboard": {"title": "OxBlood", "panels": [{}] * 6}})
-
-
 # --- happy path ---------------------------------------------------------
 
 
@@ -156,8 +134,6 @@ def test_all_checks_pass_when_everything_is_up(monkeypatch):
         ),
         "http://localhost:8000/api/v1/scenarios": _scenarios_ok,
         "http://localhost:8000/metrics": _metrics,
-        "http://localhost:9090/api/v1/targets": _prom_targets_up,
-        "http://localhost:3000/api/dashboards/uid/oxblood-drill-platform": _grafana_ok,
     }
     assert _run_with_handlers(handlers, monkeypatch) == 0
 
@@ -176,8 +152,6 @@ def test_template_missing_prints_actionable_hint(monkeypatch, capsys):
         ),
         "http://localhost:8000/api/v1/scenarios": _scenarios_ok,
         "http://localhost:8000/metrics": _metrics,
-        "http://localhost:9090/api/v1/targets": _prom_targets_up,
-        "http://localhost:3000/api/dashboards/uid/oxblood-drill-platform": _grafana_ok,
     }
     rc = _run_with_handlers(handlers, monkeypatch)
     out = capsys.readouterr().out
@@ -198,10 +172,6 @@ def test_promox_not_configured_skips_pve_checks(monkeypatch, capsys):
         ),
         "http://localhost:8000/api/v1/scenarios": lambda r: httpx.Response(200, json={"items": []}),
         "http://localhost:8000/metrics": _metrics,
-        "http://localhost:9090/api/v1/targets": lambda r: httpx.Response(
-            200, json={"data": {"activeTargets": []}}
-        ),
-        "http://localhost:3000/api/dashboards/uid/oxblood-drill-platform": _grafana_ok,
     }
     rc = _run_with_handlers(handlers, monkeypatch)
     out = capsys.readouterr().out
@@ -209,41 +179,6 @@ def test_promox_not_configured_skips_pve_checks(monkeypatch, capsys):
     assert "PROXMOX_* configured" in out
     assert "PVE nodes reachable" in out
     assert "skipped" in out
-
-
-# --- prometheus target down --------------------------------------------
-
-
-def test_prometheus_target_down_prints_error(monkeypatch, capsys):
-    handlers = {
-        "http://localhost:8000/healthz": _ok_health,
-        "http://localhost:8000/api/v1/proxmox/health": lambda r: httpx.Response(
-            503, json={"detail": "x"}
-        ),
-        "http://localhost:8000/api/v1/scenarios": lambda r: httpx.Response(200, json={"items": []}),
-        "http://localhost:8000/metrics": _metrics,
-        "http://localhost:9090/api/v1/targets": lambda r: httpx.Response(
-            200,
-            json={
-                "data": {
-                    "activeTargets": [
-                        {
-                            "labels": {"job": "oxblood-api"},
-                            "scrapeUrl": "http://api:8000/metrics",
-                            "health": "down",
-                            "lastError": "connection refused",
-                        }
-                    ]
-                }
-            },
-        ),
-        "http://localhost:3000/api/dashboards/uid/oxblood-drill-platform": _grafana_ok,
-    }
-    rc = _run_with_handlers(handlers, monkeypatch)
-    out = capsys.readouterr().out
-    assert rc == 1
-    assert "Prometheus scraping oxblood-api" in out
-    assert "down" in out
 
 
 # --- arg parsing -------------------------------------------------------
@@ -257,10 +192,6 @@ def test_custom_scenario_and_template_args(monkeypatch):
         ),
         "http://localhost:8000/api/v1/scenarios": lambda r: httpx.Response(200, json={"items": []}),
         "http://localhost:8000/metrics": _metrics,
-        "http://localhost:9090/api/v1/targets": lambda r: httpx.Response(
-            200, json={"data": {"activeTargets": []}}
-        ),
-        "http://localhost:3000/api/dashboards/uid/oxblood-drill-platform": _grafana_ok,
     }
     rc = _run_with_handlers(
         handlers,
@@ -295,8 +226,6 @@ def _acl_handlers(perms_response=None, perms_status=200, **kwargs):
         ),
         "http://localhost:8000/api/v1/scenarios": _scenarios_ok,
         "http://localhost:8000/metrics": _metrics,
-        "http://localhost:9090/api/v1/targets": _prom_targets_up,
-        "http://localhost:3000/api/dashboards/uid/oxblood-drill-platform": _grafana_ok,
     }
     base.update(kwargs)
     return base

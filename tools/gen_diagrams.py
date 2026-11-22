@@ -326,7 +326,7 @@ def fig_overview():
         6.2,
         6.0,
         0.55,
-        "Prometheus + Loki + Grafana",
+        "metrics + logs",
         edge=GREEN,
         face="#0e1f1a",
         color=GREEN,
@@ -1234,7 +1234,7 @@ def fig_phase2():
         0.55,
         2.0,
         0.5,
-        "Prometheus + Loki",
+        "metrics + logs",
         edge=GREY,
         face="#161b25",
         color=MUTED,
@@ -1247,7 +1247,7 @@ def fig_phase2():
         0.55,
         2.0,
         0.5,
-        "Grafana",
+        "run reports",
         edge=GREY,
         face="#161b25",
         color=MUTED,
@@ -1633,15 +1633,24 @@ def fig_phase4():
         5.05,
         3.2,
         0.55,
-        "Prometheus",
+        "/metrics",
         edge=GREEN,
         face="#0e1f1a",
         color=GREEN,
         weight="bold",
     )
-    pill(ax, 11.7, 4.30, 3.2, 0.55, "Loki", edge=GREEN, face="#0e1f1a", color=GREEN, weight="bold")
+    pill(ax, 11.7, 4.30, 3.2, 0.55, "logs", edge=GREEN, face="#0e1f1a", color=GREEN, weight="bold")
     pill(
-        ax, 11.7, 3.55, 3.2, 0.55, "Grafana", edge=GREEN, face="#0e1f1a", color=GREEN, weight="bold"
+        ax,
+        11.7,
+        3.55,
+        3.2,
+        0.55,
+        "run reports",
+        edge=GREEN,
+        face="#0e1f1a",
+        color=GREEN,
+        weight="bold",
     )
 
     # Lifecycle strip

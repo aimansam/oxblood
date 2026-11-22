@@ -40,42 +40,11 @@ def _patch_transport(monkeypatch, handlers):
     monkeypatch.setattr(httpx, "Client", patched_client)
 
 
-# --- baseline + success detection ---------------------------------------
+# --- success detection -------------------------------------------------
 
 
-def test_baseline_zero_then_increment_detects_success(monkeypatch):
-    state = {"value": 0.0}
-
-    def prom_query(req):
-        state["value"] += 1.0  # simulate a successful run landing
-        return httpx.Response(
-            200,
-            json={
-                "status": "success",
-                "data": {
-                    "result": [
-                        {"metric": {"outcome": "succeeded"}, "value": [0, str(state["value"])]}
-                    ]
-                },
-            },
-        )
-
-    handlers = {"http://localhost:9090/api/v1/query": prom_query}
-    _patch_transport(monkeypatch, handlers)
-
-    mod = _load_module()
-    monkeypatch.setattr(sys, "argv", ["watch_drill.py", "--timeout", "10", "--poll", "1"])
-    rc = mod.main()
-    assert rc == 0
-
-
-# --- api-poll fallback -------------------------------------------------
-
-
-def test_api_poll_fallback_works(monkeypatch):
-    """API poll mode should exit 0 when the latest run is succeeded."""
-    # First poll: running. Second poll: succeeded. Watcher detects the
-    # change via rid+status comparison.
+def test_exits_zero_when_the_latest_run_reaches_the_outcome(monkeypatch):
+    """First poll: running. Second poll: succeeded. The watcher sees the change."""
     poll_count = {"n": 0}
 
     def list_drills(req):
@@ -83,65 +52,44 @@ def test_api_poll_fallback_works(monkeypatch):
         status = "succeeded" if poll_count["n"] >= 2 else "running"
         return httpx.Response(
             200,
-            json={
-                "items": [
-                    {"run_id": 99, "scenario_id": 3, "status": status},
-                ]
-            },
+            json={"items": [{"run_id": 99, "scenario_id": 3, "status": status}]},
         )
 
-    handlers = {"http://localhost:8000/api/v1/drills": list_drills}
-    _patch_transport(monkeypatch, handlers)
+    _patch_transport(monkeypatch, {"http://localhost:8000/api/v1/drills": list_drills})
     mod = _load_module()
     monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "watch_drill.py",
-            "--api-poll",
-            "--outcome",
-            "succeeded",
-            "--timeout",
-            "10",
-            "--poll",
-            "1",
-        ],
+        sys, "argv", ["watch_drill.py", "--outcome", "succeeded", "--timeout", "10", "--poll", "1"]
     )
-    rc = mod.main()
-    assert rc == 0
+    assert mod.main() == 0
     assert poll_count["n"] >= 2
 
 
-# --- prometheus unreachable falls back to API polling -------------------
-
-
-def test_prom_unreachable_falls_back_to_api_poll(monkeypatch):
+def test_exits_zero_immediately_when_the_run_already_finished(monkeypatch):
     handlers = {
-        "http://localhost:9090/api/v1/query": lambda r: httpx.Response(
-            503, json={"status": "error", "error": "unreachable"}
-        ),
         "http://localhost:8000/api/v1/drills": lambda r: httpx.Response(
-            200,
-            json={"items": [{"run_id": 7, "scenario_id": 1, "status": "succeeded"}]},
+            200, json={"items": [{"run_id": 7, "scenario_id": 1, "status": "succeeded"}]}
         ),
     }
     _patch_transport(monkeypatch, handlers)
     mod = _load_module()
     monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "watch_drill.py",
-            "--outcome",
-            "succeeded",
-            "--timeout",
-            "5",
-            "--poll",
-            "1",
-        ],
+        sys, "argv", ["watch_drill.py", "--outcome", "succeeded", "--timeout", "5", "--poll", "1"]
     )
-    rc = mod.main()
-    assert rc == 0
+    assert mod.main() == 0
+
+
+def test_times_out_with_exit_one_when_the_outcome_never_arrives(monkeypatch):
+    handlers = {
+        "http://localhost:8000/api/v1/drills": lambda r: httpx.Response(
+            200, json={"items": [{"run_id": 7, "scenario_id": 1, "status": "running"}]}
+        ),
+    }
+    _patch_transport(monkeypatch, handlers)
+    mod = _load_module()
+    monkeypatch.setattr(
+        sys, "argv", ["watch_drill.py", "--outcome", "succeeded", "--timeout", "1", "--poll", "1"]
+    )
+    assert mod.main() == 1
 
 
 # --- cancel after N ----------------------------------------------------
@@ -158,15 +106,6 @@ def test_cancel_after_sends_cancel_request(monkeypatch):
             json={"run_id": 99, "status": "cancelled", "reason": "user-requested"},
         )
 
-    def prom_query(req):
-        return httpx.Response(
-            200,
-            json={
-                "status": "success",
-                "data": {"result": [{"metric": {"outcome": "cancelled"}, "value": [0, "0.0"]}]},
-            },
-        )
-
     def list_drills(req):
         return httpx.Response(
             200, json={"items": [{"run_id": 99, "scenario_id": 3, "status": "running"}]}
@@ -177,7 +116,6 @@ def test_cancel_after_sends_cancel_request(monkeypatch):
     handlers = {
         "http://localhost:8000/api/v1/drills/99/cancel": cancel,
         "http://localhost:8000/api/v1/drills": list_drills,
-        "http://localhost:9090/api/v1/query": prom_query,
     }
     _patch_transport(monkeypatch, handlers)
 
@@ -199,6 +137,6 @@ def test_cancel_after_sends_cancel_request(monkeypatch):
     )
     rc = mod.main()
     assert len(cancel_calls) >= 1, "expected cancel POST to have been issued"
-    # rc could be 0 (cancelled detected via the counter) or 1 (timeout
-    # via the api-poll fallback path) — both prove the cancel was issued.
-    assert rc in (0, 1)
+    # The listed run never turns "cancelled" in this stub, so the watcher times out (1);
+    # the assertion above is what proves the cancel was issued.
+    assert rc == 1

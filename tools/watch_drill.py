@@ -1,30 +1,24 @@
 #!/usr/bin/env python3
-"""Watch a live drill via Prometheus (and fall back to API polling).
+"""Watch a live drill by polling the API.
 
 Designed to run in a second terminal while `make live-drill` runs in
 the first. It exits 0 the moment the run reaches the desired terminal
 outcome (succeeded by default), and non-zero otherwise.
 
-Three modes:
+Two modes:
   --outcome succeeded|failed|cancelled|started
-      Wait until oxblood_runs_total{outcome=<outcome>} increases.
-      Default: succeeded.
+      Wait until the latest run reaches that status. Default: succeeded.
 
   --cancel-after N
       Cancel the run N seconds after it starts. Used to exercise the
-      /drills/{id}/cancel endpoint mid-flight so Panel 3 of the
-      Grafana dashboard populates. Requires a token with role in
-      {admin, lead, red} -- see ``--token`` below.
-
-  --api-poll
-      Fall back to /api/v1/drills polling if Prometheus isn't reachable.
+      /drills/{id}/cancel endpoint mid-flight. Requires a token with
+      role in {admin, lead, red} -- see ``--token`` below.
 
 Auth (L2 2.9): /api/v1/drills/{id}/cancel is now gated on
 ``require_role(ADMIN, LEAD, RED)``. Anonymous calls return 401.
 Pass the token via ``--token`` (highest priority) or
-``OXBLOOD_TOKEN`` env var (default). The Prometheus + ``/drills``
-list endpoints remain anonymous, so only the cancel call needs
-the header.
+``OXBLOOD_TOKEN`` env var (default). The ``/drills`` list endpoint
+remains anonymous, so only the cancel call needs the header.
 
 Typical usage:
   # Watch for the next succeeded run (no auth needed for read paths):
@@ -50,27 +44,8 @@ import httpx
 
 REPO = Path(__file__).resolve().parents[1]
 DEFAULT_API_BASE = os.environ.get("OXBLOOD_API_BASE", "http://localhost:8000")
-DEFAULT_PROM_BASE = os.environ.get("OXBLOOD_PROM_BASE", "http://localhost:9090")
 # Default token comes from OXBLOOD_TOKEN; --token CLI flag overrides.
 DEFAULT_TOKEN = os.environ.get("OXBLOOD_TOKEN")
-
-
-def _get_counter(prom_base, labels, name="oxblood_runs_total"):
-    """Return current value of a labelled counter from Prometheus."""
-    label_str = ",".join(f'{k}="{v}"' for k, v in labels.items())
-    expr = f"{name}{{{label_str}}}"
-    try:
-        with httpx.Client(timeout=3.0) as c:
-            r = c.get(f"{prom_base}/api/v1/query", params={"query": expr})
-            if r.status_code != 200:
-                return None
-            data = r.json()
-            results = data.get("data", {}).get("result", [])
-            if not results:
-                return 0.0
-            return float(results[0]["value"][1])
-    except Exception:
-        return None
 
 
 def _list_recent_runs(api_base, scenario=None, limit=5):
@@ -106,9 +81,9 @@ def _cancel(api_base, run_id, token=None):
     does nothing. The caller logs the HTTP code so the operator
     notices.
 
-    Read paths used by this script (Prometheus + /api/v1/drills
-    list) are still anonymous, so the token is only attached on the
-    single cancel POST.
+    The read path used by this script (the /api/v1/drills list) is
+    still anonymous, so the token is only attached on the single
+    cancel POST.
     """
     headers = {"X-Oxblood-Token": token} if token else {}
     with httpx.Client(timeout=10.0) as c:
@@ -125,7 +100,6 @@ def _cancel(api_base, run_id, token=None):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument("--api-base", default=DEFAULT_API_BASE)
-    ap.add_argument("--prom-base", default=DEFAULT_PROM_BASE)
     ap.add_argument(
         "--token",
         default=DEFAULT_TOKEN,
@@ -160,11 +134,6 @@ def main():
         help="Overall timeout in seconds (default 600)",
     )
     ap.add_argument(
-        "--api-poll",
-        action="store_true",
-        help="Use /api/v1/drills polling instead of Prometheus",
-    )
-    ap.add_argument(
         "--poll",
         type=float,
         default=2.0,
@@ -172,21 +141,11 @@ def main():
     )
     args = ap.parse_args()
 
-    # Capture the baseline counter so we detect the *next* event.
-    baseline = None
-    if not args.api_poll:
-        baseline = _get_counter(args.prom_base, {"outcome": args.outcome})
-        if baseline is None:
-            print(f"WARN: Prometheus unreachable at {args.prom_base}; falling back to API polling")
-            args.api_poll = True
-        else:
-            print(f"OK: Prometheus reachable; baseline {args.outcome}={baseline}")
-
     started_at = time.monotonic()
     deadline = started_at + args.timeout
     cancel_at = started_at + args.cancel_after if args.cancel_after is not None else None
     cancel_sent = False
-    last_run_id = _latest_run_id(args.api_base, args.scenario) if args.api_poll else None
+    last_run_id = _latest_run_id(args.api_base, args.scenario)
 
     print(f"-> watching for outcome={args.outcome!r}, timeout={args.timeout:.0f}s")
     if args.cancel_after is not None:
@@ -202,15 +161,6 @@ def main():
         now = time.monotonic()
         elapsed = now - started_at
 
-        if not args.api_poll:
-            current = _get_counter(args.prom_base, {"outcome": args.outcome})
-            if current is not None and baseline is not None and current > baseline:
-                print(
-                    f"\nSUCCESS: oxblood_runs_total{{outcome={args.outcome!r}}} "
-                    f"moved {baseline} -> {current} after {elapsed:.1f}s"
-                )
-                return 0
-
         if cancel_at is not None and not cancel_sent and now >= cancel_at:
             rid = _latest_run_id(args.api_base, args.scenario)
             if rid is not None:
@@ -220,17 +170,16 @@ def main():
             else:
                 print(f"[t+{elapsed:.1f}s] no run found to cancel yet")
 
-        if args.api_poll:
-            current_runs = _list_recent_runs(args.api_base, args.scenario, limit=1)
-            if current_runs:
-                rid = current_runs[0].get("run_id") or current_runs[0].get("id")
-                status = current_runs[0].get("status", "")
-                if rid != last_run_id:
-                    last_run_id = rid
-                    print(f"[t+{elapsed:.1f}s] new run: id={rid} status={status}")
-                if status == args.outcome:
-                    print(f"\nSUCCESS: run {rid} reached {status!r} after {elapsed:.1f}s")
-                    return 0
+        current_runs = _list_recent_runs(args.api_base, args.scenario, limit=1)
+        if current_runs:
+            rid = current_runs[0].get("run_id") or current_runs[0].get("id")
+            status = current_runs[0].get("status", "")
+            if rid != last_run_id:
+                last_run_id = rid
+                print(f"[t+{elapsed:.1f}s] new run: id={rid} status={status}")
+            if status == args.outcome:
+                print(f"\nSUCCESS: run {rid} reached {status!r} after {elapsed:.1f}s")
+                return 0
 
         if int(elapsed) % 10 < args.poll:
             print(

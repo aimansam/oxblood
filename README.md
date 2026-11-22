@@ -48,7 +48,7 @@ Browser ──► API (FastAPI, :5000)
                             └── Proxmox VE   clones, boots and seeds the range
 ```
 
-One service serves both the UI and the API. Prometheus, Alertmanager and Grafana ship in the same compose stack and listen on localhost only. The old `/`, `/login` and `/drill/` URLs redirect to `/app/`.
+One service serves both the UI and the API. The old `/`, `/login` and `/drill/` URLs redirect to `/app/`.
 
 ## Quickstart
 

@@ -4,7 +4,7 @@
 Complements tools/live_drill.py: live_drill runs the drill and polls
 until it hits a terminal status. This tool goes one step further and
 inspects the DB + audit log + /metrics to make sure the runner actually
-did what we think it did and the Grafana panels have something to show.
+did what we think it did and the counters have something to show.
 
 Usage:
     python tools/verify_drill.py                         # most recent

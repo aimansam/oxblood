@@ -242,15 +242,9 @@ def test_watch_drill_cancel_after_path_triggers_cancel_endpoint(monkeypatch) -> 
             },
         )
 
-    def prom_query(_: httpx.Request) -> httpx.Response:
-        # Always report zero counters so the watcher doesn't try to
-        # exit on Prometheus alone; force it to use api-poll fallback.
-        return httpx.Response(200, json={"status": "success", "data": {"result": []}})
-
     handlers = {
         "http://localhost:8000/api/v1/drills/99/cancel": cancel,
         "http://localhost:8000/api/v1/drills": list_drills,
-        "http://localhost:9090/api/v1/query": prom_query,
     }
 
     def _route(request: httpx.Request) -> httpx.Response:
@@ -278,8 +272,7 @@ def test_watch_drill_cancel_after_path_triggers_cancel_endpoint(monkeypatch) -> 
     sys.modules["watch_drill"] = mod
     spec.loader.exec_module(mod)
 
-    # Cancel after 0s, timeout 10s, poll every 50ms. --api-poll forces
-    # the API path because Prometheus never increments in this test.
+    # Cancel after 0s, timeout 10s, poll every 50ms.
     monkeypatch.setattr(
         sys,
         "argv",
@@ -293,7 +286,6 @@ def test_watch_drill_cancel_after_path_triggers_cancel_endpoint(monkeypatch) -> 
             "10",
             "--poll",
             "0.05",
-            "--api-poll",
         ],
     )
     rc = mod.main()
@@ -334,13 +326,9 @@ def test_watch_drill_cancel_sends_oxblood_token_header(monkeypatch) -> None:
             json={"items": [{"run_id": 99, "scenario_id": 3, "status": status}]},
         )
 
-    def prom_query(_: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"status": "success", "data": {"result": []}})
-
     handlers = {
         "http://localhost:8000/api/v1/drills/99/cancel": cancel,
         "http://localhost:8000/api/v1/drills": list_drills,
-        "http://localhost:9090/api/v1/query": prom_query,
     }
 
     def _route(request: httpx.Request) -> httpx.Response:
@@ -380,7 +368,6 @@ def test_watch_drill_cancel_sends_oxblood_token_header(monkeypatch) -> None:
             "5",
             "--poll",
             "0.05",
-            "--api-poll",
             "--token",
             "fake-jwt-for-test",
         ],
@@ -412,13 +399,9 @@ def test_watch_drill_warns_when_cancel_after_without_token(monkeypatch, capsys) 
             json={"items": [{"run_id": 99, "scenario_id": 3, "status": "cancelled"}]},
         )
 
-    def prom_query(_: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"status": "success", "data": {"result": []}})
-
     handlers = {
         "http://localhost:8000/api/v1/drills/99/cancel": cancel,
         "http://localhost:8000/api/v1/drills": list_drills,
-        "http://localhost:9090/api/v1/query": prom_query,
     }
 
     def _route(request: httpx.Request) -> httpx.Response:
@@ -461,7 +444,6 @@ def test_watch_drill_warns_when_cancel_after_without_token(monkeypatch, capsys) 
             "5",
             "--poll",
             "0.05",
-            "--api-poll",
         ],
     )
     mod.main()
