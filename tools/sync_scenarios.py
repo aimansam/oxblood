@@ -8,7 +8,7 @@ Defaults to ``OXBLOOD_SCENARIOS_DIR`` from env, or
 ``./examples/scenarios/`` if not set.
 
 The tool runs ``alembic upgrade head`` against ``OXBLOOD_DB_URL`` first,
-so a fresh Postgres / SQLite is usable out of the box.
+so a fresh Postgres is usable out of the box.
 
 Exit codes:
     0  all YAMLs synced (created/updated/unchanged) or none found
@@ -39,10 +39,7 @@ def _ensure_schema() -> None:
         print("error: OXBLOOD_DB_URL is required", file=sys.stderr)
         sys.exit(2)
     # Strip async driver so alembic uses a sync engine.
-    sync_url = db_url.replace("+asyncpg", "").replace("+aiosqlite", "")
-    # Run alembic from the repo root so relative DB paths like
-    # ``sqlite:///./foo.db`` resolve the same way they do for the CLI's
-    # own SQLAlchemy calls.
+    sync_url = db_url.replace("+asyncpg", "")
     api_dir = ROOT / "apps" / "api"
     alembic_ini = api_dir / "alembic.ini"
     r = subprocess.run(

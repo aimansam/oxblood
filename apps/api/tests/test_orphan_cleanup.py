@@ -1,4 +1,4 @@
-"""Q22: orphan-asset janitor (unit tests against in-memory SQLite).
+"""Q22: orphan-asset janitor (unit tests against a private Postgres schema).
 
 The two service functions (``list_orphans`` + ``cleanup_orphans``)
 are exercised directly with a mock adapter. HTTP-layer RBAC +
@@ -16,12 +16,14 @@ from app.db import models
 from app.db.base import Base
 from app.services import orphan_cleanup as svc
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .pgutil import isolated_engine
 
 
 @pytest.fixture
 def engine():
-    return create_async_engine("sqlite+aiosqlite:///:memory:")
+    return isolated_engine()
 
 
 @pytest.fixture

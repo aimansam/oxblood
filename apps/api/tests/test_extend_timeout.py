@@ -10,12 +10,14 @@ from app.db.models import AuditAction, AuditLog, RunStatus
 from app.runners.mock_adapter import MockProxmoxAdapter
 from app.runners.runner import Runner, RunnerError
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .pgutil import isolated_engine
 
 
 @pytest.fixture
 def engine():
-    eng = create_async_engine("sqlite+aiosqlite:///:memory:")
+    eng = isolated_engine()
     yield eng
     asyncio.run(eng.dispose())
 

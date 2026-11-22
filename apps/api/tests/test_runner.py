@@ -33,7 +33,9 @@ from app.runners.runner import (
     instance_spec,
 )
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .pgutil import isolated_engine
 
 
 def test_vm_name_uses_short_code_and_counted_instance() -> None:
@@ -335,7 +337,7 @@ async def test_check_copies_fit_refuses_before_anything_is_built(session: AsyncS
 
 @pytest.fixture
 def engine():
-    eng = create_async_engine("sqlite+aiosqlite:///:memory:")
+    eng = isolated_engine()
     yield eng
     import asyncio
 

@@ -21,7 +21,9 @@ from app.services.account_cleanup import purge_exercise_accounts
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from .pgutil import isolated_engine
 
 
 def run(coro):
@@ -30,20 +32,10 @@ def run(coro):
 
 @pytest.fixture
 def world(tmp_path):
-    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'cleanup.sqlite'}")
+    engine = isolated_engine()
     maker = async_sessionmaker(engine, expire_on_commit=False)
 
     async def setup():
-        async with engine.begin() as conn:
-            for table in (
-                User.__table__,
-                Drill.__table__,
-                DrillTeam.__table__,
-                DrillParticipant.__table__,
-                DrillScoreEvent.__table__,
-                DrillEvent.__table__,
-            ):
-                await conn.run_sync(table.create)
         async with maker() as db:
             db.add_all(
                 [Drill(title="One", max_participants=10), Drill(title="Two", max_participants=10)]

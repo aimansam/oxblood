@@ -29,7 +29,9 @@ from app.services.flags import (
 from app.services.scoring import score, score_breakdown
 from fastapi.testclient import TestClient
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .pgutil import isolated_engine
 
 # --- scoring primitives -------------------------------------------------
 
@@ -501,7 +503,7 @@ async def test_runner_writes_flag_planted_audit(
     """
     from app.runners.runner import Runner, RunRequest
 
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = isolated_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     async with AsyncSession(engine, expire_on_commit=False) as session:
@@ -568,7 +570,7 @@ async def test_runner_logs_warning_when_planted_on_unknown_role(
     see this in the audit log and the demo scenario explains."""
     from unittest.mock import patch
 
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = isolated_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     async with AsyncSession(engine, expire_on_commit=False) as session:

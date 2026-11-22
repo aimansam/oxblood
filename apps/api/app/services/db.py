@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
-from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 
@@ -14,10 +13,7 @@ def get_engine() -> AsyncEngine:
     """Drill product engine (OXBLOOD_DB_URL)."""
     global _engine
     if _engine is None:
-        # A pooled aiosqlite connection is bound to the event loop that opened it; reused
-        # from another loop (each test runs its own) it fails with "Event loop is closed".
-        pool = {"poolclass": NullPool} if settings.db_url.startswith("sqlite") else {}
-        _engine = create_async_engine(settings.db_url, echo=settings.db_echo, future=True, **pool)
+        _engine = create_async_engine(settings.db_url, echo=settings.db_echo, future=True)
     return _engine
 
 

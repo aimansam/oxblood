@@ -25,8 +25,6 @@ settings = get_settings()
 sync_url = make_url(settings.db_url)
 if sync_url.drivername in {"postgresql", "postgresql+asyncpg"}:
     sync_url = sync_url.set(drivername="postgresql+psycopg2")
-elif sync_url.drivername == "sqlite+aiosqlite":
-    sync_url = sync_url.set(drivername="sqlite")
 config.set_main_option(
     "sqlalchemy.url", sync_url.render_as_string(hide_password=False).replace("%", "%%")
 )

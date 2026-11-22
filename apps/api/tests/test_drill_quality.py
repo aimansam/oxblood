@@ -10,10 +10,8 @@ from app.core.auth import sign_token
 from app.db.models import User
 from app.db.models_drill import (
     Drill,
-    DrillEvent,
     DrillFlag,
     DrillFlagSubmission,
-    DrillObjective,
     DrillParticipant,
     DrillRound,
     DrillScoreEvent,
@@ -24,7 +22,9 @@ from app.db.session import get_session
 from app.routers.drills_v2.competition import router
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from .pgutil import isolated_engine
 
 START = datetime(2026, 1, 1, 9, 0, tzinfo=UTC)
 
@@ -35,25 +35,10 @@ def run(coro):
 
 @pytest.fixture
 def client(tmp_path):
-    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'quality.sqlite'}")
+    engine = isolated_engine()
     maker = async_sessionmaker(engine, expire_on_commit=False)
 
     async def setup():
-        async with engine.begin() as conn:
-            for table in (
-                User.__table__,
-                Drill.__table__,
-                DrillTeam.__table__,
-                DrillFlag.__table__,
-                DrillRound.__table__,
-                DrillScoreEvent.__table__,
-                DrillEvent.__table__,
-                DrillObjective.__table__,
-                DrillParticipant.__table__,
-                Submission.__table__,
-                DrillFlagSubmission.__table__,
-            ):
-                await conn.run_sync(table.create)
         async with maker() as db:
             db.add(
                 Drill(

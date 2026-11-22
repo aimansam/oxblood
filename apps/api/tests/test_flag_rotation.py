@@ -9,7 +9,9 @@ from app.db.models_drill import Drill, DrillFlag
 from app.runners.mock_adapter import MockProxmoxAdapter
 from app.runners.runner import Runner, RunRequest
 from app.services.flag_rotation import derive_flag_value, earlier_round_values, rotate_round_flags
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .pgutil import isolated_engine
 
 
 def test_values_are_stable_and_differ_by_round_flag_and_drill_secret() -> None:
@@ -29,7 +31,7 @@ def test_values_are_stable_and_differ_by_round_flag_and_drill_secret() -> None:
 
 @pytest.fixture
 def engine():
-    eng = create_async_engine("sqlite+aiosqlite:///:memory:")
+    eng = isolated_engine()
     yield eng
     import asyncio
 

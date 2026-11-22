@@ -306,7 +306,7 @@ def _setup_admin(client):
     will be raised.
 
     We bypass ``POST /auth/login`` to avoid the per-sub login rate
-    limit (5 attempts / 15 min) -- the shared SQLite test DB hits
+    limit (5 attempts / 15 min) -- the shared test DB hits
     that limit when many other tests in the session also create +
     login admin users. ``sign_token`` is the same code path the
     auth router uses; ``require_role`` accepts the resulting token
@@ -320,8 +320,7 @@ def _setup_admin(client):
 def _cleanup_test_row(scen_name: str) -> None:
     """Delete the test scenario row so other tests see an empty DB.
 
-    The conftest's SQLite is session-scoped; mutations persist
-    across tests in the same pytest invocation. Each Q7 test owns
+    The conftest's database is session-scoped. Each Q7 test owns
     its own scenario row and removes it after asserting.
     """
     import asyncio

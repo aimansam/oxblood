@@ -46,16 +46,11 @@ depends_on = None
 
 
 def _create_enum_type(name: str, values: list[str]) -> None:
-    """CREATE TYPE ... AS ENUM is a Postgres-ism; SQLite has no
-    enum type and stores enum members as plain strings under
-    the SQLAlchemy Enum() shim.
+    """CREATE TYPE ... AS ENUM.
 
     Idempotent on re-run: PG's ``DuplicateObject`` is swallowed
     in the catch block.
     """
-    bind = op.get_bind()
-    if bind.dialect.name == "sqlite":
-        return
     values_sql = ", ".join(f"'{v}'" for v in values)
     sql = sa.text(f"CREATE TYPE {name} AS ENUM ({values_sql})")
     try:
@@ -67,19 +62,10 @@ def _create_enum_type(name: str, values: list[str]) -> None:
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    dialect = bind.dialect.name
     _create_enum_type(
         "telemetry_severity",
         ["info", "low", "medium", "high"],
     )
-    # SQLite has no enum type, no server_default that prevents
-    # the cast, and no PostgreSQL-style ``::type`` cast. Skip on
-    # SQLite; the in-memory tests use SQLAlchemy's Enum() which
-    # writes the string value directly. The real production
-    # deploys on Postgres and will hit the next two branches.
-    if dialect == "sqlite":
-        return
     # The column has a server_default of ``'info'`` (set in 0008)
     # that Postgres refuses to auto-cast to the new enum type.
     # Drop it before the ALTER; the model-level default on
@@ -100,10 +86,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    bind = op.get_bind()
-    dialect = bind.dialect.name
-    if dialect == "sqlite":
-        return
     # Reverse the type change. Dropping the enum itself is
     # deliberate -- it's an internal-only type and the next
     # migration up will recreate it if needed.

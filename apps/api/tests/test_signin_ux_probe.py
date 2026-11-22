@@ -16,7 +16,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-# Re-use the in-memory SQLite session fixture already established
+# Re-use the test database session fixture already established
 # by the test suite (conftest.py provides `session` and `client`).
 
 

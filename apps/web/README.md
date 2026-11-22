@@ -31,7 +31,7 @@ The production build is baked into the API image (`apps/api/Dockerfile`), not co
 
 ## Browser tests
 `e2e/` holds Playwright tests that drive the production build against a throwaway stack
-(the real API on SQLite with the mock Proxmox adapter, which also serves the build). They need the
+(the real API on a PostgreSQL database named by `E2E_DB_URL`, whose name ends in `_e2e`, with the mock Proxmox adapter, which also serves the build). They need the
 Python dependencies of `apps/api`:
 
     npm run test:e2e                      # builds, starts the API on :8100, runs the suite

@@ -92,7 +92,7 @@ cd apps/web && npx playwright test     # browser tests, against a throwaway stac
 ```
 
 Individually: `ruff check . && ruff format --check .`, `mypy apps/api/app`,
-`OXBLOOD_DB_URL=sqlite+aiosqlite:///./test.sqlite pytest apps/api/tests tests`, and in `apps/web`
+`pytest apps/api/tests tests` (needs a PostgreSQL database whose name ends in `_test`: set `OXBLOOD_TEST_DB_URL`), and in `apps/web`
 `npm run lint && npm test && npm run build`.
 
 After an API change, regenerate the typed client with `python3 tools/export_openapi.py` and then `npm run gen:api`. Where things live is in [docs/monorepo-structure.md](docs/monorepo-structure.md).
@@ -107,6 +107,7 @@ After an API change, regenerate the typed client with `python3 tools/export_open
 | [Template attack chain](docs/template-attack-chain.md) | The enterprise file breach attack path |
 | [Enterprise file breach standard](docs/file-breach-enterprise-standard.md) | What the investigation scenario must provide |
 | [Ledger leak scenario](docs/scenario-ledger-leak.md) | A planned scenario: supplier portal leaks a ledger database |
+| [Database](docs/database.md) | Entity relationship diagrams of the 27 tables |
 | [Monorepo structure](docs/monorepo-structure.md) | Where things live |
 
 ## License

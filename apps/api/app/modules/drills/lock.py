@@ -52,7 +52,7 @@ async def _lock_row(db: AsyncSession, *, for_update: bool = False) -> DrillEnvir
     row = (await db.execute(query)).scalar_one_or_none()
     if row is None:
         # The migration seeds this row. Keeping this fallback makes a fresh
-        # SQLite/dev database self-healing without weakening the row lock in
+        # development database self-healing without weakening the row lock in
         # PostgreSQL deployments.
         row = DrillEnvironmentLock(lock_key=LOCK_KEY, status="released")
         db.add(row)

@@ -60,7 +60,7 @@ LEARN_TABLES = [
 
 
 def _sync_url(url: str) -> str:
-    return url.replace("+asyncpg", "").replace("+aiosqlite", "")
+    return url.replace("+asyncpg", "")
 
 
 async def main() -> int:

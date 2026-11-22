@@ -35,7 +35,6 @@ start path.
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Iterator
 from typing import Any
 
@@ -51,10 +50,11 @@ from app.services import pve_sdn
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, delete, select
 
+from .pgutil import sync_url
+
 
 def _sync_engine():
-    url = os.environ["OXBLOOD_DB_URL"].replace("sqlite+aiosqlite://", "sqlite:///")
-    return create_engine(url)
+    return create_engine(sync_url())
 
 
 class _StubAsyncClient(httpx.AsyncClient):
@@ -221,9 +221,6 @@ def pve_token(monkeypatch: pytest.MonkeyPatch) -> Iterator[tuple[dict[str, Any],
     try:
         with engine.begin() as conn:
             for model in (
-                db_models.TeamMembership,
-                db_models.Team,
-                db_models.Exercise,
                 db_models.TelemetryEvent,
                 db_models.FlagSubmission,
                 db_models.AuditLog,
@@ -261,9 +258,7 @@ def test_full_day1_wizard_flow(client: TestClient, pve_token: tuple[dict[str, An
     # assertion.
     from sqlalchemy import create_engine
 
-    engine = create_engine(
-        os.environ["OXBLOOD_DB_URL"].replace("sqlite+aiosqlite://", "sqlite:///")
-    )
+    engine = create_engine(sync_url())
     with engine.begin() as conn:
         # Read the YAML and pre-populate the scenarios row.
         import pathlib

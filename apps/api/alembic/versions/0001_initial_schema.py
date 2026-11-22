@@ -191,5 +191,8 @@ def downgrade() -> None:
     op.drop_index("ix_scenarios_difficulty", table_name="scenarios")
     op.drop_table("scenarios")
 
-    # Enum types are dropped automatically with their tables in modern
-    # Postgres; explicit DROP TYPE would only be needed for very old PG.
+    # Dropping a table does not drop the enum types its columns used; leaving them makes the next
+    # `upgrade` fail with "type already exists".
+    if op.get_bind().dialect.name == "postgresql":
+        for enum_name in ("audit_action", "asset_status", "run_status"):
+            op.execute(f"DROP TYPE IF EXISTS {enum_name}")

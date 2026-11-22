@@ -7,14 +7,16 @@ import asyncio
 import pytest
 from app.core.auth import sign_token
 from app.db.models import User
-from app.db.models_drill import Drill, DrillEvent, DrillParticipant, DrillTeam
+from app.db.models_drill import Drill, DrillParticipant, DrillTeam
 from app.db.session import get_session
 from app.routers.drills_v2.participants import router
 from app.services.users import authenticate
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from .pgutil import isolated_engine
 
 
 def run(coro):
@@ -23,19 +25,10 @@ def run(coro):
 
 @pytest.fixture
 def world(tmp_path):
-    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'bulk.sqlite'}")
+    engine = isolated_engine()
     maker = async_sessionmaker(engine, expire_on_commit=False)
 
     async def setup():
-        async with engine.begin() as conn:
-            for table in (
-                User.__table__,
-                Drill.__table__,
-                DrillTeam.__table__,
-                DrillParticipant.__table__,
-                DrillEvent.__table__,
-            ):
-                await conn.run_sync(table.create)
         async with maker() as db:
             db.add(Drill(title="Class", max_participants=5))
             db.add(DrillTeam(drill_id=1, name="Alpha", position=1))

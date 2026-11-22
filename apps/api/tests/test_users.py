@@ -22,7 +22,7 @@ Covers:
 
 from __future__ import annotations
 
-# Local async fixtures. We use an in-memory SQLite + Base.metadata.create_all
+# Local async fixtures. We use a private schema (isolated_engine)
 # because we only need to exercise the service layer; the full alembic
 # migration stack is exercised by the conftest's `_create_tables` for
 # the router tests (where we want FK constraints + indexes as alembic
@@ -34,19 +34,14 @@ from app.core.auth import Role
 from app.db.base import Base
 from app.services import users as users_service
 from fastapi.testclient import TestClient
-from sqlalchemy import event
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .pgutil import isolated_engine
 
 
 @pytest.fixture
 def engine():
-    eng = create_async_engine("sqlite+aiosqlite:///:memory:")
-
-    @event.listens_for(eng.sync_engine, "connect")
-    def _fk_on(dbapi_conn, _):
-        cur = dbapi_conn.cursor()
-        cur.execute("PRAGMA foreign_keys=ON")
-        cur.close()
+    eng = isolated_engine()
 
     yield eng
     asyncio.run(eng.dispose())
@@ -209,7 +204,7 @@ async def seeded():
     to the login endpoint.
 
     Cleans the users table first so tests are order-independent
-    against the file-backed SQLite that the conftest creates.
+    against the test database that the conftest creates.
     """
     from app.db import models as db_models
     from app.db.session import get_sessionmaker

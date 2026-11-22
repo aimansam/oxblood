@@ -9,6 +9,16 @@ on:
 jobs:
   lint-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: oxblood
+          POSTGRES_PASSWORD: oxblood
+          POSTGRES_DB: oxblood_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U oxblood -d oxblood_test" --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -34,11 +44,11 @@ jobs:
       - name: Pytest (API)
         run: pytest apps/api/tests tests
         env:
-          OXBLOOD_DB_URL: sqlite+aiosqlite:///./test.sqlite
+          OXBLOOD_TEST_DB_URL: postgresql+asyncpg://oxblood:oxblood@localhost:5432/oxblood_test
 
   migrations-postgres:
-    # The test suite runs on SQLite, which does not enforce foreign keys at create time and once hid a
-    # broken migration chain. Apply every migration to a real Postgres, then check the newest one reverses.
+    # The test suite already migrates a real Postgres once per session; this job also checks, in a clean
+    # database like production's, that the newest migration reverses and reapplies.
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -91,8 +101,20 @@ jobs:
       - run: npm run build
 
   e2e:
-    # Real browser tests: the production web build, served by the API (SQLite + mock Proxmox).
+    # Real browser tests: the production web build, served by the API (Postgres + mock Proxmox).
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: oxblood
+          POSTGRES_PASSWORD: oxblood
+          POSTGRES_DB: oxblood_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U oxblood -d oxblood_e2e" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      E2E_DB_URL: postgresql+asyncpg://oxblood:oxblood@localhost:5432/oxblood_e2e
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -130,8 +152,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: Install matplotlib and PyYAML
-        run: pip install matplotlib pyyaml
+      - name: Install matplotlib, PyYAML and the API (the database diagrams read its models)
+        run: pip install matplotlib pyyaml -e apps/api
       - name: Regenerate architecture diagrams
         run: python tools/gen_diagrams.py
       - name: Verify diagrams committed
@@ -142,45 +164,3 @@ jobs:
             echo "::error::Architecture diagrams are out of date. Run 'python tools/gen_diagrams.py' locally and commit the new files."
             exit 1
           fi
-
-  live-pg-tests:
-    # Opt-in job: runs only when the `run-live-pg` label is applied to the
-    # PR, or when triggered manually. Spins up a Postgres 16 service
-    # container, applies alembic migrations, then runs `-m live_pg` tests.
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'run-live-pg')
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: oxblood
-          POSTGRES_PASSWORD: oxblood
-          POSTGRES_DB: oxblood_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-          cache: pip
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e "apps/api[dev]"
-      - name: Apply alembic migrations
-        env:
-          OXBLOOD_DB_URL: postgresql+asyncpg://oxblood:oxblood@localhost:5432/oxblood_test
-        run: |
-          cd apps/api
-          PYTHONPATH=. alembic upgrade head
-      - name: Pytest (live_pg)
-        env:
-          OXBLOOD_TEST_LIVE_PG: "1"
-          OXBLOOD_TEST_LIVE_PG_URL: postgresql+asyncpg://oxblood:oxblood@localhost:5432/oxblood_test
-        run: pytest -m live_pg apps/api/tests

@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import sys
+import uuid
 from pathlib import Path
 
 import yaml
@@ -27,23 +29,45 @@ from app.db.base import Base
 from app.db.session import get_sessionmaker
 from app.runners.mock_adapter import MockProxmoxAdapter
 from app.runners.runner import Runner, RunRequest
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import NullPool
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 async def _smoke(scenario_path: Path) -> int:
+    """Run the smoke in a private schema of the database OXBLOOD_DB_URL names, and drop it afterwards."""
+    url = os.environ.get("OXBLOOD_DB_URL", "")
+    if not url.startswith("postgresql"):
+        print("OXBLOOD_DB_URL must be a PostgreSQL URL (the smoke uses a private schema of it)")
+        return 2
+    schema = f"smoke_{uuid.uuid4().hex[:10]}"
+    bootstrap = create_async_engine(url, poolclass=NullPool)
+    async with bootstrap.begin() as conn:
+        await conn.execute(text(f'create schema "{schema}"'))
+    engine = create_async_engine(
+        url, poolclass=NullPool, connect_args={"server_settings": {"search_path": schema}}
+    )
+    try:
+        return await _smoke_in(scenario_path, engine)
+    finally:
+        await engine.dispose()
+        async with bootstrap.begin() as conn:
+            await conn.execute(text(f'drop schema if exists "{schema}" cascade'))
+        await bootstrap.dispose()
+
+
+async def _smoke_in(scenario_path: Path, engine) -> int:
     # 1. Load + validate YAML
     spec = yaml.safe_load(scenario_path.read_text())
     print(f"[1/5] loaded {scenario_path.name} (kind={spec['kind']})")
 
-    # 2. Set up in-memory DB
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    # 2. Create the tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     sm = get_sessionmaker(engine=engine)
-    print("[2/5] in-memory DB created with 4 tables")
+    print("[2/5] tables created in a private schema")
 
     # 3. Insert Scenario row
     async with sm() as session:

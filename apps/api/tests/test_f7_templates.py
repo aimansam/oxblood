@@ -67,7 +67,7 @@ def test_models_template_snapshot_is_jsonb():
     losslessly when the run is reset."""
     cols = list(models.Template.__table__.columns)
     snap = next(c for c in cols if c.name == "snapshot")
-    # In SQLAlchemy, JSON covers JSONB on Postgres / TEXT on sqlite.
+    # In SQLAlchemy, JSON covers JSONB on Postgres.
     assert "JSON" in str(snap.type).upper()
 
 

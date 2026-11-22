@@ -59,8 +59,7 @@ from app.db import models as db_models
 def _as_utc(dt: datetime) -> datetime:
     """Normalize a DB-returned datetime to offset-aware UTC.
 
-    SQLite stores datetimes as strings; SQLAlchemy returns them
-    offset-naive. PostgreSQL returns them offset-aware. We compare
+    A naive datetime (for example one built in a test) is taken as UTC; PostgreSQL returns offset-aware ones. We compare
     against ``datetime.now(UTC)`` which is always offset-aware,
     so we need to coerce naive values into UTC before comparing.
     Real production (Postgres) is unaffected.

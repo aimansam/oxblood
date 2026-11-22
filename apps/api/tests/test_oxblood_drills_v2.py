@@ -20,7 +20,9 @@ from app.services.drill_service import (
 )
 from fastapi.testclient import TestClient
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from .pgutil import isolated_engine
 
 
 def _run(coro):
@@ -262,26 +264,7 @@ def test_readiness_requires_every_address_and_completed_setup(sessionmaker, monk
 @pytest.fixture
 def sessionmaker():
     async def _build():
-        engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-        async with engine.begin() as conn:
-            await conn.run_sync(auth_models.User.__table__.create)
-            await conn.run_sync(auth_models.Scenario.__table__.create)
-            await conn.run_sync(auth_models.Run.__table__.create)
-            await conn.run_sync(auth_models.Asset.__table__.create)
-            for table in [
-                m.Drill.__table__,
-                m.DrillScenario.__table__,
-                m.DrillParticipant.__table__,
-                m.DrillEvent.__table__,
-                m.DrillObjective.__table__,
-                m.DrillFlag.__table__,
-                m.DrillEnvironmentLock.__table__,
-                m.DrillTeam.__table__,
-                m.DrillRound.__table__,
-                m.DrillScoreEvent.__table__,
-                m.DrillTeamFlag.__table__,
-            ]:
-                await conn.run_sync(table.create)
+        engine = isolated_engine()
         return engine, async_sessionmaker(bind=engine, expire_on_commit=False)
 
     engine, maker = _run(_build())

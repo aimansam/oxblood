@@ -14,7 +14,9 @@ from app.routers.drills_v2.competition import router as competition_router
 from app.routers.submissions_v2 import router as submissions_router
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from .pgutil import isolated_engine
 
 
 def run(coro):
@@ -26,7 +28,7 @@ RED_FLAG, BLUE_FLAG, OPEN_FLAG = "FLAG{red_one}", "FLAG{blue_one}", "FLAG{open_o
 
 @pytest.fixture
 def world(tmp_path):
-    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'flags.sqlite'}")
+    engine = isolated_engine()
     maker = async_sessionmaker(engine, expire_on_commit=False)
 
     async def setup():
@@ -310,9 +312,7 @@ def test_classic_submission_works_when_the_database_returns_naive_datetimes(worl
     async def start_drill():
         async with maker() as db:
             drill = await db.get(Drill, 1)
-            drill.actual_start_at = datetime.utcnow() - timedelta(
-                minutes=3
-            )  # naive, as SQLite returns
+            drill.actual_start_at = datetime.utcnow() - timedelta(minutes=3)  # naive
             await db.commit()
 
     asyncio.run(start_drill())

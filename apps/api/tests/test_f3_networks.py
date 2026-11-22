@@ -27,14 +27,16 @@ from app.db.base import Base
 from app.runners.adapter import NetworkSpec
 from app.runners.mock_adapter import MockProxmoxAdapter
 from app.runners.runner import Runner, RunnerError, RunRequest
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .pgutil import isolated_engine
 
 # --- fixtures -------------------------------------------------------------
 
 
 @pytest.fixture
 def engine():
-    eng = create_async_engine("sqlite+aiosqlite:///:memory:")
+    eng = isolated_engine()
     yield eng
     import asyncio
 

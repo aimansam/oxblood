@@ -1,4 +1,4 @@
-"""DB model tests using in-memory SQLite.
+"""DB model tests on a private Postgres schema.
 
 These tests verify:
 1. Tables can be created with our metadata.
@@ -26,23 +26,18 @@ from app.db.models import (
     RunStatus,
     Scenario,
 )
-from sqlalchemy import event, select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .pgutil import isolated_engine
 
 # --- fixtures ---------------------------------------------------------------
 
 
 @pytest.fixture
 def engine():
-    """Fresh in-memory SQLite for every test."""
-    eng = create_async_engine("sqlite+aiosqlite:///:memory:")
-
-    # SQLite ignores foreign-key constraints by default — turn them on.
-    @event.listens_for(eng.sync_engine, "connect")
-    def _fk_on(dbapi_conn, _):
-        cur = dbapi_conn.cursor()
-        cur.execute("PRAGMA foreign_keys=ON")
-        cur.close()
+    """A fresh schema with every table, for every test."""
+    eng = isolated_engine()
 
     yield eng
     asyncio.run(eng.dispose())

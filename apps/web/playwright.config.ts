@@ -5,9 +5,10 @@ import { defineConfig } from '@playwright/test';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '../..');
 const python = process.env.E2E_PYTHON ?? 'python3';
-const db = process.env.E2E_DB ?? '/tmp/oxblood-e2e.sqlite';
+// The database is emptied on every start, so its name must end in _e2e (the reset refuses any other).
+const db = process.env.E2E_DB_URL ?? 'postgresql+asyncpg://oxblood:oxblood@localhost:5432/oxblood_e2e';
 
-// A throwaway stack: the real API (SQLite + a mock Proxmox with the scenario templates, e2e/serve_api.py), which also
+// A throwaway stack: the real API (Postgres + a mock Proxmox with the scenario templates, e2e/serve_api.py), which also
 // serves the production build. Needs `npm run build` done first
 // (`npm run test:e2e` does both).
 export default defineConfig({
@@ -28,14 +29,15 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `rm -f ${db} && ${python} -m alembic upgrade head && ${python} ${path.join(here, 'e2e/serve_api.py')}`,
+      command: `${python} tests/pgutil.py reset && ${python} -m alembic upgrade head && ${python} ${path.join(here, 'e2e/serve_api.py')}`,
       cwd: path.join(repo, 'apps/api'),
       url: 'http://localhost:8100/healthz',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
       stdout: 'ignore',
       env: {
-        OXBLOOD_DB_URL: `sqlite+aiosqlite:///${db}`,
+        OXBLOOD_DB_URL: db,
+        OXBLOOD_TEST_DB_URL: db,
         OXBLOOD_SCENARIOS_DIR: path.join(repo, 'examples/scenarios'),
         OXBLOOD_WEB_DIR: path.join(repo, 'apps/web/dist'),
       },

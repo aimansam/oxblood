@@ -1,6 +1,6 @@
 """Tests for the scenario sync service.
 
-We do NOT need a real DB here: SQLite-in-memory is enough to exercise
+A private Postgres schema is enough to exercise
 the upsert/archive logic. The JSON Schema is shared with the live app,
 so we test against the actual ``schemas/scenario.schema.json``.
 """
@@ -19,12 +19,14 @@ from app.services.scenario_sync import (
     sync_files,
 )
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .pgutil import isolated_engine
 
 
 @pytest.fixture
 def engine():
-    eng = create_async_engine("sqlite+aiosqlite:///:memory:")
+    eng = isolated_engine()
     yield eng
     import asyncio
 

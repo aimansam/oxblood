@@ -10,12 +10,11 @@ from app.db.models import User
 from app.db.models_drill import (
     Drill,
     DrillParticipant,
-    DrillRound,
-    DrillScoreEvent,
-    DrillTeam,
 )
 from app.services import teams as svc
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from .pgutil import isolated_engine
 
 
 def run(coro):
@@ -24,20 +23,10 @@ def run(coro):
 
 @pytest.fixture
 def db_factory(tmp_path):
-    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'teams.sqlite'}")
+    engine = isolated_engine()
     maker = async_sessionmaker(engine, expire_on_commit=False)
 
     async def setup():
-        async with engine.begin() as conn:
-            for table in (
-                User.__table__,
-                Drill.__table__,
-                DrillTeam.__table__,
-                DrillParticipant.__table__,
-                DrillRound.__table__,
-                DrillScoreEvent.__table__,
-            ):
-                await conn.run_sync(table.create)
         async with maker() as db:
             db.add(Drill(title="Competition", max_participants=20))
             for name in ("ana", "ben", "cy", "dee"):

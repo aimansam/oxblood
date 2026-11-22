@@ -61,6 +61,3 @@ testpaths = ["apps/api/tests", "tests"]
 pythonpath = ["apps/api"]
 asyncio_mode = "auto"
 addopts = "-v --tb=short"
-markers = [
-    "live_pg: opt-in tests that require a live PostgreSQL via OXBLOOD_TEST_LIVE_PG; skipped by default to keep CI fast and SQLite-only",
-]

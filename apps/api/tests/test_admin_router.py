@@ -106,13 +106,7 @@ async def test_pve_guest_inventory_drill_scope_uses_registered_vms(client, admin
     from app.db import models as catalog
     from app.db.models_drill import Drill, DrillStatus
     from app.db.session import get_sessionmaker
-    from app.services.db import get_engine
     from sqlalchemy import delete
-
-    # The v1 test database migrates the catalog; the v2 drill table is
-    # normally created by the OxBlood schema and must be added here.
-    async with get_engine().begin() as conn:
-        await conn.run_sync(Drill.__table__.create, checkfirst=True)
 
     async with get_sessionmaker()() as db:
         scenario = catalog.Scenario(

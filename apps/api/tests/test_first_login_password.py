@@ -5,8 +5,6 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from app.db.models import User
-from app.db.models_drill import Drill, DrillParticipant
 from app.db.session import get_session
 from app.routers import auth as auth_router
 from app.routers import me as me_router
@@ -14,7 +12,9 @@ from app.routers.drills_v2.participants import router as participants_router
 from app.services.users import create_user
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from .pgutil import isolated_engine
 
 
 def run(coro):
@@ -23,14 +23,10 @@ def run(coro):
 
 @pytest.fixture
 def world(tmp_path):
-    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'pw.sqlite'}")
+    engine = isolated_engine()
     maker = async_sessionmaker(engine, expire_on_commit=False)
 
     async def setup():
-        async with engine.begin() as conn:
-            await conn.run_sync(User.__table__.create)
-            await conn.run_sync(Drill.__table__.create)
-            await conn.run_sync(DrillParticipant.__table__.create)
         async with maker() as db:
             fresh = await create_user(db, sub="fresh.player", password="Generated12ab", role="red")
             fresh.must_change_password = True

@@ -131,7 +131,7 @@ def capture_seconds(
 
     Clamps to 0 if negative (a capture raced before the DB row
     was persisted). Accepts both tz-aware and tz-naive
-    ``started_at`` (SQLite stores datetimes as naive) by
+    ``started_at`` by
     normalising to UTC if no tz is attached.
     """
     if started_at is None:

@@ -22,12 +22,14 @@ from app.db.models import (
     RunStatus,
 )
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .pgutil import isolated_engine
 
 
 @pytest.fixture
 def engine():
-    return create_async_engine("sqlite+aiosqlite:///:memory:")
+    return isolated_engine()
 
 
 @pytest.fixture
@@ -72,7 +74,7 @@ async def _make_run(
 @pytest.mark.asyncio
 async def test_reset_returns_409_for_running_run(session):
     """Q23-B2: live runs cannot be reset."""
-    run = await _make_run(session, RunStatus.RUNNING, template_id=99)
+    run = await _make_run(session, RunStatus.RUNNING)
     # Build a minimal template so we can isolate the live-run
     # guard from the missing-template guard.
     tpl = models.Template(
@@ -83,7 +85,6 @@ async def test_reset_returns_409_for_running_run(session):
         snapshot={"assets": []},
         created_by="q23-test",
     )
-    s_add = models.Template
     s = session
     s.add(tpl)
     await s.commit()
@@ -112,7 +113,7 @@ async def test_reset_returns_409_for_running_run(session):
 @pytest.mark.asyncio
 async def test_reset_returns_409_for_pending_run(session):
     """Pending runs (bootstrapped but not yet started) also rejected."""
-    run = await _make_run(session, RunStatus.PENDING, template_id=99)
+    run = await _make_run(session, RunStatus.PENDING)
     tpl = models.Template(
         name=f"tpl-q23-{run.id}-p",
         title="Q23 reset template",

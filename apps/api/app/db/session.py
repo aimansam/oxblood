@@ -16,7 +16,7 @@ def get_sessionmaker(
 ) -> async_sessionmaker[AsyncSession]:
     """Lazy singleton session factory. `engine` overrides the singleton's
     default engine (used by tests + smoke scripts that run against
-    in-memory SQLite)."""
+    their own database)."""
     global _session_maker
     if engine is not None:
         return async_sessionmaker(bind=engine, expire_on_commit=False)

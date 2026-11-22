@@ -26,7 +26,6 @@ Contract checks:
 
 from __future__ import annotations
 
-import os
 from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qs, urlparse
 
@@ -35,6 +34,8 @@ from app.db import models as db_models
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
+
+from .pgutil import sync_url
 
 # --- helpers --------------------------------------------------------------
 
@@ -59,13 +60,7 @@ def _sync_session():
     uses. Needed for reading the token column back after the
     ``forgot-password`` POST (the async session fixture is for
     HTTP-handler tests, not arbitrary ORM reads)."""
-    url = os.environ.get("OXBLOOD_DB_URL", "sqlite+aiosqlite:///./test.sqlite")
-    sync_url = url
-    if "+aiosqlite" in url:
-        sync_url = url.replace("+aiosqlite", "")
-    elif "+asyncpg" in url:
-        sync_url = url.replace("+asyncpg", "+psycopg2")
-    engine = create_engine(sync_url, future=True)
+    engine = create_engine(sync_url(), future=True)
     Sm = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     return Sm()
 
@@ -88,7 +83,7 @@ def _backdate_token(sub: str, *, hours: int = 1) -> None:
 def _clean_users_table():
     """Reset the users table before each test.
 
-    The conftest's session-scoped SQLite DB is shared across tests,
+    The conftest's session-scoped test database is shared across tests,
     so without this each test sees leftover rows from the previous
     one and ``POST /auth/setup`` 409s. We truncate via the sync
     session (the test client uses async; both hit the same file).
@@ -501,18 +496,14 @@ class TestIssueResetLink:
         assert r.status_code == 204
 
         # Query the audit log via the model's SQLAlchemy mapper.
-        # The conftest sets OXBLOOD_DB_URL to a sqlite+aiosqlite URL;
-        # we need a plain sync sqlite URL to read with create_engine.
+        # Read with the synchronous driver on the same database.
         from app.db import models as db_models  # noqa: F401
         from sqlalchemy import create_engine, select  # noqa: F401
 
-        url = os.environ["OXBLOOD_DB_URL"].replace("sqlite+aiosqlite://", "sqlite:///")
-        engine = create_engine(url)
+        engine = create_engine(sync_url())
         with engine.connect() as conn:
-            # Note: SQLite stores JSON columns as TEXT, so we can't
-            # push the target_sub filter down to SQL via a JSON
-            # subscript. Pull all reset rows and filter in Python.
-            # The reset suite is bounded -- a handful of rows at most.
+            # Pull all reset rows and filter in Python; the reset suite
+            # is bounded -- a handful of rows at most.
             rows = conn.execute(
                 select(db_models.AuditLog).where(
                     db_models.AuditLog.action.in_(
