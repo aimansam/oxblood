@@ -37,6 +37,40 @@ jobs:
           OXBLOOD_DB_URL: sqlite+aiosqlite:///./test.sqlite
           OXBLOOD_REDIS_URL: redis://localhost:6379/0
 
+  migrations-postgres:
+    # The test suite runs on SQLite, which does not enforce foreign keys at create time and once hid a
+    # broken migration chain. Apply every migration to a real Postgres, then check the newest one reverses.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: oxblood
+          POSTGRES_PASSWORD: oxblood
+          POSTGRES_DB: oxblood
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U oxblood -d oxblood" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      OXBLOOD_DB_URL: postgresql+asyncpg://oxblood:oxblood@localhost:5432/oxblood
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e . psycopg2-binary
+      - name: Upgrade to head
+        run: alembic upgrade head
+      - name: Newest migration reverses and reapplies
+        run: |
+          alembic downgrade -1
+          alembic upgrade head
+          alembic current
+
   web:
     runs-on: ubuntu-latest
     defaults:

@@ -5,8 +5,8 @@
 - Removed manager startup, enrollment generation, and manager preflight checks.
 - Removed Wazuh sinks from catalog scenarios and the supported sink schema.
 - Replaced Wazuh-specific investigation objectives with native log investigation.
-- Preserved native guest logs, the existing TCP syslog forwarding path, MinIO
-  artifact declarations, and historical drill records.
+- Preserved native guest logs, the existing TCP syslog forwarding path, artifact
+  declarations, and historical drill records.
 - Linux disposable clones remove the Debian `wazuh-agent` package during guest
   seeding. Removal errors fail seeding. Package configuration and logs are retained;
   this is not a purge of historical evidence. No online package download is needed.

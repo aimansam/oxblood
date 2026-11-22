@@ -223,7 +223,7 @@ def fig_overview():
         8.7,
         2.0,
         0.7,
-        "div:ide-portal\n(Next.js)",
+        "web UI\n(React)",
         edge=OXBLOOD,
         face="#11242b",
         color=OXBLOOD,
@@ -255,7 +255,7 @@ def fig_overview():
     )
     pill(ax, 8.6, 8.7, 1.6, 0.7, "postgres", edge=BORDER)
     pill(ax, 10.4, 8.7, 1.6, 0.7, "redis", edge=BORDER)
-    pill(ax, 12.2, 8.7, 1.4, 0.7, "minio", edge=BORDER)
+    pill(ax, 12.2, 8.7, 1.4, 0.7, "artifacts", edge=BORDER)
 
     # Row 2: identity / edge / observability
     pill(
@@ -637,7 +637,7 @@ def fig_phase0():
         color=BLUE,
         fontsize=10,
     )
-    pill(ax, 10.4, 7.7, 1.6, 0.7, "minio\n(artifacts)", edge=BORDER, fontsize=10)
+    pill(ax, 10.4, 7.7, 1.6, 0.7, "artifacts\n(local disk)", edge=BORDER, fontsize=10)
     pill(ax, 8.5, 6.6, 1.6, 0.55, "self-signed\ndev cert", edge=BORDER, color=MUTED, fontsize=8.5)
     pill(ax, 10.4, 6.6, 1.6, 0.55, "drill-001/\nPCAP, logs", edge=BORDER, color=MUTED, fontsize=8.5)
     pill(
@@ -791,7 +791,7 @@ def fig_phase1():
         7.5,
         1.8,
         0.7,
-        "div:ide-portal",
+        "web UI",
         edge=OXBLOOD,
         face="#11242b",
         color=OXBLOOD,
@@ -823,7 +823,7 @@ def fig_phase1():
     )
     pill(ax, 2.5, 6.4, 1.6, 0.55, "postgres", edge=BORDER, color=MUTED, fontsize=9)
     pill(ax, 4.5, 6.4, 1.6, 0.55, "redis", edge=BORDER, color=MUTED, fontsize=9)
-    pill(ax, 6.5, 6.4, 1.6, 0.55, "minio", edge=BORDER, color=MUTED, fontsize=9)
+    pill(ax, 6.5, 6.4, 1.6, 0.55, "artifacts", edge=BORDER, color=MUTED, fontsize=9)
     pill(ax, 2.0, 5.4, 1.6, 0.5, "scenarios\nlist", edge=BORDER, color=MUTED, fontsize=8.5)
     pill(ax, 4.0, 5.4, 1.6, 0.5, "POST /drills", edge=BORDER, color=MUTED, fontsize=8.5)
     pill(ax, 6.0, 5.4, 1.6, 0.5, "provisioner\n+ ansible", edge=BORDER, color=MUTED, fontsize=8.5)
@@ -1044,12 +1044,12 @@ def fig_phase2():
     )
 
     # Control plane row
-    pill(ax, 1.7, 7.7, 1.6, 0.5, "portal", edge=OXBLOOD, face="#11242b", color=OXBLOOD)
+    pill(ax, 1.7, 7.7, 1.6, 0.5, "web UI", edge=OXBLOOD, face="#11242b", color=OXBLOOD)
     pill(ax, 3.5, 7.7, 1.6, 0.5, "api", edge=OXBLOOD, face="#11242b", color=OXBLOOD)
     pill(ax, 5.3, 7.7, 1.6, 0.5, "orch.", edge=OXBLOOD, face="#11242b", color=OXBLOOD)
     pill(ax, 7.1, 7.7, 1.4, 0.5, "postgres", edge=BORDER)
     pill(ax, 8.7, 7.7, 1.4, 0.5, "redis", edge=BORDER)
-    pill(ax, 10.3, 7.7, 1.4, 0.5, "minio", edge=BORDER)
+    pill(ax, 10.3, 7.7, 1.4, 0.5, "artifacts", edge=BORDER)
     pill(ax, 12.0, 7.7, 1.4, 0.5, "guac/noVNC", edge=BLUE, face="#0e1726", color=BLUE)
     pill(
         ax,
@@ -1194,7 +1194,7 @@ def fig_phase2():
         2.9,
         4.0,
         0.55,
-        "span port  ·  tcpdump\n-> MinIO",
+        "span port  ·  tcpdump\n-> artifacts",
         edge=GREEN,
         face="#0e1f1a",
         color=GREEN,
@@ -1420,7 +1420,15 @@ def fig_phase3():
         weight="bold",
     )
     pill(
-        ax, 11.6, 6.7, 1.8, 0.55, "rotated .pcap\n-> MinIO", edge=BORDER, color=MUTED, fontsize=8.5
+        ax,
+        11.6,
+        6.7,
+        1.8,
+        0.55,
+        "rotated .pcap\n-> artifacts",
+        edge=BORDER,
+        color=MUTED,
+        fontsize=8.5,
     )
     pill(ax, 11.6, 5.5, 1.8, 0.4, "span port  ·  drill VNet", edge=BORDER, color=MUTED, fontsize=8)
 
@@ -1486,7 +1494,7 @@ def fig_phase3():
         1.4,
         2.8,
         0.6,
-        "-> PDF AAR (MinIO)",
+        "-> PDF AAR",
         edge=OXBLOOD,
         face="#11242b",
         color=OXBLOOD,
@@ -1680,7 +1688,7 @@ def fig_phase4():
         1.05,
         10.0,
         0.5,
-        "audit_log  ·  Proxmox events  ·  Guest evidence  ·  AAR PDF in MinIO",
+        "audit_log  ·  Proxmox events  ·  Guest evidence  ·  AAR PDF",
         edge=BORDER,
         color=MUTED,
         fontsize=9,
