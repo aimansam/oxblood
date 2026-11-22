@@ -61,22 +61,13 @@ async def session(engine) -> AsyncSession:
 
 
 @pytest.fixture
-def fake_redis(monkeypatch):
-    """Per-test fresh fakeredis client.
+def fresh_counters():
+    """Empty rate-limit counters for the test, and again afterwards."""
+    from app.services import memory_store
 
-    Swaps the module-level ``_client`` and ``get_redis`` factory so
-    the login + drill rate-limiters operate on a fakeredis instead
-    of trying to reach a real Redis at localhost:6379. Same pattern
-    as ``tests/test_rate_limit.py``.
-    """
-    import fakeredis.aioredis as fakeredis_aioredis
-    from app.services import cache as cache_module
-
-    fake = fakeredis_aioredis.FakeRedis(decode_responses=True)
-    monkeypatch.setattr(cache_module, "_client", fake, raising=False)
-    monkeypatch.setattr(cache_module, "get_redis", lambda: fake)
-    yield fake
-    # close() is async; fakeredis's client works fine without an explicit close.
+    memory_store.reset_for_tests()
+    yield memory_store.counters
+    memory_store.reset_for_tests()
 
 
 # ---------- hashing ------------------------------------------------------
@@ -305,7 +296,7 @@ def test_login_response_never_includes_password_hash(client: TestClient, seeded)
 # ---------- rate-limit on login ------------------------------------------
 
 
-def test_login_rate_limited_after_5_failures(client: TestClient, seeded, fake_redis):
+def test_login_rate_limited_after_5_failures(client: TestClient, seeded, fresh_counters):
     """Six failed attempts -> 429 on the sixth."""
     # Use the same sub so the bucket fills.
     for i in range(5):
@@ -323,7 +314,9 @@ def test_login_rate_limited_after_5_failures(client: TestClient, seeded, fake_re
     assert "rate limit" in detail.lower() or "too many" in detail.lower()
 
 
-def test_login_rate_limit_per_sub_does_not_block_other_subs(client: TestClient, seeded, fake_redis):
+def test_login_rate_limit_per_sub_does_not_block_other_subs(
+    client: TestClient, seeded, fresh_counters
+):
     """Failed attempts on sub A don't lock out sub B."""
     for _ in range(5):
         client.post(
@@ -338,7 +331,7 @@ def test_login_rate_limit_per_sub_does_not_block_other_subs(client: TestClient, 
     assert r.status_code == 200
 
 
-def test_login_successful_does_not_consume_bucket(client: TestClient, seeded, fake_redis):
+def test_login_successful_does_not_consume_bucket(client: TestClient, seeded, fresh_counters):
     """A successful login does not increment the failure bucket."""
     # 4 failures + 1 success + check that 1 more failure is allowed.
     for i in range(4):

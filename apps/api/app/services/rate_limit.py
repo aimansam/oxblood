@@ -3,29 +3,18 @@
 Closes L2 2.7. Without this, a buggy / misclicking operator can call
 ``POST /api/v1/drills`` in a tight loop and accidentally spawn many
 PVE clones (each ~30 s, each costing disk + RAM). The fix is a
-window-counter keyed on ``token.sub`` (Redis-backed so the limit holds
-across uvicorn workers).
+fixed-window counter keyed on ``token.sub``.
 
-Why this isn't just an in-process counter:
-
-  * Multi-worker uvicorn means in-process state is per-worker. With
-    N workers and limit L, the actual ceiling is N×L. Redis is the
-    single shared truth.
-  * A per-process counter is lost on restart, which defeats the
-    purpose (an operator rebooting the API would get a fresh budget
-    every time).
-  * A simple Redis ``INCR`` on a key with a TTL is atomic, fast, and
-    has well-known semantics; we depend on ``fakeredis`` in unit
-    tests for the same shape.
+The counter lives in process memory (``app.services.memory_store``). That is
+correct because the API runs a single worker, and the only cost is that a restart
+gives everyone a fresh budget.
 
 Algorithm (fixed-window counter):
 
-    For each ``sub`` we keep a counter at ``oxblood:rl:drills:<sub>``
-    with TTL = ``window_s``. Each ``start_drill`` call does
-    ``INCR``; if the post-increment value exceeds the limit, the
-    request is rejected with 429. The TTL refreshes on every call
-    (Redis ``EXPIRE`` is idempotent), so an operator who pauses for
-    ``window_s`` gets a fresh budget.
+    For each ``sub`` we keep a counter that expires ``window_s`` after its last
+    increment. Each ``start_drill`` call increments it; if the new value exceeds
+    the limit, the request is rejected with 429. The expiry refreshes on every
+    call, so an operator who pauses for ``window_s`` gets a fresh budget.
 
 The module is intentionally minimal — no leaky-bucket algorithm, no
 quota, no per-route overrides. If we later need those, replace this
@@ -39,7 +28,7 @@ from dataclasses import dataclass
 
 from fastapi import HTTPException, status
 
-from app.services import cache as _cache_module
+from app.services import memory_store
 
 # --- module-level tunables (env-overridable) -------------------------------
 #
@@ -107,52 +96,22 @@ def set_config(limit: int | None = None, window_seconds: int | None = None) -> N
 
 
 def _bucket_key(sub: str) -> str:
-    """Redis key for the drill-start bucket of one subject."""
-    return f"oxblood:rl:drills:{sub}"
+    """Counter key for the drill-start bucket of one subject."""
+    return f"drills:{sub}"
 
 
 async def check_drill_start_limit(sub: str) -> None:
     """Gate ``POST /api/v1/drills``.
 
     Raises :class:`HTTPException` with status 429 if the caller is
-    over the limit. A no-op when the bucket hasn't been created yet
-    (Redis returns 1, well under the limit).
+    over the limit. The counter lives in process memory (the API runs a
+    single worker), so a restart gives everyone a fresh budget.
 
     Awaited as part of the request pipeline; the router calls it
     directly so the verified token subject is in scope.
-
-    Fail-open on Redis errors: if Redis is unreachable (e.g. during
-    local dev without a Redis container), the request is allowed and
-    a structured-log warning is emitted. This is the right default for
-    a safety net — we'd rather let a few extra drill starts through
-    than refuse a legitimate request because Redis went down. If you
-    want fail-closed, set ``OXBLOOD_RATE_LIMIT_FAIL_CLOSED=true``.
     """
-    import os
-
-    import structlog
-
     cfg = get_config()
-    key = _bucket_key(sub)
-
-    try:
-        client = _cache_module.get_redis()
-        pipe = client.pipeline()
-        pipe.incr(key)
-        pipe.expire(key, cfg.window_seconds)
-        count, _ = await pipe.execute()
-    except Exception as exc:  # noqa: BLE001 — fail-open is intentional
-        if os.environ.get("OXBLOOD_RATE_LIMIT_FAIL_CLOSED", "").lower() in ("1", "true", "yes"):
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"rate limiter unavailable: {exc}",
-            ) from exc
-        structlog.get_logger().warning(
-            "oxblood.rate_limit.redis_unreachable",
-            subject=sub,
-            error=str(exc),
-        )
-        return  # fail-open
+    count = memory_store.counters.incr(_bucket_key(sub), cfg.window_seconds)
 
     if int(count) > cfg.limit:
         # Don't decrement; the bucket naturally expires. Returning

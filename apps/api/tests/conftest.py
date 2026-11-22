@@ -138,6 +138,16 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(skip_marker)
 
 
+@pytest.fixture(autouse=True)
+def _fresh_memory_stores():
+    """Rate-limit counters and setup-job progress live in process memory; no test inherits another's."""
+    from app.services import memory_store
+
+    memory_store.reset_for_tests()
+    yield
+    memory_store.reset_for_tests()
+
+
 @pytest.fixture
 def client() -> TestClient:
     # Reset cached DB engine + sessionmaker so each test sees the

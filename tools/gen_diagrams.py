@@ -254,7 +254,7 @@ def fig_overview():
         weight="bold",
     )
     pill(ax, 8.6, 8.7, 1.6, 0.7, "postgres", edge=BORDER)
-    pill(ax, 10.4, 8.7, 1.6, 0.7, "redis", edge=BORDER)
+    pill(ax, 10.4, 8.7, 1.6, 0.7, "in-memory", edge=BORDER)
     pill(ax, 12.2, 8.7, 1.4, 0.7, "artifacts", edge=BORDER)
 
     # Row 2: identity / edge / observability
@@ -605,7 +605,7 @@ def fig_phase0():
         fontsize=10,
     )
     pill(ax, 4.5, 7.7, 1.6, 0.7, "postgres 16", edge=BORDER, fontsize=10)
-    pill(ax, 6.5, 7.7, 1.6, 0.7, "redis 7", edge=BORDER, fontsize=10)
+    pill(ax, 6.5, 7.7, 1.6, 0.7, "in-memory", edge=BORDER, fontsize=10)
     pill(ax, 2.0, 6.6, 2.0, 0.55, "main.py + routers/", edge=BORDER, color=MUTED, fontsize=9)
     pill(
         ax, 4.5, 6.6, 1.6, 0.55, "drills, scenarios,\nusers", edge=BORDER, color=MUTED, fontsize=8.5
@@ -822,7 +822,7 @@ def fig_phase1():
         weight="bold",
     )
     pill(ax, 2.5, 6.4, 1.6, 0.55, "postgres", edge=BORDER, color=MUTED, fontsize=9)
-    pill(ax, 4.5, 6.4, 1.6, 0.55, "redis", edge=BORDER, color=MUTED, fontsize=9)
+    pill(ax, 4.5, 6.4, 1.6, 0.55, "in-memory", edge=BORDER, color=MUTED, fontsize=9)
     pill(ax, 6.5, 6.4, 1.6, 0.55, "artifacts", edge=BORDER, color=MUTED, fontsize=9)
     pill(ax, 2.0, 5.4, 1.6, 0.5, "scenarios\nlist", edge=BORDER, color=MUTED, fontsize=8.5)
     pill(ax, 4.0, 5.4, 1.6, 0.5, "POST /drills", edge=BORDER, color=MUTED, fontsize=8.5)
@@ -1048,7 +1048,7 @@ def fig_phase2():
     pill(ax, 3.5, 7.7, 1.6, 0.5, "api", edge=OXBLOOD, face="#11242b", color=OXBLOOD)
     pill(ax, 5.3, 7.7, 1.6, 0.5, "orch.", edge=OXBLOOD, face="#11242b", color=OXBLOOD)
     pill(ax, 7.1, 7.7, 1.4, 0.5, "postgres", edge=BORDER)
-    pill(ax, 8.7, 7.7, 1.4, 0.5, "redis", edge=BORDER)
+    pill(ax, 8.7, 7.7, 1.4, 0.5, "in-memory", edge=BORDER)
     pill(ax, 10.3, 7.7, 1.4, 0.5, "artifacts", edge=BORDER)
     pill(ax, 12.0, 7.7, 1.4, 0.5, "guac/noVNC", edge=BLUE, face="#0e1726", color=BLUE)
     pill(

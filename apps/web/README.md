@@ -31,11 +31,10 @@ The production build is baked into the API image (`apps/api/Dockerfile`), not co
 
 ## Browser tests
 `e2e/` holds Playwright tests that drive the production build against a throwaway stack
-(the real API on SQLite with the mock Proxmox adapter, which also serves the build). They need a Redis
-and the Python dependencies of `apps/api`:
+(the real API on SQLite with the mock Proxmox adapter, which also serves the build). They need the
+Python dependencies of `apps/api`:
 
-    docker run -d --rm --name oxb-redis -p 127.0.0.1:6399:6379 redis:7-alpine
     npm run test:e2e                      # builds, starts the API on :8100, runs the suite
-    OXBLOOD_REDIS_URL=redis://127.0.0.1:6379/0 E2E_PYTHON=.venv/bin/python npm run test:e2e
+    E2E_PYTHON=.venv/bin/python npm run test:e2e
 
 An already running stack on those ports is reused locally; CI always starts a fresh one.

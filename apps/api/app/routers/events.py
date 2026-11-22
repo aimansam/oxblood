@@ -314,10 +314,8 @@ async def stream_events(
     until the client disconnects (or 30 minutes elapse, whichever
     comes first).
 
-    Note: this fan-out is in-process. Multi-worker deployments
-    will only deliver events from the worker that receives the
-    publisher call. F8.5 with Redis pub/sub is the fix; we
-    document the limitation here.
+    Note: this fan-out is in-process, so the API must run a single
+    worker (the default) for every subscriber to see every event.
     """
     await _load_run_or_404(session, run_id)
 

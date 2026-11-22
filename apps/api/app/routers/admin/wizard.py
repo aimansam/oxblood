@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json as _json
 import os
 import uuid as _uuid
 from pathlib import Path
@@ -108,36 +107,21 @@ class BuildBaselinesRequest(BaseModel):
     job_id: str | None = None
 
 
-_BASELINE_KEY_PREFIX = "oxblood:setup:baseline:"
-
-
 async def _build_baselines_bg(
     scenario_id: int,
     actor: str,
     snapshot_name: str,
     job_id: str,
 ) -> None:
-    """Background: clone+seed+snapshot all roles, write Redis progress."""
+    """Background: clone+seed+snapshot all roles, recording progress for the wizard to poll."""
     from app.db.session import get_sessionmaker
-    from app.services.cache import get_redis
-
-    redis = get_redis()
-    key = f"{_BASELINE_KEY_PREFIX}{job_id}"
 
     async def _write(step: str, message: str, job_status: str = "running") -> None:
-        await redis.hset(
-            key,
-            mapping={
-                k: _json.dumps(v)
-                for k, v in {
-                    "job_id": job_id,
-                    "step": step,
-                    "message": message,
-                    "status": job_status,
-                }.items()
-            },
+        await admin_svc.set_job_progress(
+            "baseline",
+            job_id,
+            {"job_id": job_id, "step": step, "message": message, "status": job_status},
         )
-        await redis.expire(key, 3600)
 
     await _write("start", "Queued — waiting for runner…")
     try:

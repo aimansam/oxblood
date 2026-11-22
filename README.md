@@ -44,11 +44,10 @@ Browser ──► API (FastAPI, :5000)
               ├── /app/   React UI (built from apps/web, baked into the image)
               └── /api/*  REST API
                             ├── PostgreSQL   state and score ledger
-                            ├── Redis        progress, rate limits, event bus
                             └── Proxmox VE   clones, boots and seeds the range
 ```
 
-One service serves both the UI and the API. The old `/`, `/login` and `/drill/` URLs redirect to `/app/`.
+One service serves both the UI and the API, plus a PostgreSQL database. Rate limits and wizard job progress live in the API's memory, so it runs a single worker. The old `/`, `/login` and `/drill/` URLs redirect to `/app/`.
 
 ## Quickstart
 

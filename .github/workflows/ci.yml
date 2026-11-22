@@ -35,7 +35,6 @@ jobs:
         run: pytest apps/api/tests tests
         env:
           OXBLOOD_DB_URL: sqlite+aiosqlite:///./test.sqlite
-          OXBLOOD_REDIS_URL: redis://localhost:6379/0
 
   migrations-postgres:
     # The test suite runs on SQLite, which does not enforce foreign keys at create time and once hid a
@@ -94,14 +93,6 @@ jobs:
   e2e:
     # Real browser tests: the production web build, served by the API (SQLite + mock Proxmox).
     runs-on: ubuntu-latest
-    services:
-      redis:
-        image: redis:7-alpine
-        ports: ["6379:6379"]
-        options: >-
-          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
-    env:
-      OXBLOOD_REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7

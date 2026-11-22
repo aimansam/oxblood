@@ -52,14 +52,6 @@ async def readyz() -> ReadinessResponse:
     except Exception as exc:  # noqa: BLE001
         checks["postgres"] = f"fail: {exc.__class__.__name__}"
 
-    try:
-        from app.services.cache import ping_redis
-
-        await ping_redis()
-        checks["redis"] = "ok"
-    except Exception as exc:  # noqa: BLE001
-        checks["redis"] = f"fail: {exc.__class__.__name__}"
-
     status = "ok" if all(v == "ok" for v in checks.values()) else "degraded"
     return ReadinessResponse(status=status, checks=checks)
 

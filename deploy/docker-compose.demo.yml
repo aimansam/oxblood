@@ -27,15 +27,6 @@ services:
       timeout: 3s
       retries: 10
 
-  redis:
-    image: redis:7-alpine
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
   api:
     build:
       context: ..
@@ -44,7 +35,6 @@ services:
     environment:
       OXBLOOD_DEMO: "true"
       OXBLOOD_DB_URL: postgresql+asyncpg://oxblood:oxblood-demo@postgres:5432/oxblood
-      OXBLOOD_REDIS_URL: redis://redis:6379/0
       OXBLOOD_SCENARIOS_DIR: /scenarios
       OXBLOOD_SYNC_ON_STARTUP: "true"
       OXBLOOD_RANGE_SKIP_MEMORY_CHECK: "true"
@@ -57,8 +47,6 @@ services:
       - ../examples/scenarios:/scenarios:ro
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]

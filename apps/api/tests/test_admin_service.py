@@ -4,7 +4,7 @@ These tests cover:
   * probe_pve() -- normal path, missing perms, totally down PVE
   * upload_qcow2() -- streams in chunks, reports progress, handles errors
   * create_template_from_qcow2() -- step order + VMID allocation
-  * Redis-backed progress round-trip
+  * in-memory progress round-trip (including the baseline kind)
   * The DRILL_PRIVS constant stays aligned with preflight's expectations
 
 We mock the proxmoxer client and httpx entirely -- no live PVE.
@@ -183,11 +183,11 @@ class _FakeAsyncClient:
         return httpx.Response(self.status, json=self.body)
 
 
-def _patched_admin(monkeypatch, *, redis_client=None):
+def _patched_admin(monkeypatch):
     """Helper: monkeypatch the admin module's dependencies for upload tests.
 
     Sets sane PROXMOX_* env, clears the settings + proxmox client caches,
-    and stubs out the Redis client so we don't need a live one.
+    and starts with no recorded progress.
     """
     from app.core.config import get_settings
     from app.services import proxmox as px
@@ -197,10 +197,9 @@ def _patched_admin(monkeypatch, *, redis_client=None):
     monkeypatch.setenv("PROXMOX_TOKEN_SECRET", "secret")
     get_settings.cache_clear()
     px.get_proxmox_client.cache_clear()
-    monkeypatch.setattr(
-        "app.services.cache.get_redis",
-        lambda: redis_client or _FakeRedis(),
-    )
+    from app.services import memory_store
+
+    memory_store.reset_for_tests()
 
 
 def test_upload_qcow2_streams_in_chunks(tmp_path, monkeypatch):
@@ -337,7 +336,9 @@ def test_create_template_walks_through_steps(monkeypatch):
     monkeypatch.setenv("PROXMOX_TOKEN_SECRET", "secret")
     get_settings.cache_clear()
     px.get_proxmox_client.cache_clear()
-    monkeypatch.setattr("app.services.cache.get_redis", lambda: _FakeRedis())
+    from app.services import memory_store
+
+    memory_store.reset_for_tests()
 
     call_order: list[str] = []
 
@@ -395,7 +396,9 @@ def test_create_template_records_failure_on_error(monkeypatch):
     monkeypatch.setenv("PROXMOX_TOKEN_SECRET", "secret")
     get_settings.cache_clear()
     px.get_proxmox_client.cache_clear()
-    monkeypatch.setattr("app.services.cache.get_redis", lambda: _FakeRedis())
+    from app.services import memory_store
+
+    memory_store.reset_for_tests()
 
     mock_client = MagicMock()
     mock_client.cluster.nextid.get.return_value = 9000
@@ -424,71 +427,62 @@ def test_create_template_records_failure_on_error(monkeypatch):
     assert "disk full" in (result.error or "")
 
 
-# --- Redis-backed progress --------------------------------------------------
+# --- in-memory progress -----------------------------------------------------
 
 
-class _FakeRedis:
-    """Tiny in-memory redis stand-in for the wizard progress helpers."""
+@pytest.fixture(autouse=True)
+def _empty_progress():
+    from app.services import memory_store
 
-    def __init__(self):
-        self.data: dict[str, dict[str, str]] = {}
-
-    async def hset(self, key, mapping):
-        self.data.setdefault(key, {}).update(mapping)
-
-    async def expire(self, key, seconds):  # noqa: ARG002
-        pass
-
-    async def hgetall(self, key):
-        return dict(self.data.get(key, {}))
-
-    async def scan_iter(self, match=None):
-        if match is None:
-            for k in list(self.data.keys()):
-                yield k
-            return
-        # Match is a glob like 'oxblood:setup:*'. We don't need glob here
-        # since the tests only store one or two keys.
-        for k in list(self.data.keys()):
-            if "*" in match:
-                prefix = match.split("*", 1)[0]
-                if k.startswith(prefix):
-                    yield k
-            elif k == match:
-                yield k
+    memory_store.reset_for_tests()
+    yield
+    memory_store.reset_for_tests()
 
 
 def test_progress_round_trip():
     from app.services import admin as adm
 
-    redis = _FakeRedis()
-    with patch("app.services.cache.get_redis", return_value=redis):
-        up = adm.UploadProgress(
-            job_id="abc123",
-            filename="debian.qcow2",
-            target_volid="local:import/debian.qcow2",
-            bytes_sent=1024,
-            total_bytes=2048,
-            started_at=0.0,
-            finished_at=None,
-            status="running",
-            error=None,
-            result_volid=None,
-        )
-        asyncio.run(adm._set_progress(up))
+    up = adm.UploadProgress(
+        job_id="abc123",
+        filename="debian.qcow2",
+        target_volid="local:import/debian.qcow2",
+        bytes_sent=1024,
+        total_bytes=2048,
+        started_at=0.0,
+        finished_at=None,
+        status="running",
+        error=None,
+        result_volid=None,
+    )
+    asyncio.run(adm._set_progress(up))
 
-        # Read it back.
-        loaded = asyncio.run(adm.get_progress("abc123", kind="upload"))
-        assert loaded is not None
-        assert loaded["job_id"] == "abc123"
-        assert loaded["bytes_sent"] == 1024
-        assert loaded["status"] == "running"
-        assert loaded["percent"] == 50.0
+    loaded = asyncio.run(adm.get_progress("abc123", kind="upload"))
+    assert loaded is not None
+    assert loaded["job_id"] == "abc123"
+    assert loaded["bytes_sent"] == 1024
+    assert loaded["status"] == "running"
+    assert loaded["percent"] == 50.0
 
 
 def test_progress_missing_returns_none():
     from app.services import admin as adm
 
-    with patch("app.services.cache.get_redis", return_value=_FakeRedis()):
-        loaded = asyncio.run(adm.get_progress("nope", kind="upload"))
-        assert loaded is None
+    assert asyncio.run(adm.get_progress("nope", kind="upload")) is None
+
+
+def test_progress_kinds_do_not_collide():
+    from app.services import admin as adm
+
+    asyncio.run(adm.set_job_progress("baseline", "j1", {"status": "running"}))
+    assert asyncio.run(adm.get_progress("j1", kind="baseline")) == {"status": "running"}
+    assert asyncio.run(adm.get_progress("j1", kind="upload")) is None
+
+
+def test_list_in_progress_includes_every_kind():
+    from app.services import admin as adm
+
+    asyncio.run(adm.set_job_progress("upload", "u1", {"status": "running"}))
+    asyncio.run(adm.set_job_progress("template", "t1", {"status": "done"}))
+    asyncio.run(adm.set_job_progress("baseline", "b1", {"status": "running"}))
+    kinds = sorted(item["_kind"] for item in asyncio.run(adm.list_in_progress()))
+    assert kinds == ["baseline", "template", "upload"]

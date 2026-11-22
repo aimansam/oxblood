@@ -21,4 +21,4 @@ def test_readyz_returns_503_when_db_unreachable(client):
     assert "status" in body
     assert "checks" in body
     assert "postgres" in body["checks"]
-    assert "redis" in body["checks"]
+    assert set(body["checks"]) == {"postgres"}

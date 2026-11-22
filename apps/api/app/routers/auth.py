@@ -43,7 +43,7 @@ form.
 
 Security considerations:
     - Failed-login rate limit: 5 attempts per ``sub`` per 15 min
-      via the same Redis bucket pattern as ``POST /drills`` (F2.2).
+      via the same in-memory counter as ``POST /drills`` (F2.2).
       The login check happens BEFORE the DB query, so timing
       roughly matches whether the user exists or not.
     - Generic 401 message regardless of whether the ``sub`` exists,
@@ -78,6 +78,7 @@ from app.core.auth import Role, TokenData, current_token, require_role, sign_tok
 from app.core.config import settings
 from app.db import models as db_models
 from app.db.session import get_session
+from app.services import memory_store
 from app.services.users import (
     DuplicateSubError,
     InvalidResetTokenError,
@@ -107,38 +108,12 @@ _LOGIN_WINDOW_SECONDS: int = 15 * 60
 
 
 def _login_bucket_key(sub: str) -> str:
-    return f"oxblood:rl:auth:{sub}"
+    return f"auth:{sub}"
 
 
 async def _read_login_count(sub: str) -> int:
-    """Return the current bucket count, or 0 if Redis is unreachable.
-
-    Fail-open: a Redis outage returns 0 so the caller doesn't block
-    a legitimate login. The rate-limit FAIL-CLOSED toggle still
-    applies for callers that want a hard failure on Redis errors.
-    """
-    import os
-
-    import structlog
-
-    from app.services import cache as _cache_module
-
-    try:
-        client = _cache_module.get_redis()
-        raw = await client.get(_login_bucket_key(sub))
-    except Exception as exc:  # noqa: BLE001
-        if os.environ.get("OXBLOOD_RATE_LIMIT_FAIL_CLOSED", "").lower() in ("1", "true", "yes"):
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"rate limiter unavailable: {exc}",
-            ) from exc
-        structlog.get_logger().warning(
-            "oxblood.auth.rate_limit_redis_unreachable",
-            subject=sub,
-            error=str(exc),
-        )
-        return 0
-    return int(raw) if raw else 0
+    """The number of failed attempts recorded for ``sub`` in the current window."""
+    return memory_store.counters.get(_login_bucket_key(sub))
 
 
 async def _check_login_limit_no_increment(sub: str) -> None:
@@ -161,36 +136,8 @@ async def _check_login_limit_no_increment(sub: str) -> None:
 
 
 async def _increment_login_limit(sub: str) -> None:
-    """Increment the bucket after a failed auth.
-
-    Fail-open: a Redis outage logs a warning and returns; the next
-    attempt just gets another fail-open. The TTL refreshes on every
-    increment so a flood keeps the budget full.
-    """
-    import os
-
-    import structlog
-
-    from app.services import cache as _cache_module
-
-    key = _login_bucket_key(sub)
-    try:
-        client = _cache_module.get_redis()
-        pipe = client.pipeline()
-        pipe.incr(key)
-        pipe.expire(key, _LOGIN_WINDOW_SECONDS)
-        await pipe.execute()
-    except Exception as exc:  # noqa: BLE001 — fail-open is intentional
-        if os.environ.get("OXBLOOD_RATE_LIMIT_FAIL_CLOSED", "").lower() in ("1", "true", "yes"):
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"rate limiter unavailable: {exc}",
-            ) from exc
-        structlog.get_logger().warning(
-            "oxblood.auth.rate_limit_redis_unreachable",
-            subject=sub,
-            error=str(exc),
-        )
+    """Record a failed auth. The window refreshes on every failure, so a flood keeps the budget full."""
+    memory_store.counters.incr(_login_bucket_key(sub), _LOGIN_WINDOW_SECONDS)
 
 
 # --- token TTL --------------------------------------------------------------

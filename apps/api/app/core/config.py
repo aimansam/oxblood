@@ -46,9 +46,6 @@ class Settings(BaseSettings):
     db_url: str = "postgresql+asyncpg://oxblood:oxblood@postgres:5432/oxblood"
     db_echo: bool = False
 
-    # Redis
-    redis_url: str = "redis://redis:6379/0"
-
     # CORS
     # Comma-separated list of allowed origins. The browser sends an Origin
     # header on every cross-origin request, and the CORS middleware only

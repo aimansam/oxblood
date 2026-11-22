@@ -1,7 +1,7 @@
 """Smoke tests for the admin/setup wizard HTTP endpoints.
 
 These hit the FastAPI app via TestClient and assert the right status
-codes + response shapes. No live PVE / no live Redis.
+codes + response shapes. No live PVE.
 
 Auth note (L2 2.9): every endpoint in ``/api/v1/admin/*`` is hard-gated
 on ``require_role(admin)`` at the router level. The ``admin_headers``
@@ -20,38 +20,19 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-class _FakeRedis:
-    """Tiny in-memory redis stand-in for tests that touch progress."""
+@pytest.fixture(autouse=True)
+def _empty_progress():
+    """Setup-job progress lives in memory; start and finish each test with none."""
+    from app.services import memory_store
 
-    def __init__(self):
-        self.data: dict[str, dict[str, str]] = {}
-
-    async def hset(self, key, mapping):
-        self.data.setdefault(key, {}).update(mapping)
-
-    async def expire(self, key, seconds):  # noqa: ARG002
-        pass
-
-    async def hgetall(self, key):
-        return dict(self.data.get(key, {}))
-
-    async def scan_iter(self, match=None):
-        if match is None:
-            for k in list(self.data.keys()):
-                yield k
-            return
-        for k in list(self.data.keys()):
-            if "*" in match:
-                prefix = match.split("*", 1)[0]
-                if k.startswith(prefix):
-                    yield k
-            elif k == match:
-                yield k
+    memory_store.reset_for_tests()
+    yield
+    memory_store.reset_for_tests()
 
 
 @pytest.fixture
 def client():
-    """Build a TestClient for the app with PVE/Redis stubbed out."""
+    """Build a TestClient for the app with PVE stubbed out."""
     from app.main import app
 
     with TestClient(app) as c:
@@ -238,13 +219,11 @@ def test_set_template_endpoint(client, admin_headers):
 
 
 def test_progress_endpoint_returns_404_for_unknown_job(client, monkeypatch, admin_headers):
-    monkeypatch.setattr("app.services.cache.get_redis", lambda: _FakeRedis())
     r = client.get("/api/v1/admin/progress/upload/nope", headers=admin_headers)
     assert r.status_code == 404
 
 
 def test_progress_endpoint_validates_kind(client, monkeypatch, admin_headers):
-    monkeypatch.setattr("app.services.cache.get_redis", lambda: _FakeRedis())
     r = client.get("/api/v1/admin/progress/garbage/x", headers=admin_headers)
     assert r.status_code == 400
     assert "kind" in r.json()["detail"].lower()
@@ -277,7 +256,6 @@ def test_upload_qcow2_streams_real_file(client, tmp_path: Path, monkeypatch):
     monkeypatch.setenv("PROXMOX_TOKEN_SECRET", "secret")
     get_settings.cache_clear()
     px.get_proxmox_client.cache_clear()
-    monkeypatch.setattr("app.services.cache.get_redis", lambda: _FakeRedis())
 
     admin_headers = {"X-Oxblood-Token": sign_token("admin-test", Role.ADMIN.value, 3600)}
 

@@ -8067,7 +8067,7 @@
     },
     "/api/v1/runs/{run_id}/events/stream": {
       "get": {
-        "description": "SSE live stream of TelemetryEvents for a run.\n\nOn connect:\n  * send a ``hello`` event with the run_id (so the client\n    can confirm the stream is alive).\n  * replay up to 50 recent events from the bus ring buffer\n    (``event: history``).\n\nThen keep streaming ``event: live`` for each new event\nuntil the client disconnects (or 30 minutes elapse, whichever\ncomes first).\n\nNote: this fan-out is in-process. Multi-worker deployments\nwill only deliver events from the worker that receives the\npublisher call. F8.5 with Redis pub/sub is the fix; we\ndocument the limitation here.",
+        "description": "SSE live stream of TelemetryEvents for a run.\n\nOn connect:\n  * send a ``hello`` event with the run_id (so the client\n    can confirm the stream is alive).\n  * replay up to 50 recent events from the bus ring buffer\n    (``event: history``).\n\nThen keep streaming ``event: live`` for each new event\nuntil the client disconnects (or 30 minutes elapse, whichever\ncomes first).\n\nNote: this fan-out is in-process, so the API must run a single\nworker (the default) for every subscriber to see every event.",
         "operationId": "stream_events_api_v1_runs__run_id__events_stream_get",
         "parameters": [
           {

@@ -20,12 +20,6 @@ services:
       OXBLOOD_RANGE_HOST_RESERVE_MB: ${OXBLOOD_RANGE_HOST_RESERVE_MB:-2048}
       OXBLOOD_RANGE_SKIP_MEMORY_CHECK: ${OXBLOOD_RANGE_SKIP_MEMORY_CHECK:-false}
       OXBLOOD_DB_URL: postgresql+asyncpg://oxblood:${POSTGRES_PASSWORD:-oxblood}@postgres:5432/oxblood
-      OXBLOOD_REDIS_URL: redis://redis:6379/0
-      # R1: opt into the Redis-backed event bus. With multiple
-      # uvicorn workers this is the only way to deliver SSE events
-      # across workers. Single-worker deployments can leave this
-      # unset (OXBLOOD_EVENT_BUS=memory).
-      OXBLOOD_EVENT_BUS: ${OXBLOOD_EVENT_BUS:-memory}
       # Scenario catalog. The repo's examples/ is mounted read-only so the
       # API can sync them into the DB on startup.
       OXBLOOD_SCENARIOS_DIR: ${OXBLOOD_SCENARIOS_DIR:-/workdir/examples/scenarios}
@@ -56,8 +50,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     networks: [oxblood-net]
     volumes:
       # Repo root mounted read-only so the api container can read scenario
@@ -87,23 +79,8 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: oxblood-redis
-    restart: unless-stopped
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
-    volumes:
-      - redis-data:/data
-    networks: [oxblood-net]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-
 volumes:
   postgres-data:
-  redis-data:
 
 networks:
   oxblood-net:

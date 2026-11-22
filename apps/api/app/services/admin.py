@@ -8,12 +8,12 @@ PVE-backed deployment without SSH-ing into Proxmox to drive the installer:
   * upload_qcow2()             — stream a cloud image to PVE storage with progress
   * create_template_from_qcow2 — create the VM, import the disk, attach cloud-init
   * set_template_flag()        — flip template=1 on an existing VM
-  * setup_progress_*           — Redis-backed job status for the wizard UI
+  * setup_progress_*           — in-memory job status for the wizard UI
 
 Why a separate module:
   * The runner (real_adapter.py) only does clone/start/stop/destroy -- not
     VM creation. Setup-time work is different from run-time work.
-  * Keeps proxmoxer / httpx / redis coupling out of the router layer.
+  * Keeps proxmoxer / httpx coupling out of the router layer.
 
 This module does NOT add new privileges to the API token. The operator
 must grant ``PVEDatastoreAdmin`` (a built-in PVE role that covers
@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 import os
 import time
 from collections.abc import Callable
@@ -37,6 +36,7 @@ from typing import Any
 
 import httpx
 
+from app.services import memory_store
 from app.services.proxmox import (
     ProxmoxAPIError,
     ProxmoxNotConfiguredError,
@@ -61,10 +61,6 @@ DRILL_PRIVS: frozenset[str] = frozenset({"VM.Allocate", "VM.Clone", "VM.PowerMgm
 SETUP_PRIVS: frozenset[str] = frozenset(
     {"Datastore.AllocateSpace", "Datastore.Allocate", "Datastore.Audit"}
 )
-
-#: Redis key prefix for setup progress. Each upload/template job gets a
-#: unique suffix (job_id) and is stored as a hash under this prefix.
-PROGRESS_KEY_PREFIX = "oxblood:setup:"
 
 # ---------------------------------------------------------------------------
 # Data shapes
@@ -207,8 +203,7 @@ def _settings_for_probe() -> tuple[str, str, str, str]:
 
 @dataclass
 class UploadProgress:
-    """Snapshot of an in-flight upload. Stored in Redis under
-    ``oxblood:setup:upload:<job_id>``."""
+    """Snapshot of an in-flight upload, kept in memory under ``upload:<job_id>``."""
 
     job_id: str
     filename: str
@@ -543,69 +538,35 @@ async def set_template_flag(vmid: int, node: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Redis-backed progress for the wizard UI
+# In-memory progress for the wizard UI
 # ---------------------------------------------------------------------------
+
+PROGRESS_KINDS = ("upload", "template", "baseline")
+_PROGRESS_TTL_S = 3600  # keep a finished job readable for an hour
+
+
+async def set_job_progress(kind: str, job_id: str, payload: dict[str, Any]) -> None:
+    """Record the latest state of a setup job so the wizard can poll it."""
+    memory_store.records.set(f"{kind}:{job_id}", payload, _PROGRESS_TTL_S)
 
 
 async def _set_progress(progress: UploadProgress) -> None:
-    """Persist an UploadProgress to Redis (hash)."""
-    from app.services.cache import get_redis
-
-    client = get_redis()
-    key = f"{PROGRESS_KEY_PREFIX}upload:{progress.job_id}"
-    payload = progress.to_dict()
-    await client.hset(key, mapping={k: json.dumps(v) for k, v in payload.items()})
-    # Auto-expire after 1 hour so the key namespace stays clean.
-    await client.expire(key, 3600)
+    await set_job_progress("upload", progress.job_id, progress.to_dict())
 
 
 async def _set_template_progress(progress: TemplateProgress) -> None:
-    """Persist a TemplateProgress to Redis (hash)."""
-    from app.services.cache import get_redis
-
-    client = get_redis()
-    key = f"{PROGRESS_KEY_PREFIX}template:{progress.job_id}"
-    payload = progress.to_dict()
-    await client.hset(key, mapping={k: json.dumps(v) for k, v in payload.items()})
-    await client.expire(key, 3600)
+    await set_job_progress("template", progress.job_id, progress.to_dict())
 
 
 async def get_progress(job_id: str, kind: str = "upload") -> dict[str, Any] | None:
-    """Read back a progress hash by job_id. Returns None if missing/expired."""
-    from app.services.cache import get_redis
-
-    client = get_redis()
-    key = f"{PROGRESS_KEY_PREFIX}{kind}:{job_id}"
-    raw = await client.hgetall(key)
-    if not raw:
-        return None
-    out: dict[str, Any] = {}
-    for k, v in raw.items():
-        try:
-            out[k] = json.loads(v)  # type: ignore[index]
-        except (TypeError, ValueError):
-            out[k] = v  # type: ignore[index]
-    return out
+    """The latest state of a setup job, or None if unknown or older than an hour."""
+    return memory_store.records.get(f"{kind}:{job_id}")
 
 
 async def list_in_progress() -> list[dict[str, Any]]:
-    """List all in-flight setup jobs (uploads + templates).
-
-    Useful for the wizard's "what's still running?" view.
-    """
-    from app.services.cache import get_redis
-
-    client = get_redis()
+    """All known setup jobs (uploads, templates, baselines), for the wizard's "what's running?" view."""
     out: list[dict[str, Any]] = []
-    for kind in ("upload", "template", "baseline"):
-        async for key in client.scan_iter(f"{PROGRESS_KEY_PREFIX}{kind}:*"):
-            raw = await client.hgetall(key)
-            decoded: dict[str, Any] = {}
-            for k, v in raw.items():
-                try:
-                    decoded[k] = json.loads(v)  # type: ignore[index]
-                except (TypeError, ValueError):
-                    decoded[k] = v  # type: ignore[index]
-            decoded["_kind"] = kind
-            out.append(decoded)
+    for kind in PROGRESS_KINDS:
+        for _, record in memory_store.records.with_prefix(f"{kind}:"):
+            out.append({**record, "_kind": kind})
     return out

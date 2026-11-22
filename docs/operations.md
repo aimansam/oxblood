@@ -13,6 +13,9 @@
 - **Metrics:** the stack ships no monitoring servers. The API exposes Prometheus-format counters at `/metrics`
   if you run your own scraper. It is open on the internal network; if the API port is reachable from outside,
   set `OXBLOOD_METRICS_TOKEN` and send it as a bearer token. `/healthz` and `/readyz` are the health probes.
+- **In-memory state:** login and drill-start rate limits and setup-job progress (uploads, templates, snapshot builds)
+  live in the API's memory. Restarting the API clears them, which is also the way to lift a login lockout.
+  Run one worker; with several, each would keep its own counters and progress.
 - **Backups:** `scripts/backup_db.sh` (see `deploy/backup/README.md`). Test a restore occasionally.
 
 ## Applying deploy changes

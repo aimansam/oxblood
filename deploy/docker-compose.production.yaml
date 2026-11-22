@@ -4,9 +4,9 @@ name: oxblood-cyber-drill-prod
 #
 # Key differences from deploy/docker-compose.yml:
 #
-#   * Multi-worker uvicorn (4 workers). R1 requires Redis pub/sub
-#     for SSE cross-worker fan-out -- OXBLOOD_EVENT_BUS=redis is
-#     the default here (the dev compose defaults to memory).
+#   * One uvicorn worker. Rate limits, setup-job progress and the event bus
+#     live in process memory, so the API must not run several workers.
+#     It is async; one worker comfortably serves a training range.
 #   * Traefik fronts the API with Let's Encrypt TLS. Public
 #     ingress on :443. The api service is no longer published
 #     on a host port.
@@ -49,10 +49,6 @@ services:
       OXBLOOD_ENV: production
       OXBLOOD_LOG_LEVEL: ${OXBLOOD_LOG_LEVEL:-INFO}
       OXBLOOD_DB_URL: postgresql+asyncpg://oxblood:${POSTGRES_PASSWORD}@postgres:5432/oxblood
-      OXBLOOD_REDIS_URL: redis://redis:6379/0
-      # R1: SSE across workers requires the Redis-backed bus.
-      # Overriding the default in the dev compose.
-      OXBLOOD_EVENT_BUS: redis
       # Scenarios are baked into the image; no OXBLOOD_SCENARIOS_DIR.
       # Sync still runs on startup so any DB-side edits get rolled in.
       OXBLOOD_SYNC_ON_STARTUP: "true"
@@ -69,9 +65,8 @@ services:
       PROXMOX_TOKEN_ID: ${PROXMOX_TOKEN_ID}
       PROXMOX_TOKEN_SECRET: ${PROXMOX_TOKEN_SECRET}
       PROXMOX_VERIFY_SSL: ${PROXMOX_VERIFY_SSL:-true}
-      # Multi-worker: uvicorn is launched with --workers 4
-      # (see the `command:` override below).
-      WEB_CONCURRENCY: "4"
+      # Single worker: in-memory state (see the header comment).
+      WEB_CONCURRENCY: "1"
     command:
       - "uvicorn"
       - "app.main:app"
@@ -80,9 +75,7 @@ services:
       - "--port"
       - "8000"
       - "--workers"
-      # 4 workers = roughly 4x throughput on JSON endpoints.
-      # R1 makes SSE work across all of them via Redis.
-      - "4"
+      - "1"
       - "--proxy-headers"
       # Honor X-Forwarded-For / X-Forwarded-Proto from Traefik
       # so redirect URLs + CORS use the public scheme.
@@ -92,8 +85,6 @@ services:
       - "/app/logging.json"
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks: [oxblood-net]
     healthcheck:
@@ -151,32 +142,6 @@ services:
           cpus: "2"
           memory: 2G
 
-  redis:
-    image: redis:7-alpine
-    container_name: oxblood-redis
-    restart: always
-    command:
-      # Production: enable AOF for durability (R1's pub/sub
-      # tolerates loss but the cache + rate-limit buckets don't).
-      - "redis-server"
-      - "--appendonly"
-      - "yes"
-      - "--appendfsync"
-      - "everysec"
-    volumes:
-      - redis-data:/data
-    networks: [oxblood-net]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: 1G
-
   # F12.3: Traefik fronts the public ingress with Let's Encrypt.
   # Public hostname is ${PUBLIC_HOSTNAME}; ACME email is ${ACME_EMAIL}.
   traefik:
@@ -206,7 +171,6 @@ services:
 
 volumes:
   postgres-data:
-  redis-data:
   traefik-letsencrypt:
 
 networks:
