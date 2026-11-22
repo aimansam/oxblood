@@ -6,6 +6,7 @@ Outputs:
     architecture.png          what runs and how the parts talk
     exercise-lifecycle.png    plan, prepare, play, finish
     range-<scenario>.png      one per file in examples/scenarios, drawn from the YAML
+    erd-<domain>.png          the database, one diagram per domain, drawn from the SQLAlchemy models
 
 The range diagrams read the scenario files, so they change when a scenario does. CI regenerates them and
 fails if a scenario has no committed diagram.
@@ -25,6 +26,7 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle  # noq
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from diagram_data import Range, load_scenarios  # noqa: E402
+from erd_data import GROUPS, Edge, Group, Table, load_tables  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
 OUT_DIR = REPO / "assets" / "diagrams"
@@ -409,11 +411,240 @@ def range_diagram(r: Range) -> None:
     save(fig, r.filename)
 
 
+# ---------------------------------------------------------------------------------------------------------
+# database diagrams
+# ---------------------------------------------------------------------------------------------------------
+
+BOX_W, HEAD_H, ROW_H, BOX_PAD = 3.3, 0.5, 0.29, 0.12
+COL_PITCH, ROW_GAP = 4.6, 1.0
+
+
+def _box_height(table: Table | None) -> float:
+    if table is None:  # a stub shows only its name
+        return HEAD_H + 0.1
+    rows = len(table.primary_key) + len(table.foreign_keys)
+    return HEAD_H + rows * ROW_H + BOX_PAD
+
+
+def _bezier(p1, p2, rad: float, t: float):
+    """A point on matplotlib's arc3 curve from p1 to p2 (a quadratic Bezier)."""
+    (x1, y1), (x2, y2) = p1, p2
+    cx = (x1 + x2) / 2 + rad * (y2 - y1)
+    cy = (y1 + y2) / 2 - rad * (x2 - x1)
+    return (
+        (1 - t) ** 2 * x1 + 2 * (1 - t) * t * cx + t**2 * x2,
+        (1 - t) ** 2 * y1 + 2 * (1 - t) * t * cy + t**2 * y2,
+    )
+
+
+def _hits(p1, p2, rad, boxes, skip) -> int:
+    """How many sample points of the curve fall inside a box other than the two it joins."""
+    count = 0
+    for i in range(1, 24):
+        x, y = _bezier(p1, p2, rad, i / 24)
+        for name, (bx, by, bw, bh) in boxes.items():
+            if name not in skip and bx - 0.1 < x < bx + bw + 0.1 and by - 0.1 < y < by + bh + 0.1:
+                count += 1
+    return count
+
+
+def erd(group: Group, tables: dict[str, Table], edges: list[Edge]) -> None:
+    placed = group.placed()
+    cols = max(c for c, _ in placed.values()) + 1
+    rows = sorted({r for _, r in placed.values()})
+
+    # Row heights follow the tallest box in the row; rows are stacked top-down.
+    row_h = {
+        r: max(
+            _box_height(tables.get(n) if n in group.cells else None)
+            for n, (_, rr) in placed.items()
+            if rr == r
+        )
+        for r in rows
+    }
+    top = 0.0
+    row_top: dict[int, float] = {}
+    for r in rows:
+        row_top[r] = top
+        top += row_h[r] + ROW_GAP
+    body_h = top - ROW_GAP
+
+    width = cols * COL_PITCH - (COL_PITCH - BOX_W) + 0.6
+    height = body_h + 3.0
+    fig, ax = canvas(width, height, group.title, group.subtitle)
+
+    boxes: dict[str, tuple[float, float, float, float]] = {}  # name -> x, y(bottom), w, h
+    for name, (c, r) in placed.items():
+        h = _box_height(tables.get(name) if name in group.cells else None)
+        boxes[name] = (0.3 + c * COL_PITCH, height - 2.3 - row_top[r] - h, BOX_W, h)
+
+    patches = {}
+    for name, (x, y, w, h) in boxes.items():
+        stub = name not in group.cells
+        patches[name] = FancyBboxPatch(
+            (x, y),
+            w,
+            h,
+            boxstyle="round,pad=0.0,rounding_size=0.1",
+            linewidth=1.2,
+            edgecolor=BORDER if stub else MUTED,
+            facecolor=BG if stub else PANEL,
+            linestyle="--" if stub else "-",
+            zorder=3,
+        )
+        ax.add_patch(patches[name])
+
+    # Lines first, so the boxes sit on top of them. Parallel keys between the same two tables fan out.
+    # A table can be drawn more than once as a stub ("users", "users@2"); a key points at the nearest copy.
+    def nearest(target: str, origin: str) -> str | None:
+        copies = [k for k in placed if k.split("@")[0] == target]
+        ox, oy = placed[origin]
+        return min(
+            copies, key=lambda k: abs(placed[k][0] - ox) + abs(placed[k][1] - oy), default=None
+        )
+
+    drawn = [
+        (e, k)
+        for e in edges
+        if e.source in group.cells
+        and e.target not in group.quiet
+        and (k := nearest(e.target, e.source)) is not None
+    ]
+    seen: dict[frozenset[str], int] = {}
+    for e, target in drawn:
+        pair = frozenset((e.source, target))
+        n = seen.get(pair, 0)
+        seen[pair] = n + 1
+        sx, sy, sw, sh = boxes[e.source]
+        tx, ty, tw, th = boxes[target]
+        p1, p2 = (sx + sw / 2, sy + sh / 2), (tx + tw / 2, ty + th / 2)
+        # The straightest curve that stays clear of the other boxes.
+        skip = {e.source, target}
+        candidates = [0.0, 0.15, -0.15, 0.3, -0.3, 0.45, -0.45, 0.6, -0.6, 0.8, -0.8, 1.0, -1.0]
+        rad = min(candidates, key=lambda r: (_hits(p1, p2, r + n * 0.18, boxes, skip), abs(r)))
+        ax.add_patch(
+            FancyArrowPatch(
+                p1,
+                p2,
+                arrowstyle="-|>",
+                mutation_scale=11,
+                color=MUTED,
+                linewidth=1.1,
+                connectionstyle=f"arc3,rad={rad + n * 0.18}",
+                patchA=patches[e.source],
+                patchB=patches[target],
+                shrinkA=1,
+                shrinkB=1,
+                zorder=2,
+            )
+        )
+
+    for name, (x, y, w, h) in boxes.items():
+        if name not in group.cells:
+            ax.text(
+                x + w / 2,
+                y + h / 2,
+                name.split("@")[0],
+                ha="center",
+                va="center",
+                fontsize=9,
+                color=MUTED,
+                zorder=4,
+            )
+            continue
+        t = tables[name]
+        ax.add_patch(
+            Rectangle(
+                (x + 0.02, y + h - HEAD_H), w - 0.04, HEAD_H - 0.02, color=BLUE_TINT, lw=0, zorder=4
+            )
+        )
+        ax.text(
+            x + 0.15,
+            y + h - HEAD_H / 2,
+            name,
+            ha="left",
+            va="center",
+            fontsize=9.5,
+            fontweight="bold",
+            color=TEXT,
+            zorder=5,
+        )
+        ax.text(
+            x + w - 0.12,
+            y + h - HEAD_H / 2,
+            f"{t.columns} cols",
+            ha="right",
+            va="center",
+            fontsize=7,
+            color=MUTED,
+            zorder=5,
+        )
+        line = y + h - HEAD_H - 0.05 - ROW_H / 2
+        for col in t.primary_key:
+            ax.text(x + 0.15, line, col, ha="left", va="center", fontsize=8, color=TEXT, zorder=5)
+            ax.text(
+                x + w - 0.12,
+                line,
+                "PK",
+                ha="right",
+                va="center",
+                fontsize=7.5,
+                fontweight="bold",
+                color=ACCENT,
+                zorder=5,
+            )
+            line -= ROW_H
+        for fk in t.foreign_keys:
+            ax.text(
+                x + 0.15, line, fk.column, ha="left", va="center", fontsize=8, color=TEXT, zorder=5
+            )
+            ax.text(
+                x + 1.6,
+                line,
+                f"→ {fk.target}",
+                ha="left",
+                va="center",
+                fontsize=7.5,
+                color=MUTED,
+                zorder=5,
+            )
+            ax.text(
+                x + w - 0.12,
+                line,
+                "FK",
+                ha="right",
+                va="center",
+                fontsize=7.5,
+                fontweight="bold",
+                color=BLUE,
+                zorder=5,
+            )
+            line -= ROW_H
+    ax.text(
+        0.3,
+        0.15,
+        "Arrows point from the table that holds the foreign key to the table it references. "
+        "Dashed boxes are copies or belong to another diagram."
+        + (
+            f" Keys to {', '.join(group.quiet)} are named in the boxes but not drawn."
+            if group.quiet
+            else ""
+        ),
+        fontsize=8,
+        color=MUTED,
+        va="center",
+    )
+    save(fig, group.filename)
+
+
 def main() -> None:
     architecture()
     lifecycle()
     for r in load_scenarios(REPO / "examples" / "scenarios"):
         range_diagram(r)
+    tables, edges = load_tables()
+    for g in GROUPS:
+        erd(g, tables, edges)
     print("Done.")
 
 
